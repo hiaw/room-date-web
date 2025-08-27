@@ -54,7 +54,7 @@ export interface AuthFormProps {
 // App Layout Component Types
 export interface AppLayoutProps {
   currentRoute: string | null | undefined;
-  children?: any;
+  children?: unknown;
 }
 
 // Navigation Item Type
@@ -104,19 +104,21 @@ export interface LoadingSpinnerProps {
 }
 
 // Virtualized List Component Types
-export interface VirtualizedListProps<T = any> {
+export interface VirtualizedListProps<T = unknown> {
   items: T[];
   itemHeight: number;
   containerHeight: number;
-  renderItem: (item: T, index: number) => any;
+  renderItem: (item: T, index: number) => unknown;
 }
 
 // Offline Indicator Component Types
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OfflineIndicatorProps {
   // No props needed, component handles its own state
 }
 
 // Event Card Skeleton Component Types
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface EventCardSkeletonProps {
   // No props needed, just a loading skeleton
 }

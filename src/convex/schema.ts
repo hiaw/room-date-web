@@ -141,8 +141,7 @@ const schema = defineSchema({
     .index("by_applicant", ["applicantId"])
     .index("by_status", ["status"])
     .index("by_event_status", ["eventId", "status"])
-    .index("by_applicant_status", ["applicantId", "status"])
-    .index("by_applicant_time", ["applicantId", "_creationTime"]),
+    .index("by_applicant_status", ["applicantId", "status"]),
 
   // Connections - direct relationships between users (created after approved applications)
   connections: defineTable({
@@ -188,7 +187,6 @@ const schema = defineSchema({
     senderProfileImageUrl: v.optional(v.string()),
   })
     .index("by_connection", ["connectionId"])
-    .index("by_connection_time", ["connectionId", "_creationTime"])
     .index("by_sender", ["senderId"])
     .index("by_receiver", ["receiverId"])
     .index("by_unread", ["connectionId", "isRead"])
@@ -215,8 +213,7 @@ const schema = defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])
-    .index("by_user_event", ["userId", "eventId"])
-    .index("by_user_time", ["userId", "_creationTime"]),
+    .index("by_user_event", ["userId", "eventId"]),
 
   // Event Views - track when users view events (for analytics/recommendations)
   eventViews: defineTable({
@@ -267,11 +264,13 @@ const schema = defineSchema({
     identifier: v.optional(v.string()), // IP, email, etc.
     metadata: v.optional(v.any()), // Additional context (room/event IDs, etc.)
     timestamp: v.number(),
-    severity: v.union(
-      v.literal("low"),
-      v.literal("medium"),
-      v.literal("high"),
-      v.literal("critical"),
+    severity: v.optional(
+      v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("critical"),
+      ),
     ),
   })
     .index("by_type_time", ["eventType", "timestamp"])

@@ -2,14 +2,12 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { authStore } from "$lib/stores/auth.js";
-  import { Home, Search, Calendar, MessageCircle, User } from "lucide-svelte";
+  import { Search, Calendar, MessageCircle, User } from "lucide-svelte";
   import OfflineIndicator from "./ui/OfflineIndicator.svelte";
 
   import type { AppLayoutProps } from "$lib/types/components";
 
-  interface Props extends AppLayoutProps {}
-
-  let { currentRoute, children }: Props = $props();
+  let { children }: Omit<AppLayoutProps, "currentRoute"> = $props();
 
   const navItems = [
     {
@@ -75,7 +73,7 @@
       class="fixed right-0 bottom-0 left-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur-md"
     >
       <div class="mx-auto flex max-w-sm items-center justify-around px-2 py-2">
-        {#each navItems as item}
+        {#each navItems as item (item.id)}
           {@const IconComponent = item.icon}
           <button
             onclick={() => handleNavigation(item.path)}

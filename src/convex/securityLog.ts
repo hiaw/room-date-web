@@ -130,11 +130,14 @@ export const getSecurityStats = query({
 
     for (const event of recentEvents) {
       stats.byType[event.eventType] = (stats.byType[event.eventType] || 0) + 1;
-      stats.bySeverity[event.severity] =
-        (stats.bySeverity[event.severity] || 0) + 1;
 
-      if (event.severity === "critical") {
-        stats.criticalCount++;
+      if (event.severity) {
+        stats.bySeverity[event.severity] =
+          (stats.bySeverity[event.severity] || 0) + 1;
+
+        if (event.severity === "critical") {
+          stats.criticalCount++;
+        }
       }
     }
 

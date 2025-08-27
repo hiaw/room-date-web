@@ -237,7 +237,7 @@ export const updateRoom = mutation({
     }
 
     // Prepare update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (args.title !== undefined) {
       if (!args.title.trim()) {

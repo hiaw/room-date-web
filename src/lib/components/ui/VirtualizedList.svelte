@@ -1,34 +1,37 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  interface Props {
-    items: any[];
+  interface Props<T> {
+    items: T[];
     itemHeight: number;
     containerHeight: number;
-    renderItem: (item: any, index: number) => any;
+    renderItem: (item: T, index: number) => unknown;
   }
 
-  let { items, itemHeight, containerHeight, renderItem }: Props = $props();
+  let { items, itemHeight, containerHeight, renderItem }: Props<unknown> =
+    $props();
 
   let scrollTop = $state(0);
   let container: HTMLElement;
 
   // Calculate visible range
-  let startIndex = $derived(() => Math.floor(scrollTop / itemHeight));
-  let endIndex = $derived(() => Math.min(
-    startIndex + Math.ceil(containerHeight / itemHeight) + 2, // +2 for buffer
-    items.length
-  ));
+  let startIndex = $derived(Math.floor(scrollTop / itemHeight));
+  let endIndex = $derived(
+    Math.min(
+      startIndex() + Math.ceil(containerHeight / itemHeight) + 2, // +2 for buffer
+      items.length,
+    ),
+  );
 
-  let visibleItems = $derived(() =>
-    items.slice(startIndex, endIndex).map((item, index) => ({
+  let visibleItems = $derived(
+    items.slice(startIndex(), endIndex()).map((item, index) => ({
       item,
-      index: startIndex + index
-    }))
+      index: startIndex() + index,
+    })),
   );
 
   let totalHeight = $derived(items.length * itemHeight);
-  let offsetY = $derived(startIndex * itemHeight);
+  let offsetY = $derived(startIndex() * itemHeight);
 
   function handleScroll(event: Event) {
     const target = event.target as HTMLElement;
@@ -37,12 +40,12 @@
 
   onMount(() => {
     if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
+      container.addEventListener("scroll", handleScroll, { passive: true });
     }
 
     return () => {
       if (container) {
-        container.removeEventListener('scroll', handleScroll);
+        container.removeEventListener("scroll", handleScroll);
       }
     };
   });
@@ -55,9 +58,9 @@
 >
   <div style="height: {totalHeight}px; position: relative;">
     <div style="transform: translateY({offsetY}px);">
-      {#each visibleItems as { item, index }}
+      {#each visibleItems as { item, index } (index)}
         <div style="height: {itemHeight}px;">
-          {@render item, index}
+          {@render renderItem(item, index)}
         </div>
       {/each}
     </div>

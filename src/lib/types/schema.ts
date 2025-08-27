@@ -256,7 +256,7 @@ export interface UserInsights {
 // Real-time updates
 export interface RealtimeUpdate {
   type: "message" | "application" | "connection" | "event";
-  data: any;
+  data: unknown;
   timestamp: number;
   userId?: string;
 }

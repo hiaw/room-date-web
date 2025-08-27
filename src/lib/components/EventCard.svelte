@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { MapPin, Clock, Users, Calendar, Heart } from "lucide-svelte";
+  import { MapPin, Clock, Users, Heart } from "lucide-svelte";
   import { formatDistanceToNow, format } from "date-fns";
 
   import type { EventData } from "$lib/types/components";
@@ -13,8 +13,7 @@
   let { event }: Props = $props();
 
   let bookmarked = $state(false);
-  let imageLoaded = $state(false);
-  let imageRef: HTMLImageElement;
+  let imageRef = $state<HTMLImageElement | HTMLDivElement>();
 
   function handleEventClick() {
     goto(`/events/${event._id}`);
@@ -189,14 +188,14 @@
             alt={event.hostName || "Host"}
             class="h-8 w-8 rounded-full object-cover"
             onload={() => (imageLoaded = true)}
-            onerror={() => {
+            onerror={(e) => {
               // Fallback to initials if image fails
-              imageRef.src = `https://api.dicebear.com/7.x/initials/svg?seed=${event.hostName || "Anonymous"}`;
+              const target = e.target as HTMLImageElement;
+              target.src = `https://api.dicebear.com/7.x/initials/svg?seed=${event.hostName || "Anonymous"}`;
             }}
           />
         {:else}
           <div
-            bind:this={imageRef}
             class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400"
           >
             <span class="text-sm font-medium text-white">
@@ -241,6 +240,8 @@
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    display: block;
+    line-clamp: 1;
   }
 
   .line-clamp-2 {
@@ -248,5 +249,7 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    display: block;
+    line-clamp: 2;
   }
 </style>

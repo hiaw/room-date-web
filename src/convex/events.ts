@@ -251,7 +251,7 @@ export const discoverEvents = query({
     const limit = args.limit || 20;
 
     // Start with active events
-    let query = ctx.db
+    const query = ctx.db
       .query("events")
       .withIndex("by_active", (q) => q.eq("isActive", true));
 
@@ -435,7 +435,7 @@ export const updateEvent = mutation({
     }
 
     // Prepare update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (args.title !== undefined) updateData.title = args.title?.trim();
     if (args.description !== undefined)
@@ -569,7 +569,7 @@ export const getEventsNearUser = query({
     const radiusInMiles = args.radiusMiles || 25;
 
     // Start with active events
-    let query = ctx.db
+    const query = ctx.db
       .query("events")
       .withIndex("by_active", (q) => q.eq("isActive", true));
 

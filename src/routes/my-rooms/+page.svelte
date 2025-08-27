@@ -1,22 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
-  import { authStore, isAuthenticated } from "$lib/stores/auth.js";
-  import { goto } from "$app/navigation";
-  import {
-    Plus,
-    Calendar,
-    MapPin,
-    Users,
-    Settings,
-    Edit3,
-    Trash2,
-    Home,
-  } from "lucide-svelte";
-  import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
 
-  const convex = useConvexClient();
+  import { isAuthenticated } from "$lib/stores/auth.js";
+  import { goto } from "$app/navigation";
+  import { Plus, MapPin, Calendar, Users } from "lucide-svelte";
+  import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -38,13 +26,13 @@
   // Group events by room
   let eventsByRoom = $derived(
     events.reduce(
-      (acc: Record<string, any[]>, event: any) => {
-        const roomId = event.roomId;
+      (acc: Record<string, unknown[]>, event: unknown) => {
+        const roomId = (event as { roomId: string }).roomId;
         if (!acc[roomId]) acc[roomId] = [];
         acc[roomId].push(event);
         return acc;
       },
-      {} as Record<string, any[]>,
+      {} as Record<string, unknown[]>,
     ),
   );
 
@@ -70,7 +58,7 @@
     return `${count} events`;
   }
 
-  function getLocationDisplay(room: any): string {
+  function getLocationDisplay(room: unknown): string {
     const parts = [];
     if (room.city) parts.push(room.city);
     if (room.state) parts.push(room.state);
@@ -138,7 +126,7 @@
     {:else}
       <!-- Rooms List -->
       <div class="space-y-6">
-        {#each rooms as room}
+        {#each rooms as room (room._id)}
           <div
             class="overflow-hidden rounded-2xl border border-white/50 bg-white/90 shadow-sm backdrop-blur-sm"
           >
@@ -206,7 +194,7 @@
                 </div>
 
                 <div class="space-y-3">
-                  {#each eventsByRoom[room._id].slice(0, 3) as event}
+                  {#each eventsByRoom[room._id].slice(0, 3) as event (event._id)}
                     <div
                       class="flex cursor-pointer items-center justify-between rounded-xl bg-gray-50 p-3 transition-colors hover:bg-gray-100"
                       onclick={() => viewEvent(event._id)}
@@ -302,5 +290,7 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    display: block;
+    line-clamp: 2;
   }
 </style>

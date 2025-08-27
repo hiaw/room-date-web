@@ -1,14 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
-  import { authStore, isAuthenticated } from "$lib/stores/auth.js";
+
+  import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { MessageCircle, User, Calendar, Clock, Search } from "lucide-svelte";
+  import { MessageCircle, User, Calendar, Search } from "lucide-svelte";
   import { formatDistanceToNow } from "date-fns";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
-
-  const convex = useConvexClient();
 
   // Redirect if not authenticated
   onMount(() => {
@@ -36,7 +33,7 @@
 
   // Filter connections/conversations based on search
   let filteredConnections = $derived(
-    connections.filter((connection: any) => {
+    connections.filter((connection: unknown) => {
       if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
       return (
@@ -48,7 +45,7 @@
   );
 
   let filteredConversations = $derived(
-    conversations.filter((conversation: any) => {
+    conversations.filter((conversation: unknown) => {
       if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
       return (
@@ -164,7 +161,7 @@
         </div>
       {:else}
         <div class="space-y-2">
-          {#each filteredConversations as conversation}
+          {#each filteredConversations as conversation (conversation.connectionId)}
             <div
               class="cursor-pointer rounded-2xl border border-white/50 bg-white/90 p-4 backdrop-blur-sm transition-all hover:shadow-md"
               onclick={() => openConversation(conversation.connectionId)}
@@ -180,7 +177,9 @@
                   class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400"
                 >
                   <span class="text-sm font-medium text-white">
-                    {getUserInitials(conversation.otherUserName || "?")}
+                    {getUserInitials(
+                      conversation.otherUser?.profile?.displayName || "?",
+                    )}
                   </span>
                 </div>
 
@@ -188,14 +187,17 @@
                 <div class="min-w-0 flex-1">
                   <div class="mb-1 flex items-center justify-between">
                     <h3 class="truncate font-semibold text-gray-900">
-                      {conversation.otherUserName}
+                      {conversation.otherUser?.profile?.displayName ||
+                        "Unknown User"}
                     </h3>
                     <span class="flex-shrink-0 text-xs text-gray-500">
-                      {#if conversation.lastMessageTime}
+                      {#if conversation.lastMessage?._creationTime}
                         {formatDistanceToNow(
-                          new Date(conversation.lastMessageTime),
+                          new Date(conversation.lastMessage._creationTime),
                           { addSuffix: true },
                         )}
+                      {:else}
+                        Recently
                       {/if}
                     </span>
                   </div>
@@ -206,15 +208,12 @@
 
                   <div class="flex items-center text-xs text-gray-500">
                     <Calendar size={12} class="mr-1" />
-                    <span
-                      >Connected at {conversation.eventTitle ||
-                        "an event"}</span
-                    >
+                    <span>Connected at an event</span>
                   </div>
                 </div>
 
                 <!-- Unread Indicator -->
-                {#if conversation.hasUnreadMessages}
+                {#if conversation.unreadCount && conversation.unreadCount > 0}
                   <div
                     class="h-3 w-3 flex-shrink-0 rounded-full bg-purple-500"
                   ></div>
@@ -252,7 +251,7 @@
         </div>
       {:else}
         <div class="space-y-2">
-          {#each filteredConnections as connection}
+          {#each filteredConnections as connection (connection._id)}
             <div
               class="cursor-pointer rounded-2xl border border-white/50 bg-white/90 p-4 backdrop-blur-sm transition-all hover:shadow-md"
               onclick={() => viewConnection(connection._id)}
@@ -267,7 +266,9 @@
                   class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400"
                 >
                   <span class="text-sm font-medium text-white">
-                    {getUserInitials(connection.otherUserName || "?")}
+                    {getUserInitials(
+                      connection.otherUser?.profile?.displayName || "?",
+                    )}
                   </span>
                 </div>
 
@@ -275,7 +276,8 @@
                 <div class="min-w-0 flex-1">
                   <div class="mb-1 flex items-center justify-between">
                     <h3 class="truncate font-semibold text-gray-900">
-                      {connection.otherUserName}
+                      {connection.otherUser?.profile?.displayName ||
+                        "Unknown User"}
                     </h3>
                     <span class="text-xs text-gray-500">
                       {formatDistanceToNow(new Date(connection._creationTime), {
@@ -288,12 +290,11 @@
                     class="mb-2 flex items-center space-x-2 text-sm text-gray-600"
                   >
                     <Calendar size={14} />
-                    <span class="truncate">Met at: {connection.eventTitle}</span
-                    >
+                    <span class="truncate">Met at: an event</span>
                   </div>
 
                   <div class="flex items-center text-xs text-gray-500">
-                    <span class="truncate">in {connection.roomTitle}</span>
+                    <span class="truncate">in a room</span>
                   </div>
                 </div>
 

@@ -7,14 +7,12 @@
 
   import type { AuthFormProps } from "$lib/types/components";
 
-  interface Props extends AuthFormProps {}
-
   let {
     onSubmit,
     isSignUp = false,
     loading = false,
     error = null,
-  }: Props = $props();
+  }: AuthFormProps = $props();
 
   let email = $state("");
   let password = $state("");

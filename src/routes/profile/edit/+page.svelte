@@ -1,15 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useMutation, useConvexClient } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
-  import { authStore, isAuthenticated } from "$lib/stores/auth.js";
+  import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Save } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
-
-  const convex = useConvexClient();
 
   // Redirect if not authenticated
   onMount(() => {
@@ -47,7 +43,9 @@
     }
   });
 
-  async function handleSave() {
+  async function handleSave(event: Event) {
+    event.preventDefault();
+
     if (!displayName.trim()) {
       alert("Please enter your display name");
       return;
@@ -56,7 +54,7 @@
     saving = true;
 
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         displayName: displayName.trim(),
         bio: bio.trim() || undefined,
         location: location.trim() || undefined,
@@ -145,7 +143,7 @@
     </div>
   {:else}
     <div class="mx-auto max-w-2xl px-4 py-6">
-      <form onsubmit|preventDefault={handleSave} class="space-y-6">
+      <form onsubmit={handleSave} class="space-y-6">
         <!-- Profile Photos -->
         <div class="space-y-4">
           <h2 class="text-lg font-semibold text-gray-900">Profile Photos</h2>

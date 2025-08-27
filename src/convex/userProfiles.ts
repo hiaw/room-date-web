@@ -98,7 +98,7 @@ export const updateUserProfile = mutation({
       await ctx.db.patch(existingProfile._id, {
         ...Object.fromEntries(
           Object.entries(profileData).filter(
-            ([_, value]) => value !== undefined,
+            ([, value]) => value !== undefined,
           ),
         ),
       });
@@ -180,7 +180,7 @@ export const updateUserSettings = mutation({
       await ctx.db.patch(existingSettings._id, {
         ...Object.fromEntries(
           Object.entries(settingsData).filter(
-            ([_, value]) => value !== undefined,
+            ([, value]) => value !== undefined,
           ),
         ),
       });

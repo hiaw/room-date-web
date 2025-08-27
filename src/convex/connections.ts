@@ -68,9 +68,7 @@ export const getMyConnections = query({
       // Get last message
       const lastMessage = await ctx.db
         .query("messages")
-        .withIndex("by_connection_time", (q) =>
-          q.eq("connectionId", connection._id),
-        )
+        .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
         .order("desc")
         .first();
 
@@ -357,9 +355,9 @@ export const getMessages = query({
 
     const limit = args.limit || 50;
 
-    let query = ctx.db
+    const query = ctx.db
       .query("messages")
-      .withIndex("by_connection_time", (q) =>
+      .withIndex("by_connection", (q) =>
         q.eq("connectionId", args.connectionId),
       )
       .order("desc");
@@ -441,7 +439,7 @@ export const getUserConnections = query({
       return [];
     }
 
-    let query = ctx.db.query("connections");
+    const query = ctx.db.query("connections");
 
     // Filter by user
     const connections = await query

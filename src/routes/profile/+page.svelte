@@ -1,8 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
-  import { authStore, isAuthenticated } from "$lib/stores/auth.js";
+  import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import {
     User,
@@ -14,13 +12,10 @@
     Languages,
     Camera,
     Plus,
-    Trash2,
     LogOut,
   } from "lucide-svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import Button from "$lib/components/ui/Button.svelte";
-
-  const convex = useConvexClient();
 
   // Redirect if not authenticated
   onMount(() => {
@@ -87,7 +82,7 @@
       .join(", ");
   }
 
-  function formatLocation(profile: any): string {
+  function formatLocation(profile: unknown): string {
     const parts = [];
     if (profile?.city) parts.push(profile.city);
     if (profile?.state) parts.push(profile.state);
@@ -334,7 +329,7 @@
 
             <div class="p-8">
               <div class="grid grid-cols-3 gap-4">
-                {#each profile.photoUrls.slice(0, 6) as photoUrl}
+                {#each profile.photoUrls.slice(0, 6) as photoUrl, index (index)}
                   <button
                     class="aspect-square overflow-hidden rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   >

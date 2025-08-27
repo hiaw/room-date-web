@@ -19,7 +19,7 @@ export interface AuthStore {
   subscribe: (callback: (state: AuthState) => void) => () => void;
   checkExistingAuth: () => boolean;
   setUser: (userData: User | null) => void;
-  setAuthSuccess: (userData: User | null, tokens: any) => void;
+  setAuthSuccess: (userData: User | null, tokens: unknown) => void;
   setAuthError: (error: string) => void;
   setLoading: (loading: boolean) => void;
   logout: () => void;
@@ -49,12 +49,13 @@ export interface WritableStore<T> extends Store<T> {
   update: (updater: (value: T) => T) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ReadableStore<T> extends Store<T> {
   // Readable stores only have subscribe
 }
 
 // Form Store Types (for complex form state management)
-export interface FormStoreState<T = any> {
+export interface FormStoreState<T = unknown> {
   data: T;
   errors: Record<string, string>;
   touched: Record<string, boolean>;
@@ -63,8 +64,9 @@ export interface FormStoreState<T = any> {
   isDirty: boolean;
 }
 
-export interface FormStore<T = any> extends WritableStore<FormStoreState<T>> {
-  setField: (field: keyof T, value: any) => void;
+export interface FormStore<T = unknown>
+  extends WritableStore<FormStoreState<T>> {
+  setField: (field: keyof T, value: unknown) => void;
   setError: (field: keyof T, error: string) => void;
   setTouched: (field: keyof T, touched: boolean) => void;
   reset: () => void;
@@ -91,7 +93,7 @@ export interface PaginationStore extends WritableStore<PaginationState> {
 }
 
 // Infinite Scroll Store Types
-export interface InfiniteScrollState<T = any> {
+export interface InfiniteScrollState<T = unknown> {
   items: T[];
   loading: boolean;
   error: string | null;
@@ -100,7 +102,7 @@ export interface InfiniteScrollState<T = any> {
   pageSize: number;
 }
 
-export interface InfiniteScrollStore<T = any>
+export interface InfiniteScrollStore<T = unknown>
   extends WritableStore<InfiniteScrollState<T>> {
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -110,17 +112,17 @@ export interface InfiniteScrollStore<T = any>
 // Search Store Types
 export interface SearchState {
   query: string;
-  results: any[];
+  results: unknown[];
   isSearching: boolean;
   error: string | null;
-  filters: Record<string, any>;
+  filters: Record<string, unknown>;
   sortBy: string;
   sortOrder: "asc" | "desc";
 }
 
 export interface SearchStore extends WritableStore<SearchState> {
   setQuery: (query: string) => void;
-  setFilters: (filters: Record<string, any>) => void;
+  setFilters: (filters: Record<string, unknown>) => void;
   setSort: (sortBy: string, sortOrder: "asc" | "desc") => void;
   search: () => Promise<void>;
   clearResults: () => void;
@@ -157,7 +159,7 @@ export interface NotificationStore extends WritableStore<NotificationState> {
 export interface ModalState {
   isOpen: boolean;
   title?: string;
-  content?: any;
+  content?: unknown;
   size?: "sm" | "md" | "lg" | "xl";
   onClose?: () => void;
   onConfirm?: () => void;
@@ -198,13 +200,13 @@ export interface LoadingStore extends WritableStore<LoadingState> {
 }
 
 // Local Storage Store Types
-export interface LocalStorageState<T = any> {
+export interface LocalStorageState<T = unknown> {
   data: T;
   isLoaded: boolean;
   error: string | null;
 }
 
-export interface LocalStorageStore<T = any>
+export interface LocalStorageStore<T = unknown>
   extends WritableStore<LocalStorageState<T>> {
   setData: (data: T) => void;
   clear: () => void;
@@ -212,13 +214,13 @@ export interface LocalStorageStore<T = any>
 }
 
 // Session Storage Store Types
-export interface SessionStorageState<T = any> {
+export interface SessionStorageState<T = unknown> {
   data: T;
   isLoaded: boolean;
   error: string | null;
 }
 
-export interface SessionStorageStore<T = any>
+export interface SessionStorageStore<T = unknown>
   extends WritableStore<SessionStorageState<T>> {
   setData: (data: T) => void;
   clear: () => void;

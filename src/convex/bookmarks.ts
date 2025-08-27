@@ -93,7 +93,7 @@ export const getBookmarkedEvents = query({
 
     const bookmarks = await ctx.db
       .query("eventBookmarks")
-      .withIndex("by_user_time", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .take(limit);
 

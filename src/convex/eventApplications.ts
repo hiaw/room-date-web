@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Apply to join an event
@@ -312,15 +314,15 @@ export const cancelApplication = mutation({
  * Helper function to create a connection between two users
  */
 async function createConnection(
-  ctx: any,
-  user1Id: string,
-  user2Id: string,
-  eventId: string,
+  ctx: MutationCtx,
+  user1Id: Id<"users">,
+  user2Id: Id<"users">,
+  eventId: Id<"events">,
 ): Promise<string> {
   // Check if connection already exists
   const existingConnection = await ctx.db
     .query("connections")
-    .withIndex("by_users", (q: any) =>
+    .withIndex("by_users", (q) =>
       q.eq("user1Id", user1Id).eq("user2Id", user2Id),
     )
     .first();
@@ -332,7 +334,7 @@ async function createConnection(
   // Also check the reverse direction
   const reverseConnection = await ctx.db
     .query("connections")
-    .withIndex("by_users", (q: any) =>
+    .withIndex("by_users", (q) =>
       q.eq("user1Id", user2Id).eq("user2Id", user1Id),
     )
     .first();
@@ -344,12 +346,12 @@ async function createConnection(
   // Get user profiles for denormalized data
   const user1Profile = await ctx.db
     .query("userProfiles")
-    .withIndex("by_user", (q: any) => q.eq("userId", user1Id))
+    .withIndex("by_user", (q) => q.eq("userId", user1Id))
     .first();
 
   const user2Profile = await ctx.db
     .query("userProfiles")
-    .withIndex("by_user", (q: any) => q.eq("userId", user2Id))
+    .withIndex("by_user", (q) => q.eq("userId", user2Id))
     .first();
 
   // Create new connection

@@ -49,7 +49,10 @@
         const compressedFile = await compressImage(file);
 
         // Get upload URL from Convex
-        const uploadUrl = await convex.mutation(api.files.generateUploadUrl);
+        const uploadUrl = await convex.mutation(
+          api.files.generateUploadUrl,
+          {},
+        );
 
         // Upload to Convex storage
         const result = await fetch(uploadUrl, {
@@ -156,7 +159,7 @@
   <!-- Image Grid -->
   {#if images.length > 0}
     <div class="grid grid-cols-3 gap-4">
-      {#each images as image, index}
+      {#each images as image, index (index)}
         <div class="group relative aspect-square">
           <img
             src={image}

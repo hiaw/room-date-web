@@ -1,16 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useMutation, useConvexClient } from "convex-svelte";
-  import { api } from "../../../../../convex/_generated/api.js";
-  import { authStore, isAuthenticated } from "$lib/stores/auth.js";
+  import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { ArrowLeft, Save, Calendar, Clock, Users } from "lucide-svelte";
+  import { ArrowLeft, Save } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
 
-  const convex = useConvexClient();
   const roomId = $page.params.roomId;
 
   // Redirect if not authenticated
@@ -42,17 +39,14 @@
   let preferredGender = $state<string[]>([]);
   let eventImages = $state<string[]>([]);
   let saving = $state(false);
-  let lastSubmissionTime = $state(0);
 
-  async function handleSave() {
+  async function handleSave(event: Event) {
+    event.preventDefault();
+
     if (!room) return;
 
-    // Rate limiting - prevent spam submissions
-    const now = Date.now();
-    const timeSinceLastSubmission = now - lastSubmissionTime;
-    if (timeSinceLastSubmission < 2000) {
-      // 2 second cooldown
-      alert("Please wait a moment before submitting again");
+    if (!title.trim()) {
+      alert("Please enter an event title");
       return;
     }
 
@@ -166,13 +160,13 @@
 
   // Set default dates (today and tomorrow)
   onMount(() => {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const now = Date.now();
+    const today = new Date(now);
+    const tomorrow = new Date(now + 24 * 60 * 60 * 1000);
 
     startDate = today.toISOString().split("T")[0];
     startTime = "19:00"; // Default to 7 PM
-    endDate = startDate;
+    endDate = tomorrow.toISOString().split("T")[0];
     endTime = "22:00"; // Default to 10 PM
   });
 </script>
@@ -253,7 +247,7 @@
         </div>
       </div>
 
-      <form onsubmit|preventDefault={handleSave} class="space-y-6">
+      <form onsubmit={handleSave} class="space-y-6">
         <!-- Event Photos -->
         <div class="space-y-4">
           <h2 class="text-lg font-semibold text-gray-900">Event Photos</h2>
@@ -457,7 +451,7 @@
               Gender Preferences
             </label>
             <div class="flex flex-wrap gap-2">
-              {#each [{ value: "male", label: "Male" }, { value: "female", label: "Female" }, { value: "non_binary", label: "Non-Binary" }, { value: "any", label: "Any" }] as option}
+              {#each [{ value: "male", label: "Male" }, { value: "female", label: "Female" }, { value: "non_binary", label: "Non-Binary" }, { value: "any", label: "Any" }] as option (option.value)}
                 <button
                   type="button"
                   onclick={() => toggleGender(option.value)}

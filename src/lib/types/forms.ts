@@ -3,7 +3,7 @@
 
 // Generic Form Types
 export interface FormField {
-  value: any;
+  value: unknown;
   error: string | null;
   touched: boolean;
   valid: boolean;
@@ -16,7 +16,7 @@ export interface FormState {
   isDirty: boolean;
   errors: Record<string, string>;
   touched: Record<string, boolean>;
-  values: Record<string, any>;
+  values: Record<string, unknown>;
 }
 
 export interface FormConfig {
@@ -34,7 +34,7 @@ export interface ValidationRule {
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
-  custom?: (value: any) => string | null;
+  custom?: (value: unknown) => string | null;
   message?: string;
 }
 
@@ -182,14 +182,14 @@ export interface ApplicationFormData {
 }
 
 // Form Submission Types
-export interface FormSubmissionResult<T = any> {
+export interface FormSubmissionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   errors?: Record<string, string>;
 }
 
-export interface FormSubmissionHandler<T = any> {
+export interface FormSubmissionHandler<T = unknown> {
   (data: T): Promise<FormSubmissionResult<T>>;
 }
 
@@ -211,7 +211,7 @@ export interface FormFieldConfig {
   required?: boolean;
   disabled?: boolean;
   validation?: ValidationRule | ValidationRule[];
-  props?: Record<string, any>; // Additional props for specific field types
+  props?: Record<string, unknown>; // Additional props for specific field types
 }
 
 export interface FormConfig {
@@ -224,7 +224,7 @@ export interface FormConfig {
 }
 
 // Form Hook Types (for custom form logic)
-export interface UseFormOptions<T = any> {
+export interface UseFormOptions<T = unknown> {
   initialValues: T;
   validationSchema?: ValidationRules;
   onSubmit?: (values: T) => void | Promise<void>;
@@ -232,20 +232,20 @@ export interface UseFormOptions<T = any> {
   validateOnBlur?: boolean;
 }
 
-export interface UseFormReturn<T = any> {
+export interface UseFormReturn<T = unknown> {
   values: T;
   errors: Record<string, string>;
   touched: Record<string, boolean>;
   isSubmitting: boolean;
   isValid: boolean;
   isDirty: boolean;
-  setFieldValue: (field: keyof T, value: any) => void;
+  setFieldValue: (field: keyof T, value: unknown) => void;
   setFieldError: (field: keyof T, error: string) => void;
   setFieldTouched: (field: keyof T, touched: boolean) => void;
   validate: () => ValidationResult;
   reset: (values?: T) => void;
   handleSubmit: (e: Event) => void;
-  getFieldProps: (field: keyof T) => any;
+  getFieldProps: (field: keyof T) => unknown;
 }
 
 // File Upload Types
@@ -269,10 +269,10 @@ export interface FileUploadOptions {
 
 // Form Context Types
 export interface FormContextValue {
-  values: Record<string, any>;
+  values: Record<string, unknown>;
   errors: Record<string, string>;
   touched: Record<string, boolean>;
-  setFieldValue: (field: string, value: any) => void;
+  setFieldValue: (field: string, value: unknown) => void;
   setFieldError: (field: string, error: string) => void;
   setFieldTouched: (field: string, touched: boolean) => void;
   validate: () => boolean;

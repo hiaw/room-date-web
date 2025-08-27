@@ -1,23 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useConvexClient } from "convex-svelte";
+  import { useQuery } from "convex-svelte";
   import { api } from "../../convex/_generated/api.js";
-  import { authStore, isAuthenticated } from "$lib/stores/auth.js";
+  import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import {
-    Search,
-    MapPin,
-    Clock,
-    Users,
-    Calendar,
-    Filter,
-    Plus,
-  } from "lucide-svelte";
+  import { Search, MapPin, Calendar, Filter, Plus } from "lucide-svelte";
   import EventCard from "$lib/components/EventCard.svelte";
-  import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
-  import EventCardSkeleton from "$lib/components/ui/EventCardSkeleton.svelte";
 
-  const convex = useConvexClient();
+  import EventCardSkeleton from "$lib/components/ui/EventCardSkeleton.svelte";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -34,8 +24,6 @@
     SortBy,
     SortOrder,
     ActivityLevel,
-    DiscoverFilters,
-    DiscoverPageState,
     EventCategory,
     ActivityLevelOption,
   } from "$lib/types/pages";
@@ -135,7 +123,7 @@
   let error = $derived(eventsQueryResult?.error);
 
   // Debounced search to prevent excessive filtering
-  let searchTimeout: number;
+  let searchTimeout: ReturnType<typeof setTimeout>;
   function handleSearch(query: string) {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
@@ -156,33 +144,35 @@
 
   // Pre-compute date ranges for better performance
   let todayRange = $derived(() => {
-    const today = new Date();
+    const now = Date.now();
+    const today = new Date(now);
     const todayStart = new Date(
       today.getFullYear(),
       today.getMonth(),
       today.getDate(),
     );
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1);
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
     return { start: todayStart, end: todayEnd };
   });
 
   let weekRange = $derived(() => {
-    const today = new Date();
+    const now = Date.now();
+    const today = new Date(now);
     const todayStart = new Date(
       today.getFullYear(),
       today.getMonth(),
       today.getDate(),
     );
-    const weekStart = new Date(todayStart);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);
+    const weekStart = new Date(
+      todayStart.getTime() - todayStart.getDay() * 24 * 60 * 60 * 1000,
+    );
+    const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
     return { start: weekStart, end: weekEnd };
   });
 
   let monthRange = $derived(() => {
-    const today = new Date();
+    const now = Date.now();
+    const today = new Date(now);
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
     return { start: monthStart, end: monthEnd };
@@ -190,7 +180,7 @@
 
   // Filter events based on search and filters
   let filteredEvents = $derived(() => {
-    let filtered = events.filter((event: any) => {
+    let filtered = events.filter((event: unknown) => {
       if (!event) return false;
 
       // Search filter - use regex for better performance
@@ -239,18 +229,30 @@
         const eventDate = new Date(event.startTime);
 
         switch (selectedDateRange) {
-          case "today":
-            if (eventDate < todayRange.start || eventDate >= todayRange.end)
+          case "today": {
+            const todayRangeObj = todayRange();
+            if (
+              eventDate < todayRangeObj.start ||
+              eventDate >= todayRangeObj.end
+            )
               return false;
             break;
-          case "this_week":
-            if (eventDate < weekRange.start || eventDate >= weekRange.end)
+          }
+          case "this_week": {
+            const weekRangeObj = weekRange();
+            if (eventDate < weekRangeObj.start || eventDate >= weekRangeObj.end)
               return false;
             break;
-          case "this_month":
-            if (eventDate < monthRange.start || eventDate >= monthRange.end)
+          }
+          case "this_month": {
+            const monthRangeObj = monthRange();
+            if (
+              eventDate < monthRangeObj.start ||
+              eventDate >= monthRangeObj.end
+            )
               return false;
             break;
+          }
         }
       }
 
@@ -274,7 +276,7 @@
     });
 
     // Sort filtered events
-    return filtered.sort((a: any, b: any) => {
+    return filtered.sort((a: unknown, b: unknown) => {
       let comparison = 0;
 
       switch (sortBy) {
@@ -395,7 +397,7 @@
               Event Categories
             </span>
             <div class="grid grid-cols-2 gap-2">
-              {#each eventCategories as category}
+              {#each eventCategories as category (category.value)}
                 <button
                   type="button"
                   onclick={() => {
@@ -431,7 +433,7 @@
               Activity Level
             </span>
             <div class="space-y-2">
-              {#each activityLevels as level}
+              {#each activityLevels as level (level.value)}
                 <button
                   type="button"
                   onclick={() => {
@@ -460,7 +462,7 @@
               When
             </span>
             <div class="grid grid-cols-2 gap-2">
-              {#each [{ value: "any", label: "Anytime" }, { value: "today", label: "Today" }, { value: "this_week", label: "This Week" }, { value: "this_month", label: "This Month" }] as option}
+              {#each [{ value: "any" as DateRange, label: "Anytime" }, { value: "today" as DateRange, label: "Today" }, { value: "this_week" as DateRange, label: "This Week" }, { value: "this_month" as DateRange, label: "This Month" }] as option (option.value)}
                 <button
                   type="button"
                   onclick={() => (selectedDateRange = option.value)}
@@ -509,7 +511,7 @@
               >Gender Preferences</span
             >
             <div class="flex flex-wrap gap-2">
-              {#each ["male", "female", "non_binary", "any"] as gender}
+              {#each ["male", "female", "non_binary", "any"] as gender (gender)}
                 <button
                   type="button"
                   onclick={() => {
@@ -569,7 +571,7 @@
               Sort By
             </span>
             <div class="space-y-2">
-              {#each [{ value: "distance", label: "Distance" }, { value: "date", label: "Date" }, { value: "popularity", label: "Popularity" }, { value: "newest", label: "Newest First" }] as option}
+              {#each [{ value: "distance" as SortBy, label: "Distance" }, { value: "date" as SortBy, label: "Date" }, { value: "popularity" as SortBy, label: "Popularity" }, { value: "newest" as SortBy, label: "Newest First" }] as option (option.value)}
                 <button
                   type="button"
                   onclick={() => (sortBy = option.value)}
@@ -580,14 +582,13 @@
                 >
                   <span>{option.label}</span>
                   {#if sortBy === option.value}
-                    <button
-                      type="button"
+                    <span
                       onclick={() =>
                         (sortOrder = sortOrder === "asc" ? "desc" : "asc")}
-                      class="ml-2 text-xs"
+                      class="ml-2 cursor-pointer text-xs hover:text-purple-800"
                     >
                       {sortOrder === "asc" ? "↑" : "↓"}
-                    </button>
+                    </span>
                   {/if}
                 </button>
               {/each}
@@ -639,7 +640,7 @@
   <div class="px-4 py-4">
     {#if loading}
       <div class="space-y-4">
-        {#each Array(3) as _}
+        {#each Array.from({ length: 3 }, (_, index) => index) as index (index)}
           <EventCardSkeleton />
         {/each}
       </div>
@@ -704,9 +705,9 @@
       </div>
     {:else}
       <div class="space-y-4">
-        {#each filteredEvents as event, index}
+        {#each filteredEvents as event, index (event._id)}
           <div class="stagger-item" style="animation-delay: {index * 0.1}s">
-            <EventCard {event} />
+            <EventCard event={event as EventData} />
           </div>
         {/each}
       </div>

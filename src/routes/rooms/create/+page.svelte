@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useMutation, useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
-  import { authStore, isAuthenticated } from "$lib/stores/auth.js";
+  import { useMutation } from "convex-svelte";
+  import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Save, MapPin } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
 
-  const convex = useConvexClient();
+  // Create room mutation
+  let createRoom = useMutation(api.rooms.createRoom);
 
   // Redirect if not authenticated
   onMount(() => {
@@ -18,7 +18,7 @@
   });
 
   // Create room mutation
-  let createRoom = useMutation(api.rooms.createRoom);
+  // let createRoom = useMutation(api.rooms.createRoom); // Temporarily commented out
 
   // Form state
   let title = $state("");
@@ -32,8 +32,9 @@
   let saving = $state(false);
   let locationLoading = $state(false);
 
-  async function handleSave() {
-    // Client-side validation
+  async function handleSave(event: Event) {
+    event.preventDefault();
+
     if (!title.trim()) {
       alert("Please enter a room title");
       return;
@@ -69,12 +70,12 @@
       if (streetAddress && city) {
         const fullAddress = `${streetAddress}, ${city}${state ? ", " + state : ""}${zipCode ? " " + zipCode : ""}, ${country}`;
         try {
-          const geocodeResponse = await fetch(
+          await fetch(
             `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(fullAddress)}&key=YOUR_API_KEY`,
           );
           // For now, use a simple geocoding approach or skip coordinates
           // In production, you'd want to use a proper geocoding service
-        } catch (error) {
+        } catch {
           console.warn("Geocoding failed, creating room without coordinates");
         }
       }
@@ -95,7 +96,7 @@
         isActive: true,
       };
 
-      const roomId = await createRoom(roomData);
+      await createRoom(roomData);
       goto("/my-rooms");
     } catch (error) {
       console.error("Failed to create room:", error);
@@ -207,7 +208,7 @@
   </div>
 
   <div class="mx-auto max-w-2xl px-4 py-6">
-    <form onsubmit|preventDefault={handleSave} class="space-y-6">
+    <form onsubmit={handleSave} class="space-y-6">
       <!-- Room Photos -->
       <div class="space-y-4">
         <h2 class="text-lg font-semibold text-gray-900">Room Photos</h2>

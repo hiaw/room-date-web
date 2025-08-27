@@ -69,14 +69,14 @@ export type Position = "top" | "bottom" | "left" | "right";
 export type Alignment = "start" | "center" | "end";
 
 // API Response types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
 }
 
-export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
+export interface PaginatedResponse<T = unknown> extends ApiResponse<T[]> {
   pagination: {
     page: number;
     pageSize: number;
@@ -90,7 +90,7 @@ export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
 export interface AppError {
   code: string;
   message: string;
-  details?: any;
+  details?: unknown;
   timestamp: number;
 }
 
@@ -101,7 +101,7 @@ export interface ValidationError {
 }
 
 // Event types
-export interface CustomEvent<T = any> {
+export interface CustomEvent<T = unknown> {
   type: string;
   payload: T;
   timestamp: number;
@@ -112,7 +112,7 @@ export interface CustomEvent<T = any> {
 export interface Route {
   path: string;
   title: string;
-  icon?: any;
+  icon?: unknown;
   badge?: string | number;
   children?: Route[];
 }

@@ -96,7 +96,7 @@ export interface EventPageFormData {
 }
 
 export interface ProfilePageState {
-  profile: any; // Use proper type from schema
+  profile: unknown; // Use proper type from schema
   loading: boolean;
   saving: boolean;
   formData: ProfilePageFormData;
@@ -110,7 +110,7 @@ export interface RoomCreationState {
 }
 
 export interface EventCreationState {
-  room: any; // Use proper type from schema
+  room: unknown; // Use proper type from schema
   roomLoading: boolean;
   formData: EventPageFormData;
   saving: boolean;
@@ -121,15 +121,15 @@ export interface ConnectionWithDetails {
   _id: string;
   user1Id: string;
   user2Id: string;
-  status: string;
-  lastMessageAt?: number;
+  status: "pending" | "accepted" | "declined";
+  _creationTime: number;
   user1DisplayName?: string;
   user2DisplayName?: string;
   user1ProfileImageUrl?: string;
   user2ProfileImageUrl?: string;
-  otherUser?: any; // Use proper user type
+  otherUser?: unknown; // Use proper user type
   unreadCount?: number;
-  lastMessage?: any; // Use proper message type
+  lastMessage?: unknown; // Use proper message type
 }
 
 export interface ConnectionsPageState {
@@ -149,14 +149,14 @@ export interface MessageWithDetails {
   isRead: boolean;
   imageUrl?: string;
   _creationTime: number;
-  sender?: any; // Use proper user type
+  sender?: unknown; // Use proper user type
   senderDisplayName?: string;
   senderProfileImageUrl?: string;
 }
 
 export interface Conversation {
   connectionId: string;
-  otherUser: any; // Use proper user type
+  otherUser: unknown; // Use proper user type
   messages: MessageWithDetails[];
   unreadCount: number;
   lastMessage?: MessageWithDetails;
@@ -171,13 +171,13 @@ export interface MessagesPageState {
 }
 
 // Generic Page State Types
-export interface PageState<T = any> {
+export interface PageState<T = unknown> {
   data: T;
   loading: boolean;
   error: string | null;
 }
 
-export interface PaginatedPageState<T = any> extends PageState<T[]> {
+export interface PaginatedPageState<T = unknown> extends PageState<T[]> {
   hasMore: boolean;
   nextCursor?: string;
 }
@@ -190,7 +190,7 @@ export interface PageFormState {
 }
 
 export interface PageFormFieldState {
-  value: any;
+  value: unknown;
   error: string | null;
   touched: boolean;
   valid: boolean;
@@ -210,13 +210,13 @@ export interface ProfilePageParams {
 }
 
 // Loading and Error States
-export interface PageAsyncState<T = any> {
+export interface PageAsyncState<T = unknown> {
   data: T | null;
   loading: boolean;
   error: string | null;
 }
 
-export interface PageInfiniteScrollState<T = any> {
+export interface PageInfiniteScrollState<T = unknown> {
   items: T[];
   loading: boolean;
   error: string | null;
@@ -228,12 +228,12 @@ export interface PageInfiniteScrollState<T = any> {
 export interface PageSearchState {
   query: string;
   isSearching: boolean;
-  results: any[];
-  filters: Record<string, any>;
+  results: unknown[];
+  filters: Record<string, unknown>;
 }
 
 export interface PageFilterState {
   isOpen: boolean;
-  activeFilters: Record<string, any>;
-  availableFilters: Record<string, any>;
+  activeFilters: Record<string, unknown>;
+  availableFilters: Record<string, unknown>;
 }
