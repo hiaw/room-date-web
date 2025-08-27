@@ -342,3 +342,30 @@ function calculateDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+/**
+ * Get rooms owned by current user (alias for getMyRooms)
+ */
+export const getUserRooms = query({
+  args: {
+    includeInactive: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
+    let query = ctx.db
+      .query("rooms")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId));
+
+    if (!args.includeInactive) {
+      query = query.filter((q) => q.eq(q.field("isActive"), true));
+    }
+
+    const rooms = await query.collect();
+
+    return rooms;
+  },
+});

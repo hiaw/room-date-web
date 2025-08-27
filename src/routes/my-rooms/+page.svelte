@@ -210,6 +210,10 @@
                     <div
                       class="flex cursor-pointer items-center justify-between rounded-xl bg-gray-50 p-3 transition-colors hover:bg-gray-100"
                       onclick={() => viewEvent(event._id)}
+                      onkeydown={(e) =>
+                        e.key === "Enter" || e.key === " "
+                          ? viewEvent(event._id)
+                          : null}
                       role="button"
                       tabindex="0"
                     >

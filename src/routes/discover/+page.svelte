@@ -25,6 +25,12 @@
     }
   });
 
+  // Location state
+  let userLocation = $state<{ latitude: number; longitude: number } | null>(
+    null,
+  );
+  let locationError = $state<string | null>(null);
+
   // Search and filter state
   let searchQuery = $state("");
   let showFilters = $state(false);
@@ -32,16 +38,52 @@
   let ageRange = $state({ min: 18, max: 65 });
   let maxDistance = $state(25);
 
-  // Reactive query
-  let eventsQueryResult = useQuery(api.events.getEventsNearUser, {
-    latitude: 37.7749, // TODO: Get user's actual location
-    longitude: -122.4194,
-    radiusMiles: maxDistance,
-    limit: 20,
+  // Get user's location on mount
+  onMount(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          userLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          locationError = null;
+        },
+        (error) => {
+          console.error("Location error:", error);
+          locationError =
+            "Could not get your location. Using default location.";
+          // Fall back to San Francisco
+          userLocation = {
+            latitude: 37.7749,
+            longitude: -122.4194,
+          };
+        },
+        { timeout: 10000, enableHighAccuracy: true },
+      );
+    } else {
+      locationError = "Geolocation is not supported. Using default location.";
+      userLocation = {
+        latitude: 37.7749,
+        longitude: -122.4194,
+      };
+    }
   });
 
-  let events = $derived(eventsQueryResult.data ?? []);
-  let loading = $derived(eventsQueryResult.isLoading);
+  // Reactive query - recreate the query when params change
+  let eventsQueryResult = $derived(
+    userLocation
+      ? useQuery(api.events.getEventsNearUser, {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          radiusMiles: maxDistance,
+          limit: 20,
+        })
+      : null,
+  );
+
+  let events = $derived(eventsQueryResult?.data ?? []);
+  let loading = $derived(eventsQueryResult?.isLoading ?? true);
 
   function handleSearch(query: string) {
     searchQuery = query.toLowerCase();
@@ -129,6 +171,32 @@
           }}
         />
       </div>
+
+      <!-- Location Status -->
+      {#if locationError}
+        <div class="mt-3 rounded-lg border border-orange-200 bg-orange-50 p-3">
+          <div class="flex items-center">
+            <MapPin class="mr-2 h-4 w-4 text-orange-500" />
+            <span class="text-sm text-orange-700">{locationError}</span>
+          </div>
+        </div>
+      {:else if userLocation}
+        <div class="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
+          <div class="flex items-center">
+            <MapPin class="mr-2 h-4 w-4 text-green-500" />
+            <span class="text-sm text-green-700"
+              >Showing events within {maxDistance} miles of your location</span
+            >
+          </div>
+        </div>
+      {:else}
+        <div class="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+          <div class="flex items-center">
+            <MapPin class="mr-2 h-4 w-4 text-blue-500" />
+            <span class="text-sm text-blue-700">Getting your location...</span>
+          </div>
+        </div>
+      {/if}
 
       <!-- Filter Panel -->
       {#if showFilters}

@@ -525,3 +525,117 @@ function calculateDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+/**
+ * Get events owned by current user (alias for getMyEvents)
+ */
+export const getUserEvents = query({
+  args: {
+    includeInactive: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
+    let query = ctx.db
+      .query("events")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId));
+
+    if (!args.includeInactive) {
+      query = query.filter((q) => q.eq(q.field("isActive"), true));
+    }
+
+    const events = await query.collect();
+
+    return events;
+  },
+});
+
+/**
+ * Get events near user location (alias for discoverEvents)
+ */
+export const getEventsNearUser = query({
+  args: {
+    latitude: v.number(),
+    longitude: v.number(),
+    radiusMiles: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limit = args.limit || 20;
+    const radiusInMiles = args.radiusMiles || 25;
+
+    // Start with active events
+    let query = ctx.db
+      .query("events")
+      .withIndex("by_active", (q) => q.eq("isActive", true));
+
+    let events = await query.take(200); // Get more for filtering
+
+    // Filter out user's own events
+    if (userId) {
+      events = events.filter((event) => event.ownerId !== userId);
+    }
+
+    // Distance filtering
+    events = events
+      .filter((event) => event.roomLatitude && event.roomLongitude)
+      .map((event) => ({
+        event,
+        distance: calculateDistance(
+          args.latitude,
+          args.longitude,
+          event.roomLatitude!,
+          event.roomLongitude!,
+        ),
+      }))
+      .filter((item) => item.distance <= radiusInMiles)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, limit)
+      .map((item) => item.event);
+
+    // Get additional details for each event
+    const eventsWithDetails = [];
+    for (const event of events) {
+      // Get application count
+      const applications = await ctx.db
+        .query("eventApplications")
+        .withIndex("by_event", (q) => q.eq("eventId", event._id))
+        .collect();
+
+      // Check user's application status
+      let userApplication = null;
+      if (userId) {
+        userApplication =
+          applications.find((app) => app.applicantId === userId) || null;
+      }
+
+      // Check if bookmarked
+      let isBookmarked = false;
+      if (userId) {
+        const bookmark = await ctx.db
+          .query("eventBookmarks")
+          .withIndex("by_user_event", (q) =>
+            q.eq("userId", userId).eq("eventId", event._id),
+          )
+          .first();
+        isBookmarked = !!bookmark;
+      }
+
+      eventsWithDetails.push({
+        ...event,
+        applicationCount: applications.length,
+        pendingApplicationCount: applications.filter(
+          (app) => app.status === "pending",
+        ).length,
+        userApplication,
+        isBookmarked,
+      });
+    }
+
+    return eventsWithDetails;
+  },
+});

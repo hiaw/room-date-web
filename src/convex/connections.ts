@@ -419,3 +419,180 @@ export const markMessagesAsRead = mutation({
     return { markedCount: unreadMessages.length };
   },
 });
+
+/**
+ * Get user connections (alias for getMyConnections)
+ */
+export const getUserConnections = query({
+  args: {
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("blocked_by_user1"),
+        v.literal("blocked_by_user2"),
+        v.literal("blocked_by_both"),
+      ),
+    ),
+    includeDisconnected: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
+    let query = ctx.db.query("connections");
+
+    // Filter by user
+    const connections = await query
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("user1Id"), userId),
+          q.eq(q.field("user2Id"), userId),
+        ),
+      )
+      .collect();
+
+    // Apply status filter
+    let filteredConnections = connections;
+    if (args.status) {
+      filteredConnections = connections.filter(
+        (conn) => conn.status === args.status,
+      );
+    } else if (!args.includeDisconnected) {
+      // Default: exclude disconnected connections
+      filteredConnections = connections.filter(
+        (conn) => conn.status !== "disconnected",
+      );
+    }
+
+    // Get detailed connection info with user profiles
+    const connectionsWithDetails = [];
+    for (const connection of filteredConnections) {
+      // Determine the other user
+      const otherUserId =
+        connection.user1Id === userId ? connection.user2Id : connection.user1Id;
+
+      // Get other user info
+      const otherUser = await ctx.db.get(otherUserId);
+      const otherUserProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", otherUserId))
+        .first();
+
+      // Get last message in this connection
+      const lastMessage = await ctx.db
+        .query("messages")
+        .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
+        .order("desc")
+        .first();
+
+      // Count unread messages
+      const unreadCount = await ctx.db
+        .query("messages")
+        .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
+        .filter((q) =>
+          q.and(
+            q.neq(q.field("senderId"), userId),
+            q.eq(q.field("isRead"), false),
+          ),
+        )
+        .collect();
+
+      connectionsWithDetails.push({
+        ...connection,
+        otherUser: otherUser
+          ? {
+              ...otherUser,
+              profile: otherUserProfile,
+            }
+          : null,
+        lastMessage,
+        unreadCount: unreadCount.length,
+      });
+    }
+
+    // Sort by last activity (most recent first)
+    return connectionsWithDetails.sort((a, b) => {
+      const aTime = a.lastMessage?._creationTime || a._creationTime;
+      const bTime = b.lastMessage?._creationTime || b._creationTime;
+      return bTime - aTime;
+    });
+  },
+});
+
+/**
+ * Get user conversations (simplified view of connections for messaging)
+ */
+export const getUserConversations = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
+    // Get active connections only
+    const connections = await ctx.db
+      .query("connections")
+      .filter((q) =>
+        q.and(
+          q.or(
+            q.eq(q.field("user1Id"), userId),
+            q.eq(q.field("user2Id"), userId),
+          ),
+          q.eq(q.field("status"), "active"),
+        ),
+      )
+      .collect();
+
+    const conversations = [];
+    for (const connection of connections) {
+      // Determine the other user
+      const otherUserId =
+        connection.user1Id === userId ? connection.user2Id : connection.user1Id;
+
+      // Get other user info
+      const otherUser = await ctx.db.get(otherUserId);
+      const otherUserProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", otherUserId))
+        .first();
+
+      // Get last message
+      const lastMessage = await ctx.db
+        .query("messages")
+        .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
+        .order("desc")
+        .first();
+
+      // Count unread messages
+      const unreadCount = await ctx.db
+        .query("messages")
+        .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
+        .filter((q) =>
+          q.and(
+            q.neq(q.field("senderId"), userId),
+            q.eq(q.field("isRead"), false),
+          ),
+        )
+        .collect();
+
+      conversations.push({
+        connectionId: connection._id,
+        otherUser: otherUser
+          ? {
+              ...otherUser,
+              profile: otherUserProfile,
+            }
+          : null,
+        lastMessage,
+        unreadCount: unreadCount.length,
+        lastActivity: lastMessage?._creationTime || connection._creationTime,
+      });
+    }
+
+    // Sort by last activity
+    return conversations.sort((a, b) => b.lastActivity - a.lastActivity);
+  },
+});
