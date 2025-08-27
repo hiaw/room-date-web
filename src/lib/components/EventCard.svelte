@@ -4,26 +4,7 @@
   import { MapPin, Clock, Users, Calendar, Heart } from "lucide-svelte";
   import { formatDistanceToNow, format } from "date-fns";
 
-  interface EventData {
-    _id: string;
-    title?: string;
-    description?: string;
-    suggestedTimes?: Date[];
-    isFlexibleTiming?: boolean;
-    maxGuests?: number;
-    preferredGender?: string[];
-    minAge?: number;
-    maxAge?: number;
-    roomTitle?: string;
-    roomDescription?: string;
-    roomCity?: string;
-    roomState?: string;
-    hostName?: string;
-    hostAge?: number;
-    distanceMiles?: number;
-    applicantCount?: number;
-    _creationTime: number;
-  }
+  import type { EventData } from "$lib/types/components";
 
   interface Props {
     event: EventData;

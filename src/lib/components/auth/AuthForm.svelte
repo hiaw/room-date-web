@@ -5,12 +5,9 @@
   import OAuthButton from "./OAuthButton.svelte";
   import { Mail, Lock, User } from "lucide-svelte";
 
-  interface Props {
-    onSubmit: (email: string, password: string, name?: string) => Promise<void>;
-    isSignUp?: boolean;
-    loading?: boolean;
-    error?: string | null;
-  }
+  import type { AuthFormProps } from "$lib/types/components";
+
+  interface Props extends AuthFormProps {}
 
   let {
     onSubmit,

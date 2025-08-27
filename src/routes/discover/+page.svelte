@@ -26,34 +26,42 @@
     }
   });
 
+  import type {
+    LocationState,
+    AgeRange,
+    GuestCountRange,
+    DateRange,
+    SortBy,
+    SortOrder,
+    ActivityLevel,
+    DiscoverFilters,
+    DiscoverPageState,
+    EventCategory,
+    ActivityLevelOption,
+  } from "$lib/types/pages";
+
   // Location state
-  let userLocation = $state<{ latitude: number; longitude: number } | null>(
-    null,
-  );
+  let userLocation = $state<LocationState | null>(null);
   let locationError = $state<string | null>(null);
 
   // Search and filter state
   let searchQuery = $state("");
   let showFilters = $state(false);
   let selectedGenders: string[] = $state([]);
-  let ageRange = $state({ min: 18, max: 65 });
+  let ageRange = $state<AgeRange>({ min: 18, max: 65 });
   let maxDistance = $state(25);
   let selectedCategories: string[] = $state([]);
-  let selectedActivityLevel = $state<string | null>(null);
-  let selectedDateRange = $state<"today" | "this_week" | "this_month" | "any">(
-    "any",
-  );
+  let selectedActivityLevel = $state<ActivityLevel>(null);
+  let selectedDateRange = $state<DateRange>("any");
   let showPastEvents = $state(false);
 
   // Advanced filters
-  let guestCountRange = $state({ min: 1, max: 50 });
-  let sortBy = $state<"distance" | "date" | "popularity" | "newest">(
-    "distance",
-  );
-  let sortOrder = $state<"asc" | "desc">("asc");
+  let guestCountRange = $state<GuestCountRange>({ min: 1, max: 50 });
+  let sortBy = $state<SortBy>("distance");
+  let sortOrder = $state<SortOrder>("asc");
 
   // Event categories
-  const eventCategories = [
+  const eventCategories: EventCategory[] = [
     { value: "social", label: "Social", emoji: "🎉" },
     { value: "dining", label: "Dining", emoji: "🍽️" },
     { value: "games", label: "Games", emoji: "🎮" },
@@ -64,7 +72,7 @@
     { value: "music", label: "Music", emoji: "🎵" },
   ];
 
-  const activityLevels = [
+  const activityLevels: ActivityLevelOption[] = [
     {
       value: "low",
       label: "Chill",

@@ -7,18 +7,7 @@ import {
 } from "../auth.js";
 import { formatUserName } from "../utils/user.js";
 
-interface User {
-  _id: string;
-  email?: string;
-  name?: string;
-}
-
-interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
-  isLoading: boolean;
-  error: string | null;
-}
+import type { User, AuthState } from "$lib/types/stores";
 
 function createAuthStore() {
   const { subscribe, set, update } = writable<AuthState>({

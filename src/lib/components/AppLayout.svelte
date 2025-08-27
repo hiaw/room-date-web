@@ -5,10 +5,9 @@
   import { Home, Search, Calendar, MessageCircle, User } from "lucide-svelte";
   import OfflineIndicator from "./ui/OfflineIndicator.svelte";
 
-  interface Props {
-    currentRoute: string | null | undefined;
-    children?: any;
-  }
+  import type { AppLayoutProps } from "$lib/types/components";
+
+  interface Props extends AppLayoutProps {}
 
   let { currentRoute, children }: Props = $props();
 
