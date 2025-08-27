@@ -4,8 +4,6 @@
   import { type AuthTokens } from "./auth.js";
   import { authStore } from "./stores/auth.js";
   import AuthForm from "./components/auth/AuthForm.svelte";
-  import Card from "./components/ui/Card.svelte";
-  import Button from "./components/ui/Button.svelte";
   import ErrorMessage from "./components/ui/ErrorMessage.svelte";
 
   const convex = useConvexClient();
@@ -102,13 +100,9 @@
   $: ({ isLoading } = $authStore);
 </script>
 
-<Card class="mx-auto mt-8 max-w-md p-8">
-  <h2 class="mb-6 text-center text-2xl font-bold text-gray-800">
-    {isSignUp ? "Sign Up" : "Sign In"}
-  </h2>
-
+<div class="w-full">
   {#if authError}
-    <div class="mb-4">
+    <div class="mb-6">
       <ErrorMessage message={authError} dismissible onDismiss={clearError} />
     </div>
   {/if}
@@ -120,21 +114,23 @@
     error={authError}
   />
 
-  <p class="mt-4 text-center text-gray-600">
-    {isSignUp ? "Already have an account?" : "Don't have an account?"}
-    <Button
-      variant="secondary"
-      size="sm"
+  <div class="mt-6 text-center">
+    <p class="text-sm text-gray-600">
+      {isSignUp ? "Already have an account?" : "Don't have an account?"}
+    </p>
+    <button
       onclick={toggleMode}
-      class="ml-1 font-medium text-blue-600 underline hover:text-blue-800"
+      class="mt-1 font-semibold text-purple-600 transition-colors hover:text-purple-700"
+      disabled={isLoading}
     >
       {isSignUp ? "Sign In" : "Sign Up"}
-    </Button>
-  </p>
+    </button>
+  </div>
 
   {#if !isSignUp}
-    <p class="mt-2 text-center text-xs text-gray-500">
-      New user? You'll need to create an account first.
+    <p class="mt-4 text-center text-xs leading-relaxed text-gray-500">
+      New to Room Dates? Create an account to start hosting events and
+      connecting with people in your area.
     </p>
   {/if}
-</Card>
+</div>

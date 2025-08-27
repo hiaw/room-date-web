@@ -3,6 +3,7 @@
   import Button from "../ui/Button.svelte";
   import ErrorMessage from "../ui/ErrorMessage.svelte";
   import OAuthButton from "./OAuthButton.svelte";
+  import { Mail, Lock, User } from "lucide-svelte";
 
   interface Props {
     onSubmit: (email: string, password: string, name?: string) => Promise<void>;
@@ -44,17 +45,17 @@
 </script>
 
 <!-- OAuth Options -->
-<div class="space-y-3">
+<div class="mb-6 space-y-3">
   <OAuthButton provider="google" disabled={loading} />
 </div>
 
 <!-- Divider -->
-<div class="relative my-6">
+<div class="relative mb-6">
   <div class="absolute inset-0 flex items-center">
-    <div class="w-full border-t border-gray-300"></div>
+    <div class="w-full border-t border-gray-200"></div>
   </div>
   <div class="relative flex justify-center text-sm">
-    <span class="bg-white px-2 text-gray-500">Or continue with email</span>
+    <span class="bg-white px-3 font-medium text-gray-500">or</span>
   </div>
 </div>
 
@@ -66,51 +67,76 @@
 
   {#if isSignUp}
     <div>
-      <label for="name" class="mb-1 block text-sm font-medium text-gray-700">
-        Name (optional):
+      <label for="name" class="mb-2 block text-sm font-medium text-gray-700">
+        Full Name (Optional)
       </label>
-      <input
-        id="name"
-        type="text"
-        bind:value={name}
-        disabled={loading}
-        placeholder="Your name"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
-      />
+      <div class="relative">
+        <User
+          class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400"
+        />
+        <input
+          id="name"
+          type="text"
+          bind:value={name}
+          disabled={loading}
+          placeholder="Enter your full name"
+          class="w-full rounded-xl border border-gray-200 py-3 pr-4 pl-10 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
+        />
+      </div>
     </div>
   {/if}
 
   <div>
-    <label for="email" class="mb-1 block text-sm font-medium text-gray-700">
-      Email:
+    <label for="email" class="mb-2 block text-sm font-medium text-gray-700">
+      Email Address
     </label>
-    <input
-      id="email"
-      type="email"
-      bind:value={email}
-      disabled={loading}
-      required
-      placeholder="your@email.com"
-      class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
-    />
+    <div class="relative">
+      <Mail
+        class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400"
+      />
+      <input
+        id="email"
+        type="email"
+        bind:value={email}
+        disabled={loading}
+        required
+        placeholder="Enter your email"
+        class="w-full rounded-xl border border-gray-200 py-3 pr-4 pl-10 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
+      />
+    </div>
   </div>
 
   <div>
-    <label for="password" class="mb-1 block text-sm font-medium text-gray-700">
-      Password:
+    <label for="password" class="mb-2 block text-sm font-medium text-gray-700">
+      Password
     </label>
-    <input
-      id="password"
-      type="password"
-      bind:value={password}
-      disabled={loading}
-      required
-      placeholder="Your password"
-      class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
-    />
+    <div class="relative">
+      <Lock
+        class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400"
+      />
+      <input
+        id="password"
+        type="password"
+        bind:value={password}
+        disabled={loading}
+        required
+        placeholder="Enter your password"
+        class="w-full rounded-xl border border-gray-200 py-3 pr-4 pl-10 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
+      />
+    </div>
+    {#if isSignUp}
+      <p class="mt-1 text-xs text-gray-500">
+        Choose a secure password with at least 8 characters
+      </p>
+    {/if}
   </div>
 
-  <Button type="submit" disabled={loading} {loading} class="w-full">
-    {isSignUp ? "Sign Up" : "Sign In"} with Email
+  <Button
+    type="submit"
+    disabled={loading}
+    {loading}
+    class="w-full py-3 text-base font-semibold"
+  >
+    {isSignUp ? "Create Account" : "Sign In"}
   </Button>
 </form>

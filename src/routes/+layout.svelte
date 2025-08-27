@@ -4,6 +4,8 @@
   import { getStoredToken } from "$lib/auth.js";
   import { onMount } from "svelte";
   import { browser } from "$app/environment";
+  import { page } from "$app/stores";
+  import AppLayout from "$lib/components/AppLayout.svelte";
   import "../app.css";
 
   const { children } = $props();
@@ -42,6 +44,10 @@
       }
     }
   });
+
+  let currentRoute = $derived($page.route.id);
 </script>
 
-{@render children()}
+<AppLayout {currentRoute}>
+  {@render children()}
+</AppLayout>

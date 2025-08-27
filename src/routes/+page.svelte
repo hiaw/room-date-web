@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { replaceState } from "$app/navigation";
+  import { replaceState, goto } from "$app/navigation";
   import { useConvexClient } from "convex-svelte";
   import { api } from "../convex/_generated/api.js";
   import { authStore, isAuthenticated } from "../lib/stores/auth.js";
@@ -45,6 +45,8 @@
           const userData = await convex.query(api.users.getUserProfile, {});
           if (userData) {
             authStore.setUser(userData);
+            // After successful auth, redirect to discover page
+            goto("/discover");
           }
         } else {
           authStore.setAuthError("OAuth verification failed");
@@ -76,6 +78,8 @@
             authStore.setUser(
               userData as { _id: string; email?: string; name?: string },
             );
+            // If already authenticated, redirect to discover
+            goto("/discover");
           } else {
             authStore.signOut();
           }
