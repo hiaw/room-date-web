@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { useQuery, useMutation } from "convex-svelte";
+  import { api } from "../../../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -36,9 +38,14 @@
   let maxGuests = $state<number | undefined>(undefined);
   let minAge = $state<number | undefined>(18);
   let maxAge = $state<number | undefined>(65);
-  let preferredGender = $state<string[]>([]);
-  let eventImages = $state<string[]>([]);
+  let preferredGender = $state<string[]>(["any"]);
   let saving = $state(false);
+
+  // Calculate today's date for min date constraints
+  let todayDateString = $derived(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  });
 
   async function handleSave(event: Event) {
     event.preventDefault();
@@ -330,7 +337,7 @@
                   id="startDate"
                   type="date"
                   bind:value={startDate}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={todayDateString}
                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
                   required={!isFlexibleTiming}
                 />
@@ -365,7 +372,7 @@
                   id="endDate"
                   type="date"
                   bind:value={endDate}
-                  min={startDate || new Date().toISOString().split("T")[0]}
+                  min={startDate || todayDateString}
                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
                 />
               </div>

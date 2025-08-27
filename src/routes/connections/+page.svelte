@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { useQuery } from "convex-svelte";
+  import { api } from "../../convex/_generated/api.js";
 
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";

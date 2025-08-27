@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { useQuery, useMutation } from "convex-svelte";
+  import { api } from "../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Save } from "lucide-svelte";
@@ -29,6 +31,13 @@
   let location = $state("");
   let profileImages = $state<string[]>([]);
   let saving = $state(false);
+
+  // Calculate max date for date of birth (18 years ago)
+  let maxDateOfBirth = $derived(() => {
+    const today = new Date();
+    const eighteenYearsAgo = new Date(today.getFullYear() - 18, 11, 31);
+    return eighteenYearsAgo.toISOString().split("T")[0];
+  });
 
   // Initialize form when profile loads
   $effect(() => {
@@ -207,9 +216,7 @@
               id="dateOfBirth"
               type="date"
               bind:value={dateOfBirth}
-              max={new Date(new Date().getFullYear() - 18, 11, 31)
-                .toISOString()
-                .split("T")[0]}
+              max={maxDateOfBirth}
               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
             />
             {#if dateOfBirth}

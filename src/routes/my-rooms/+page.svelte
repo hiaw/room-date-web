@@ -1,9 +1,18 @@
 <script lang="ts">
   import { onMount } from "svelte";
-
+  import { useQuery } from "convex-svelte";
+  import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { Plus, MapPin, Calendar, Users } from "lucide-svelte";
+  import {
+    Plus,
+    MapPin,
+    Calendar,
+    Users,
+    Home,
+    Edit3,
+    Settings,
+  } from "lucide-svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
 
   // Redirect if not authenticated

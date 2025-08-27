@@ -572,25 +572,29 @@
             </span>
             <div class="space-y-2">
               {#each [{ value: "distance" as SortBy, label: "Distance" }, { value: "date" as SortBy, label: "Date" }, { value: "popularity" as SortBy, label: "Popularity" }, { value: "newest" as SortBy, label: "Newest First" }] as option (option.value)}
-                <button
-                  type="button"
-                  onclick={() => (sortBy = option.value)}
-                  class="micro-bounce focus-ring flex w-full items-center justify-between rounded-lg border-2 px-3 py-2 text-sm transition-all duration-200 {sortBy ===
-                  option.value
-                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
-                >
-                  <span>{option.label}</span>
+                <div class="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onclick={() => (sortBy = option.value)}
+                    class="micro-bounce focus-ring flex-1 rounded-lg border-2 px-3 py-2 text-left text-sm transition-all duration-200 {sortBy ===
+                    option.value
+                      ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
+                  >
+                    {option.label}
+                  </button>
                   {#if sortBy === option.value}
-                    <span
+                    <button
+                      type="button"
                       onclick={() =>
                         (sortOrder = sortOrder === "asc" ? "desc" : "asc")}
-                      class="ml-2 cursor-pointer text-xs hover:text-purple-800"
+                      class="ml-2 cursor-pointer rounded border-none bg-transparent px-2 py-1 text-xs hover:text-purple-800"
+                      aria-label="Toggle sort order"
                     >
                       {sortOrder === "asc" ? "↑" : "↓"}
-                    </span>
+                    </button>
                   {/if}
-                </button>
+                </div>
               {/each}
             </div>
           </div>

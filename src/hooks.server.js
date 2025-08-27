@@ -34,7 +34,7 @@ export async function handle({ event, resolve }) {
   // Enhanced permissions policy
   response.headers.set(
     "Permissions-Policy",
-    "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(self)",
+    "geolocation=(self), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(self)",
   );
 
   // HSTS (HTTP Strict Transport Security) - enhanced settings

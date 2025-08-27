@@ -1,3 +1,5 @@
+<svelte:options ssr={false} />
+
 <script lang="ts">
   import { Upload, X, Camera } from "lucide-svelte";
   import { useConvexClient } from "convex-svelte";
