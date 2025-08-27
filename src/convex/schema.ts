@@ -98,6 +98,12 @@ const schema = defineSchema({
     preferredGender: v.optional(v.array(v.string())), // ['male', 'female', 'non_binary', 'any']
     minAge: v.optional(v.number()),
     maxAge: v.optional(v.number()),
+    // Event categorization and interests
+    category: v.optional(v.string()), // e.g., 'social', 'dining', 'games', 'arts', 'fitness', 'professional'
+    tags: v.optional(v.array(v.string())), // Flexible tags for filtering
+    activityLevel: v.optional(
+      v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+    ),
     // Media support for events
     eventImages: v.optional(v.array(v.string())),
     primaryEventImageUrl: v.optional(v.string()),
@@ -110,7 +116,9 @@ const schema = defineSchema({
     .index("by_active_start", ["isActive", "startTime"])
     .index("by_location", ["roomLatitude", "roomLongitude"]) // Geospatial queries
     .index("by_active_location", ["isActive", "roomLatitude", "roomLongitude"])
-    .index("by_city_active", ["roomCity", "isActive"]),
+    .index("by_city_active", ["roomCity", "isActive"])
+    .index("by_category", ["category", "isActive"])
+    .index("by_activity_level", ["activityLevel", "isActive"]),
 
   // Event Applications - users apply to join events
   eventApplications: defineTable({

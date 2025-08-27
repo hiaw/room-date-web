@@ -22,7 +22,7 @@
   }: Props = $props();
 
   const baseClasses =
-    "font-medium rounded-md transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed";
+    "font-medium rounded-md transition-all duration-200 btn-hover-lift focus-ring focus:outline-none disabled:cursor-not-allowed";
 
   const variantClasses = {
     primary:

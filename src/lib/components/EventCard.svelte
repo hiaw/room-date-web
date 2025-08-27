@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { MapPin, Clock, Users, Calendar, Heart } from "lucide-svelte";
   import { formatDistanceToNow, format } from "date-fns";
@@ -31,6 +32,8 @@
   let { event }: Props = $props();
 
   let bookmarked = $state(false);
+  let imageLoaded = $state(false);
+  let imageRef: HTMLImageElement;
 
   function handleEventClick() {
     goto(`/events/${event._id}`);
@@ -90,10 +93,40 @@
   );
   let ageRange = $derived(getAgeRangeDisplay());
   let location = $derived(getLocationDisplay());
+
+  // Lazy loading for images
+  let isVisible = $state(false);
+  let observer: IntersectionObserver;
+
+  onMount(() => {
+    if (imageRef && "IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              isVisible = true;
+              observer.disconnect();
+            }
+          });
+        },
+        { threshold: 0.1 },
+      );
+      observer.observe(imageRef);
+    } else {
+      // Fallback for browsers without IntersectionObserver
+      isVisible = true;
+    }
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  });
 </script>
 
 <div
-  class="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-200 hover:shadow-md"
+  class="card-hover cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
   onclick={handleEventClick}
   role="button"
   tabindex="0"
@@ -167,13 +200,29 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <!-- Host Avatar -->
-        <div
-          class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400"
-        >
-          <span class="text-sm font-medium text-white">
-            {event.hostName?.charAt(0) || "?"}
-          </span>
-        </div>
+        {#if isVisible}
+          <img
+            bind:this={imageRef}
+            src={event.hostImageUrl ||
+              `https://api.dicebear.com/7.x/initials/svg?seed=${event.hostName || "Anonymous"}`}
+            alt={event.hostName || "Host"}
+            class="h-8 w-8 rounded-full object-cover"
+            onload={() => (imageLoaded = true)}
+            onerror={() => {
+              // Fallback to initials if image fails
+              imageRef.src = `https://api.dicebear.com/7.x/initials/svg?seed=${event.hostName || "Anonymous"}`;
+            }}
+          />
+        {:else}
+          <div
+            bind:this={imageRef}
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400"
+          >
+            <span class="text-sm font-medium text-white">
+              {event.hostName?.charAt(0) || "?"}
+            </span>
+          </div>
+        {/if}
         <div>
           <p class="text-sm font-medium text-gray-900">
             {event.hostName || "Anonymous Host"}

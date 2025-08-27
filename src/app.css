@@ -1,1 +1,192 @@
 @import "tailwindcss";
+
+/* Custom animations and transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Page transition animations */
+.page-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.page-exit {
+  animation: fadeIn 0.2s ease-in reverse;
+}
+
+/* Enhanced button animations */
+.btn-hover-lift {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-hover-lift:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Card animations */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* Form input animations */
+.input-focus {
+  transition: all 0.2s ease;
+}
+
+.input-focus:focus {
+  transform: scale(1.01);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+/* Loading animations */
+.loading-dots::after {
+  content: "";
+  animation: pulse 1.5s infinite;
+}
+
+/* Shimmer effect for loading states */
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Stagger animation for lists */
+.stagger-item {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.stagger-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.stagger-item:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.stagger-item:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.stagger-item:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.stagger-item:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+/* Micro-interactions */
+.micro-bounce {
+  transition: transform 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.micro-bounce:hover {
+  transform: scale(1.05);
+}
+
+.micro-bounce:active {
+  transform: scale(0.95);
+}
+
+/* Icon animations */
+.icon-spin {
+  transition: transform 0.3s ease;
+}
+
+.icon-spin:hover {
+  transform: rotate(360deg);
+}
+
+/* Notification animations */
+.notification-enter {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.notification-exit {
+  animation: slideInFromRight 0.2s ease-in reverse;
+}
+
+/* Tab animations */
+.tab-active {
+  position: relative;
+}
+
+.tab-active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  animation: scaleIn 0.3s ease-out;
+  animation-fill-mode: forwards;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced focus styles */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+}

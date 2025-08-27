@@ -3,6 +3,7 @@
   import { goto } from "$app/navigation";
   import { authStore } from "$lib/stores/auth.js";
   import { Home, Search, Calendar, MessageCircle, User } from "lucide-svelte";
+  import OfflineIndicator from "./ui/OfflineIndicator.svelte";
 
   interface Props {
     currentRoute: string | null | undefined;
@@ -61,6 +62,9 @@
 <div
   class="app-layout min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50"
 >
+  <!-- Offline Indicator -->
+  <OfflineIndicator />
+
   <!-- Main Content -->
   <main class="flex-1 {shouldShowBottomNav ? 'pb-20' : ''}">
     {@render children()}
@@ -76,18 +80,18 @@
           {@const IconComponent = item.icon}
           <button
             onclick={() => handleNavigation(item.path)}
-            class="flex min-h-[60px] flex-col items-center justify-center rounded-xl p-2 transition-all duration-200 {isActiveRoute(
+            class="group micro-bounce focus-ring flex min-h-[60px] flex-col items-center justify-center rounded-xl p-2 transition-all duration-200 {isActiveRoute(
               item.path,
             )
               ? 'scale-105 bg-purple-100 text-purple-600'
-              : 'text-gray-600 hover:bg-purple-50 hover:text-purple-600'}"
+              : 'text-gray-600 hover:scale-105 hover:bg-purple-50 hover:text-purple-600'}"
             aria-label={item.label}
           >
             <IconComponent
               size={22}
-              class="mb-1 {isActiveRoute(item.path)
+              class="mb-1 transition-all duration-200 {isActiveRoute(item.path)
                 ? 'stroke-2'
-                : 'stroke-1.5'}"
+                : 'stroke-1.5 group-hover:rotate-12'}"
             />
             <span class="text-xs font-medium">{item.label}</span>
           </button>

@@ -15,6 +15,7 @@
   } from "lucide-svelte";
   import EventCard from "$lib/components/EventCard.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
+  import EventCardSkeleton from "$lib/components/ui/EventCardSkeleton.svelte";
 
   const convex = useConvexClient();
 
@@ -37,6 +38,45 @@
   let selectedGenders: string[] = $state([]);
   let ageRange = $state({ min: 18, max: 65 });
   let maxDistance = $state(25);
+  let selectedCategories: string[] = $state([]);
+  let selectedActivityLevel = $state<string | null>(null);
+  let selectedDateRange = $state<"today" | "this_week" | "this_month" | "any">(
+    "any",
+  );
+  let showPastEvents = $state(false);
+
+  // Advanced filters
+  let guestCountRange = $state({ min: 1, max: 50 });
+  let sortBy = $state<"distance" | "date" | "popularity" | "newest">(
+    "distance",
+  );
+  let sortOrder = $state<"asc" | "desc">("asc");
+
+  // Event categories
+  const eventCategories = [
+    { value: "social", label: "Social", emoji: "🎉" },
+    { value: "dining", label: "Dining", emoji: "🍽️" },
+    { value: "games", label: "Games", emoji: "🎮" },
+    { value: "arts", label: "Arts & Culture", emoji: "🎨" },
+    { value: "fitness", label: "Fitness", emoji: "💪" },
+    { value: "professional", label: "Networking", emoji: "💼" },
+    { value: "outdoor", label: "Outdoor", emoji: "🌿" },
+    { value: "music", label: "Music", emoji: "🎵" },
+  ];
+
+  const activityLevels = [
+    {
+      value: "low",
+      label: "Chill",
+      description: "Relaxed, low-key activities",
+    },
+    { value: "medium", label: "Active", description: "Moderate engagement" },
+    {
+      value: "high",
+      label: "High Energy",
+      description: "Active, energetic events",
+    },
+  ];
 
   // Get user's location on mount
   onMount(() => {
@@ -84,32 +124,81 @@
 
   let events = $derived(eventsQueryResult?.data ?? []);
   let loading = $derived(eventsQueryResult?.isLoading ?? true);
+  let error = $derived(eventsQueryResult?.error);
 
+  // Debounced search to prevent excessive filtering
+  let searchTimeout: number;
   function handleSearch(query: string) {
-    searchQuery = query.toLowerCase();
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      searchQuery = query.toLowerCase();
+    }, 300); // 300ms debounce
   }
 
   function toggleFilter() {
     showFilters = !showFilters;
   }
 
+  // Memoized filter functions for better performance
+  let searchRegex = $derived(
+    searchQuery
+      ? new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
+      : null,
+  );
+
+  // Pre-compute date ranges for better performance
+  let todayRange = $derived(() => {
+    const today = new Date();
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    return { start: todayStart, end: todayEnd };
+  });
+
+  let weekRange = $derived(() => {
+    const today = new Date();
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    return { start: weekStart, end: weekEnd };
+  });
+
+  let monthRange = $derived(() => {
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    return { start: monthStart, end: monthEnd };
+  });
+
   // Filter events based on search and filters
-  let filteredEvents = $derived(
-    events.filter((event: any) => {
+  let filteredEvents = $derived(() => {
+    let filtered = events.filter((event: any) => {
       if (!event) return false;
 
-      // Search filter
-      if (searchQuery) {
+      // Search filter - use regex for better performance
+      if (searchRegex) {
         const searchableText = [
           event.title,
           event.description,
           event.roomTitle,
           event.roomDescription,
+          event.category,
+          ...(event.tags || []),
         ]
           .join(" ")
           .toLowerCase();
 
-        if (!searchableText.includes(searchQuery)) return false;
+        if (!searchRegex.test(searchableText)) return false;
       }
 
       // Gender filter
@@ -124,9 +213,80 @@
       if (event.minAge && ageRange.max < event.minAge) return false;
       if (event.maxAge && ageRange.min > event.maxAge) return false;
 
+      // Category filter
+      if (selectedCategories.length > 0 && event.category) {
+        if (!selectedCategories.includes(event.category)) return false;
+      }
+
+      // Activity level filter
+      if (
+        selectedActivityLevel &&
+        event.activityLevel !== selectedActivityLevel
+      ) {
+        return false;
+      }
+
+      // Date range filter - use pre-computed ranges
+      if (selectedDateRange !== "any" && event.startTime) {
+        const eventDate = new Date(event.startTime);
+
+        switch (selectedDateRange) {
+          case "today":
+            if (eventDate < todayRange.start || eventDate >= todayRange.end)
+              return false;
+            break;
+          case "this_week":
+            if (eventDate < weekRange.start || eventDate >= weekRange.end)
+              return false;
+            break;
+          case "this_month":
+            if (eventDate < monthRange.start || eventDate >= monthRange.end)
+              return false;
+            break;
+        }
+      }
+
+      // Past events filter
+      if (!showPastEvents && event.startTime) {
+        const eventDate = new Date(event.startTime);
+        const now = new Date();
+        if (eventDate < now) return false;
+      }
+
+      // Guest count filter
+      if (event.maxGuests) {
+        if (
+          event.maxGuests < guestCountRange.min ||
+          event.maxGuests > guestCountRange.max
+        )
+          return false;
+      }
+
       return true;
-    }),
-  );
+    });
+
+    // Sort filtered events
+    return filtered.sort((a: any, b: any) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case "distance":
+          comparison = (a.distance || 0) - (b.distance || 0);
+          break;
+        case "date":
+          comparison = (a.startTime || 0) - (b.startTime || 0);
+          break;
+        case "popularity":
+          comparison = (b.applicationCount || 0) - (a.applicationCount || 0);
+          break;
+        case "newest":
+          comparison = (b._creationTime || 0) - (a._creationTime || 0);
+          break;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  });
 </script>
 
 <svelte:head>
@@ -134,7 +294,7 @@
 </svelte:head>
 
 <div
-  class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pb-4"
+  class="page-enter min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pb-4"
 >
   <!-- Header -->
   <div
@@ -148,10 +308,10 @@
         </div>
         <button
           onclick={toggleFilter}
-          class="rounded-xl bg-purple-100 p-2 text-purple-600 transition-colors hover:bg-purple-200"
+          class="micro-bounce focus-ring rounded-xl bg-purple-100 p-2 text-purple-600 transition-colors hover:bg-purple-200"
           aria-label="Filters"
         >
-          <Filter size={20} />
+          <Filter size={20} class="icon-spin" />
         </button>
       </div>
 
@@ -163,7 +323,7 @@
         <input
           type="text"
           placeholder="Search events, rooms, or activities..."
-          class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pr-4 pl-10 focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none"
+          class="input-focus w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pr-4 pl-10 transition-all duration-200 focus:outline-none"
           bind:value={searchQuery}
           oninput={(e) => {
             const target = e.target as HTMLInputElement;
@@ -200,84 +360,267 @@
 
       <!-- Filter Panel -->
       {#if showFilters}
-        <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
-          <div class="space-y-4">
-            <!-- Distance Filter -->
-            <div>
-              <label
-                for="distance-slider"
-                class="mb-2 block text-sm font-medium text-gray-700"
-              >
-                Distance: {maxDistance} miles
-              </label>
+        <div
+          class="animate-in slide-in-from-top-2 mt-4 space-y-6 rounded-xl border border-gray-200 bg-gray-50 p-4 duration-300"
+        >
+          <!-- Distance Filter -->
+          <div>
+            <label
+              for="distance-slider"
+              class="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Distance: {maxDistance} miles
+            </label>
+            <input
+              id="distance-slider"
+              type="range"
+              min="1"
+              max="50"
+              bind:value={maxDistance}
+              class="slider h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
+            />
+          </div>
+
+          <!-- Event Categories -->
+          <div>
+            <span class="mb-3 block text-sm font-medium text-gray-700">
+              Event Categories
+            </span>
+            <div class="grid grid-cols-2 gap-2">
+              {#each eventCategories as category}
+                <button
+                  type="button"
+                  onclick={() => {
+                    if (selectedCategories.includes(category.value)) {
+                      selectedCategories = selectedCategories.filter(
+                        (c) => c !== category.value,
+                      );
+                    } else {
+                      selectedCategories = [
+                        ...selectedCategories,
+                        category.value,
+                      ];
+                    }
+                  }}
+                  class="micro-bounce focus-ring flex items-center space-x-2 rounded-lg border-2 px-3 py-2 text-sm transition-all duration-200 {selectedCategories.includes(
+                    category.value,
+                  )
+                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
+                >
+                  <span class="transition-transform duration-200"
+                    >{category.emoji}</span
+                  >
+                  <span>{category.label}</span>
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Activity Level -->
+          <div>
+            <span class="mb-3 block text-sm font-medium text-gray-700">
+              Activity Level
+            </span>
+            <div class="space-y-2">
+              {#each activityLevels as level}
+                <button
+                  type="button"
+                  onclick={() => {
+                    selectedActivityLevel =
+                      selectedActivityLevel === level.value
+                        ? null
+                        : level.value;
+                  }}
+                  class="micro-bounce focus-ring flex w-full items-start space-x-3 rounded-lg border-2 px-3 py-2 text-left transition-all duration-200 {selectedActivityLevel ===
+                  level.value
+                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
+                >
+                  <div class="flex-1">
+                    <div class="font-medium">{level.label}</div>
+                    <div class="text-xs opacity-75">{level.description}</div>
+                  </div>
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Date Range -->
+          <div>
+            <span class="mb-3 block text-sm font-medium text-gray-700">
+              When
+            </span>
+            <div class="grid grid-cols-2 gap-2">
+              {#each [{ value: "any", label: "Anytime" }, { value: "today", label: "Today" }, { value: "this_week", label: "This Week" }, { value: "this_month", label: "This Month" }] as option}
+                <button
+                  type="button"
+                  onclick={() => (selectedDateRange = option.value)}
+                  class="micro-bounce focus-ring rounded-lg border-2 px-3 py-2 text-sm transition-all duration-200 {selectedDateRange ===
+                  option.value
+                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
+                >
+                  {option.label}
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Age Range -->
+          <div>
+            <span class="mb-2 block text-sm font-medium text-gray-700">
+              Age Range: {ageRange.min} - {ageRange.max}
+            </span>
+            <div class="flex items-center space-x-4">
               <input
-                id="distance-slider"
-                type="range"
-                min="1"
-                max="50"
-                bind:value={maxDistance}
-                class="slider h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
+                type="number"
+                min="18"
+                max="100"
+                bind:value={ageRange.min}
+                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
+                placeholder="Min"
+                aria-label="Minimum age"
+              />
+              <span class="text-gray-500">to</span>
+              <input
+                type="number"
+                min="18"
+                max="100"
+                bind:value={ageRange.max}
+                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
+                placeholder="Max"
+                aria-label="Maximum age"
               />
             </div>
+          </div>
 
-            <!-- Age Range -->
-            <div>
-              <span class="mb-2 block text-sm font-medium text-gray-700">
-                Age Range: {ageRange.min} - {ageRange.max}
-              </span>
-              <div class="flex items-center space-x-4">
-                <input
-                  type="number"
-                  min="18"
-                  max="100"
-                  bind:value={ageRange.min}
-                  class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
-                  placeholder="Min"
-                  aria-label="Minimum age"
-                />
-                <span class="text-gray-500">to</span>
-                <input
-                  type="number"
-                  min="18"
-                  max="100"
-                  bind:value={ageRange.max}
-                  class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
-                  placeholder="Max"
-                  aria-label="Maximum age"
-                />
-              </div>
+          <!-- Gender Preferences -->
+          <div>
+            <span class="mb-2 block text-sm font-medium text-gray-700"
+              >Gender Preferences</span
+            >
+            <div class="flex flex-wrap gap-2">
+              {#each ["male", "female", "non_binary", "any"] as gender}
+                <button
+                  type="button"
+                  onclick={() => {
+                    if (selectedGenders.includes(gender)) {
+                      selectedGenders = selectedGenders.filter(
+                        (g) => g !== gender,
+                      );
+                    } else {
+                      selectedGenders = [...selectedGenders, gender];
+                    }
+                  }}
+                  class="micro-bounce focus-ring rounded-full border-2 px-3 py-1 text-sm transition-all duration-200 {selectedGenders.includes(
+                    gender,
+                  )
+                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
+                >
+                  {gender
+                    .replace("_", " ")
+                    .replace(/\b\w/g, (l) => l.toUpperCase())}
+                </button>
+              {/each}
             </div>
+          </div>
 
-            <!-- Gender Preferences -->
-            <div>
-              <span class="mb-2 block text-sm font-medium text-gray-700"
-                >Gender</span
-              >
-              <div class="flex flex-wrap gap-2">
-                {#each ["male", "female", "non_binary"] as gender}
-                  <button
-                    onclick={() => {
-                      if (selectedGenders.includes(gender)) {
-                        selectedGenders = selectedGenders.filter(
-                          (g) => g !== gender,
-                        );
-                      } else {
-                        selectedGenders = [...selectedGenders, gender];
-                      }
-                    }}
-                    class="rounded-full border-2 px-3 py-1 text-sm transition-colors {selectedGenders.includes(
-                      gender,
-                    )
-                      ? 'border-purple-500 bg-purple-100 text-purple-700'
-                      : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300'}"
-                  >
-                    {gender
-                      .replace("_", " ")
-                      .replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </button>
-                {/each}
-              </div>
+          <!-- Guest Count Filter -->
+          <div>
+            <span class="mb-2 block text-sm font-medium text-gray-700">
+              Guest Count: {guestCountRange.min} - {guestCountRange.max}
+            </span>
+            <div class="flex items-center space-x-4">
+              <input
+                type="number"
+                min="1"
+                max="50"
+                bind:value={guestCountRange.min}
+                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
+                placeholder="Min"
+                aria-label="Minimum guest count"
+              />
+              <span class="text-gray-500">to</span>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                bind:value={guestCountRange.max}
+                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
+                placeholder="Max"
+                aria-label="Maximum guest count"
+              />
             </div>
+          </div>
+
+          <!-- Sort Options -->
+          <div>
+            <span class="mb-3 block text-sm font-medium text-gray-700">
+              Sort By
+            </span>
+            <div class="space-y-2">
+              {#each [{ value: "distance", label: "Distance" }, { value: "date", label: "Date" }, { value: "popularity", label: "Popularity" }, { value: "newest", label: "Newest First" }] as option}
+                <button
+                  type="button"
+                  onclick={() => (sortBy = option.value)}
+                  class="micro-bounce focus-ring flex w-full items-center justify-between rounded-lg border-2 px-3 py-2 text-sm transition-all duration-200 {sortBy ===
+                  option.value
+                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
+                >
+                  <span>{option.label}</span>
+                  {#if sortBy === option.value}
+                    <button
+                      type="button"
+                      onclick={() =>
+                        (sortOrder = sortOrder === "asc" ? "desc" : "asc")}
+                      class="ml-2 text-xs"
+                    >
+                      {sortOrder === "asc" ? "↑" : "↓"}
+                    </button>
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Advanced Options -->
+          <div class="border-t border-gray-200 pt-4">
+            <div class="flex items-center space-x-3">
+              <input
+                id="show-past-events"
+                type="checkbox"
+                bind:checked={showPastEvents}
+                class="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <label for="show-past-events" class="text-sm text-gray-700">
+                Show past events
+              </label>
+            </div>
+          </div>
+
+          <!-- Clear Filters -->
+          <div class="border-t border-gray-200 pt-4">
+            <button
+              type="button"
+              onclick={() => {
+                selectedCategories = [];
+                selectedActivityLevel = null;
+                selectedDateRange = "any";
+                selectedGenders = [];
+                ageRange = { min: 18, max: 65 };
+                maxDistance = 25;
+                showPastEvents = false;
+                guestCountRange = { min: 1, max: 50 };
+                sortBy = "distance";
+                sortOrder = "asc";
+              }}
+              class="btn-hover-lift focus-ring w-full rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 transition-all duration-200"
+            >
+              Clear All Filters
+            </button>
           </div>
         </div>
       {/if}
@@ -287,8 +630,49 @@
   <!-- Events List -->
   <div class="px-4 py-4">
     {#if loading}
-      <div class="flex items-center justify-center py-16">
-        <LoadingSpinner />
+      <div class="space-y-4">
+        {#each Array(3) as _}
+          <EventCardSkeleton />
+        {/each}
+      </div>
+    {:else if error}
+      <div class="py-16 text-center">
+        <div class="mx-auto mb-4 h-12 w-12 text-red-500">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+        </div>
+        <h3 class="mb-2 text-lg font-medium text-gray-900">
+          Unable to load events
+        </h3>
+        <p class="mb-6 text-gray-600">
+          There was a problem loading events. Please check your connection and
+          try again.
+        </p>
+        <button
+          onclick={() => window.location.reload()}
+          class="btn-hover-lift inline-flex items-center space-x-2 rounded-xl bg-purple-600 px-6 py-3 text-white transition-all duration-200"
+        >
+          <svg
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          <span>Try Again</span>
+        </button>
       </div>
     {:else if filteredEvents.length === 0}
       <div class="py-16 text-center">
@@ -301,16 +685,21 @@
         </p>
         <button
           onclick={() => goto("/my-rooms")}
-          class="inline-flex items-center space-x-2 rounded-xl bg-purple-600 px-6 py-3 text-white transition-colors hover:bg-purple-700"
+          class="btn-hover-lift focus-ring inline-flex items-center space-x-2 rounded-xl bg-purple-600 px-6 py-3 text-white transition-all duration-200"
         >
-          <Plus size={20} />
+          <Plus
+            size={20}
+            class="transition-transform duration-200 group-hover:rotate-90"
+          />
           <span>Create Event</span>
         </button>
       </div>
     {:else}
       <div class="space-y-4">
-        {#each filteredEvents as event}
-          <EventCard {event} />
+        {#each filteredEvents as event, index}
+          <div class="stagger-item" style="animation-delay: {index * 0.1}s">
+            <EventCard {event} />
+          </div>
         {/each}
       </div>
     {/if}
