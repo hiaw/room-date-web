@@ -7,6 +7,7 @@ This is a quick reference for common setup scenarios. For complete instructions,
 ```bash
 # 1. Start Convex
 npx convex dev
+npx @convex-dev/auth
 
 # 2. Start app
 npm run dev
