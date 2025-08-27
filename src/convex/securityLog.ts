@@ -7,8 +7,18 @@ export type SecurityEventType =
   | "auth_failure"
   | "rate_limit_hit"
   | "suspicious_activity"
-  | "task_created"
-  | "unauthorized_access";
+  | "unauthorized_access"
+  | "room_created"
+  | "event_created"
+  | "application_submitted"
+  | "connection_created"
+  | "message_sent"
+  | "profile_updated"
+  | "location_accessed"
+  | "image_uploaded"
+  | "spam_detected";
+
+export type SecuritySeverity = "low" | "medium" | "high" | "critical";
 
 /**
  * Log a security event for monitoring and audit purposes
@@ -20,14 +30,33 @@ export const logSecurityEvent = mutation({
       v.literal("auth_failure"),
       v.literal("rate_limit_hit"),
       v.literal("suspicious_activity"),
-      v.literal("task_created"),
       v.literal("unauthorized_access"),
+      v.literal("room_created"),
+      v.literal("event_created"),
+      v.literal("application_submitted"),
+      v.literal("connection_created"),
+      v.literal("message_sent"),
+      v.literal("profile_updated"),
+      v.literal("location_accessed"),
+      v.literal("image_uploaded"),
+      v.literal("spam_detected"),
     ),
     identifier: v.optional(v.string()),
     metadata: v.optional(v.any()),
+    severity: v.optional(
+      v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("critical"),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
+
+    // Determine severity if not provided
+    const severity = args.severity || getDefaultSeverity(args.eventType);
 
     await ctx.db.insert("securityEvents", {
       eventType: args.eventType,
@@ -35,15 +64,19 @@ export const logSecurityEvent = mutation({
       identifier: args.identifier,
       metadata: args.metadata,
       timestamp: Date.now(),
+      severity,
     });
 
     // Also log to console for immediate visibility
-    console.log(`Security Event: ${args.eventType}`, {
-      userId,
-      identifier: args.identifier,
-      timestamp: new Date().toISOString(),
-      metadata: args.metadata,
-    });
+    console.log(
+      `Security Event [${severity.toUpperCase()}]: ${args.eventType}`,
+      {
+        userId,
+        identifier: args.identifier,
+        timestamp: new Date().toISOString(),
+        metadata: args.metadata,
+      },
+    );
   },
 });
 
@@ -53,6 +86,7 @@ export const logSecurityEvent = mutation({
 export const getRecentSecurityEvents = query({
   args: {
     eventType: v.optional(v.string()),
+    severity: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -61,13 +95,50 @@ export const getRecentSecurityEvents = query({
     let query = ctx.db.query("securityEvents");
 
     if (args.eventType) {
-      // This would need to be adjusted based on actual eventType filtering
       query = query.filter((q) => q.eq(q.field("eventType"), args.eventType));
+    }
+
+    if (args.severity) {
+      query = query.filter((q) => q.eq(q.field("severity"), args.severity));
     }
 
     const events = await query.order("desc").take(limit);
 
     return events;
+  },
+});
+
+/**
+ * Get security statistics
+ */
+export const getSecurityStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const recentEvents = await ctx.db
+      .query("securityEvents")
+      .filter((q) =>
+        q.gt(q.field("timestamp"), Date.now() - 24 * 60 * 60 * 1000),
+      ) // Last 24 hours
+      .collect();
+
+    const stats = {
+      total: recentEvents.length,
+      byType: {} as Record<string, number>,
+      bySeverity: {} as Record<string, number>,
+      criticalCount: 0,
+    };
+
+    for (const event of recentEvents) {
+      stats.byType[event.eventType] = (stats.byType[event.eventType] || 0) + 1;
+      stats.bySeverity[event.severity] =
+        (stats.bySeverity[event.severity] || 0) + 1;
+
+      if (event.severity === "critical") {
+        stats.criticalCount++;
+      }
+    }
+
+    return stats;
   },
 });
 
@@ -91,3 +162,27 @@ export const cleanupOldSecurityEvents = mutation({
     return { deleted: oldEvents.length };
   },
 });
+
+/**
+ * Helper function to determine default severity for event types
+ */
+function getDefaultSeverity(eventType: SecurityEventType): SecuritySeverity {
+  const severityMap: Record<SecurityEventType, SecuritySeverity> = {
+    auth_success: "low",
+    auth_failure: "medium",
+    rate_limit_hit: "medium",
+    suspicious_activity: "high",
+    unauthorized_access: "high",
+    room_created: "low",
+    event_created: "low",
+    application_submitted: "low",
+    connection_created: "low",
+    message_sent: "low",
+    profile_updated: "low",
+    location_accessed: "medium",
+    image_uploaded: "low",
+    spam_detected: "high",
+  };
+
+  return severityMap[eventType] || "medium";
+}

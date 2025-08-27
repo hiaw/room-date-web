@@ -6,7 +6,12 @@ export type UserProfileId = Id<"userProfiles">;
 
 export interface UserWithProfile extends Doc<"users"> {
   profile?: UserProfile;
+  displayName?: string; // From profile or user
 }
+
+// User Settings Types
+export type UserSettings = Doc<"userSettings">;
+export type UserSettingsId = Id<"userSettings">;
 
 // Room Types
 export type Room = Doc<"rooms">;
@@ -26,6 +31,14 @@ export interface EventWithDetails extends Event {
   applicationCount?: number;
   pendingApplicationCount?: number;
   userApplication?: EventApplication; // Current user's application if any
+  isBookmarked?: boolean;
+}
+
+// Time slot for flexible events
+export interface TimeSlot {
+  startTime: number;
+  endTime: number;
+  label?: string;
 }
 
 // Application Types
@@ -66,14 +79,23 @@ export interface MessageWithSender extends Message {
   sender?: UserWithProfile;
 }
 
-// Message Read Status Types
-export type MessageReadStatus = Doc<"messageReadStatus">;
+// Bookmark Types
+export type EventBookmark = Doc<"eventBookmarks">;
+export type EventBookmarkId = Id<"eventBookmarks">;
 
 // Event Views Types
 export type EventView = Doc<"eventViews">;
 
+// Push Notification Types
+export type PushNotificationToken = Doc<"pushNotificationTokens">;
+export type Platform = "ios" | "android" | "web";
+
+// Message Read Status Types
+export type MessageReadStatus = Doc<"messageReadStatus">;
+
 // Security Types
 export type SecurityEvent = Doc<"securityEvents">;
+export type SecuritySeverity = "low" | "medium" | "high" | "critical";
 
 // Form Data Types (for creating/updating entities)
 export interface CreateRoomData {
@@ -85,6 +107,11 @@ export interface CreateRoomData {
   state?: string;
   zipCode?: string;
   country?: string;
+  latitude?: number;
+  longitude?: number;
+  locationVerified?: boolean;
+  images?: string[];
+  primaryImageUrl?: string;
 }
 
 export interface UpdateRoomData extends Partial<CreateRoomData> {
@@ -98,10 +125,13 @@ export interface CreateEventData {
   startTime?: number;
   endTime?: number;
   isFlexibleTiming: boolean;
+  suggestedTimeSlots?: TimeSlot[];
   maxGuests?: number;
   preferredGender?: string[];
   minAge?: number;
   maxAge?: number;
+  eventImages?: string[];
+  primaryEventImageUrl?: string;
 }
 
 export interface UpdateEventData extends Partial<CreateEventData> {
@@ -130,7 +160,26 @@ export interface UpdateProfileData {
   dateOfBirth?: number;
   bio?: string;
   profileImageUrl?: string;
+  profileImages?: string[];
   location?: string;
+  latitude?: number;
+  longitude?: number;
+  locationSharing?: boolean;
+}
+
+export interface UpdateSettingsData {
+  pushNotifications?: boolean;
+  emailNotifications?: boolean;
+  messageNotifications?: boolean;
+  applicationNotifications?: boolean;
+  eventReminderNotifications?: boolean;
+  ageRangePreference?: {
+    min: number;
+    max: number;
+  };
+  maxDistance?: number;
+  genderPreferences?: string[];
+  theme?: "light" | "dark" | "system";
 }
 
 // Utility Types
@@ -149,6 +198,19 @@ export interface SearchFilters {
   hasFlexibleTiming?: boolean;
   startDateAfter?: number;
   startDateBefore?: number;
+  maxDistance?: number; // in miles
+  userLatitude?: number; // for distance calculations
+  userLongitude?: number;
+}
+
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
 }
 
 // Mobile/UI specific types
@@ -163,4 +225,38 @@ export interface NavigationState {
   currentTab: "explore" | "rooms" | "connections" | "profile";
   previousTab?: string;
   canGoBack: boolean;
+}
+
+// Geospatial types for "events near me"
+export interface DistanceResult<T> {
+  data: T;
+  distance: number; // in miles
+}
+
+export interface BoundingBox {
+  minLatitude: number;
+  maxLatitude: number;
+  minLongitude: number;
+  maxLongitude: number;
+}
+
+// Analytics and insights
+export interface UserInsights {
+  totalRoomsCreated: number;
+  totalEventsHosted: number;
+  totalApplicationsSent: number;
+  totalApplicationsReceived: number;
+  totalConnections: number;
+  averageEventAttendance: number;
+  preferredEventTypes: string[];
+  mostActiveHours: number[];
+  lastActiveAt: number;
+}
+
+// Real-time updates
+export interface RealtimeUpdate {
+  type: "message" | "application" | "connection" | "event";
+  data: any;
+  timestamp: number;
+  userId?: string;
 }

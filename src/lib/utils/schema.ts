@@ -60,7 +60,13 @@ export function calculateAge(dateOfBirth: number): number {
 }
 
 export function getDisplayName(user: UserWithProfile): string {
-  return user.profile?.displayName || user.name || user.email || "Anonymous";
+  return (
+    user.profile?.displayName ||
+    user.displayName ||
+    user.name ||
+    user.email ||
+    "Anonymous"
+  );
 }
 
 export function isProfileComplete(profile: UserProfile): boolean {
