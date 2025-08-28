@@ -5,9 +5,11 @@
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { browser } from "$app/environment";
-  import { ArrowLeft, Save, MapPin } from "lucide-svelte";
+  import { ArrowLeft, Save } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
-  import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
+  import RoomImageSection from "$lib/components/rooms/RoomImageSection.svelte";
+  import RoomDetailsForm from "$lib/components/rooms/RoomDetailsForm.svelte";
+  import RoomLocationForm from "$lib/components/rooms/RoomLocationForm.svelte";
 
   // Get convex client - only on client side
   let convex = browser ? useConvexClient() : null;
@@ -173,6 +175,39 @@
       { timeout: 10000, enableHighAccuracy: true },
     );
   }
+
+  // Event handlers for form components
+  function handleImagesChange(newImages: string[]) {
+    images = newImages;
+  }
+
+  function handleTitleChange(value: string) {
+    title = value;
+  }
+
+  function handleDescriptionChange(value: string) {
+    description = value;
+  }
+
+  function handleStreetAddressChange(value: string) {
+    streetAddress = value;
+  }
+
+  function handleCityChange(value: string) {
+    city = value;
+  }
+
+  function handleStateLocationChange(value: string) {
+    stateLocation = value;
+  }
+
+  function handleZipCodeChange(value: string) {
+    zipCode = value;
+  }
+
+  function handleCountryChange(value: string) {
+    country = value;
+  }
 </script>
 
 <svelte:head>
@@ -214,164 +249,31 @@
   <div class="mx-auto max-w-2xl px-4 py-6">
     <form onsubmit={handleSave} class="space-y-6">
       <!-- Room Photos -->
-      <div class="space-y-4">
-        <h2 class="text-lg font-semibold text-gray-900">Room Photos</h2>
-        <p class="text-sm text-gray-600">
-          Add photos of your room to help people see what makes it special. The
-          first photo will be the main room image.
-        </p>
-        <ImageUploader
-          {images}
-          maxImages={8}
-          onImagesChange={(newImages) => (images = newImages)}
-          label="Add Room Photos"
-        />
-      </div>
+      <RoomImageSection {images} onImagesChange={handleImagesChange} />
 
-      <!-- Basic Information -->
-      <div class="space-y-4">
-        <h2 class="text-lg font-semibold text-gray-900">Room Details</h2>
-
-        <div>
-          <label
-            for="title"
-            class="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Room Title *
-          </label>
-          <input
-            id="title"
-            type="text"
-            bind:value={title}
-            placeholder="e.g. Cozy Downtown Loft, Garden Patio Space"
-            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-            required
-          />
-        </div>
-
-        <div>
-          <label
-            for="description"
-            class="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Description
-          </label>
-          <textarea
-            id="description"
-            bind:value={description}
-            placeholder="Describe your room, its atmosphere, amenities, and what makes it special for events..."
-            rows="4"
-            class="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-          ></textarea>
-        </div>
-      </div>
+      <!-- Room Details -->
+      <RoomDetailsForm
+        {title}
+        {description}
+        onTitleChange={handleTitleChange}
+        onDescriptionChange={handleDescriptionChange}
+      />
 
       <!-- Location -->
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-gray-900">Location</h2>
-          <button
-            type="button"
-            onclick={getCurrentLocation}
-            disabled={locationLoading}
-            class="flex items-center space-x-2 rounded-lg bg-blue-100 px-3 py-2 text-sm text-blue-700 transition-colors hover:bg-blue-200 disabled:opacity-50"
-          >
-            {#if locationLoading}
-              <div
-                class="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"
-              ></div>
-            {:else}
-              <MapPin size={16} />
-            {/if}
-            <span>Use Current Location</span>
-          </button>
-        </div>
-
-        <div>
-          <label
-            for="streetAddress"
-            class="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Street Address *
-          </label>
-          <input
-            id="streetAddress"
-            type="text"
-            bind:value={streetAddress}
-            placeholder="123 Main Street"
-            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-            required
-          />
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              for="city"
-              class="mb-1 block text-sm font-medium text-gray-700"
-            >
-              City *
-            </label>
-            <input
-              id="city"
-              type="text"
-              bind:value={city}
-              placeholder="San Francisco"
-              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              for="stateLocation"
-              class="mb-2 block text-sm font-medium text-gray-700"
-            >
-              State / Province
-            </label>
-            <input
-              id="stateLocation"
-              type="text"
-              bind:value={stateLocation}
-              placeholder="CA"
-              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              for="zipCode"
-              class="mb-1 block text-sm font-medium text-gray-700"
-            >
-              ZIP/Postal Code
-            </label>
-            <input
-              id="zipCode"
-              type="text"
-              bind:value={zipCode}
-              placeholder="94102"
-              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label
-              for="country"
-              class="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Country
-            </label>
-            <input
-              id="country"
-              type="text"
-              bind:value={country}
-              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-            />
-          </div>
-        </div>
-      </div>
+      <RoomLocationForm
+        {streetAddress}
+        {city}
+        {stateLocation}
+        {zipCode}
+        {country}
+        {locationLoading}
+        onStreetAddressChange={handleStreetAddressChange}
+        onCityChange={handleCityChange}
+        onStateLocationChange={handleStateLocationChange}
+        onZipCodeChange={handleZipCodeChange}
+        onCountryChange={handleCountryChange}
+        onGetCurrentLocation={getCurrentLocation}
+      />
 
       <!-- Submit Button (Mobile) -->
       <div class="pt-6 lg:hidden">

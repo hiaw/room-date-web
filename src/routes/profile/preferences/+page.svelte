@@ -4,9 +4,12 @@
   import { api } from "../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { ArrowLeft, Save, Bell, Heart, Palette } from "lucide-svelte";
+  import { ArrowLeft, Save } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
+  import NotificationPreferences from "$lib/components/profile/NotificationPreferences.svelte";
+  import DiscoveryPreferences from "$lib/components/profile/DiscoveryPreferences.svelte";
+  import AppearancePreferences from "$lib/components/profile/AppearancePreferences.svelte";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -94,6 +97,43 @@
       genderPreferences = [...genderPreferences, gender];
     }
   }
+
+  // Event handlers for form components
+  function handlePushNotificationsChange(value: boolean) {
+    pushNotifications = value;
+  }
+
+  function handleEmailNotificationsChange(value: boolean) {
+    emailNotifications = value;
+  }
+
+  function handleMessageNotificationsChange(value: boolean) {
+    messageNotifications = value;
+  }
+
+  function handleApplicationNotificationsChange(value: boolean) {
+    applicationNotifications = value;
+  }
+
+  function handleEventReminderNotificationsChange(value: boolean) {
+    eventReminderNotifications = value;
+  }
+
+  function handleAgeRangeMinChange(value: number) {
+    ageRangeMin = value;
+  }
+
+  function handleAgeRangeMaxChange(value: number) {
+    ageRangeMax = value;
+  }
+
+  function handleMaxDistanceChange(value: number) {
+    maxDistance = value;
+  }
+
+  function handleThemeChange(value: "light" | "dark" | "system") {
+    theme = value;
+  }
 </script>
 
 <svelte:head>
@@ -147,246 +187,33 @@
     {:else}
       <form onsubmit={handleSave} class="mx-auto max-w-2xl space-y-6">
         <!-- Notifications Section -->
-        <div
-          class="rounded-3xl border border-white/50 bg-white/90 shadow-sm backdrop-blur-sm"
-        >
-          <div class="border-b border-gray-100 px-8 py-6">
-            <h3
-              class="flex items-center space-x-2 text-lg font-semibold text-gray-900"
-            >
-              <Bell size={20} />
-              <span>Notifications</span>
-            </h3>
-            <p class="mt-1 text-sm text-gray-600">
-              Choose what notifications you'd like to receive
-            </p>
-          </div>
-
-          <div class="space-y-4 p-8">
-            <label class="flex items-center justify-between">
-              <div>
-                <span class="font-medium text-gray-900">Push Notifications</span
-                >
-                <p class="text-sm text-gray-600">Get notified on your device</p>
-              </div>
-              <input
-                type="checkbox"
-                bind:checked={pushNotifications}
-                class="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-            </label>
-
-            <label class="flex items-center justify-between">
-              <div>
-                <span class="font-medium text-gray-900"
-                  >Email Notifications</span
-                >
-                <p class="text-sm text-gray-600">Receive updates via email</p>
-              </div>
-              <input
-                type="checkbox"
-                bind:checked={emailNotifications}
-                class="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-            </label>
-
-            <label class="flex items-center justify-between">
-              <div>
-                <span class="font-medium text-gray-900"
-                  >Message Notifications</span
-                >
-                <p class="text-sm text-gray-600">
-                  New messages from connections
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                bind:checked={messageNotifications}
-                class="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-            </label>
-
-            <label class="flex items-center justify-between">
-              <div>
-                <span class="font-medium text-gray-900"
-                  >Application Notifications</span
-                >
-                <p class="text-sm text-gray-600">
-                  When someone applies to your events
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                bind:checked={applicationNotifications}
-                class="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-            </label>
-
-            <label class="flex items-center justify-between">
-              <div>
-                <span class="font-medium text-gray-900">Event Reminders</span>
-                <p class="text-sm text-gray-600">
-                  Reminders for upcoming events
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                bind:checked={eventReminderNotifications}
-                class="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-            </label>
-          </div>
-        </div>
+        <NotificationPreferences
+          {pushNotifications}
+          {emailNotifications}
+          {messageNotifications}
+          {applicationNotifications}
+          {eventReminderNotifications}
+          onPushNotificationsChange={handlePushNotificationsChange}
+          onEmailNotificationsChange={handleEmailNotificationsChange}
+          onMessageNotificationsChange={handleMessageNotificationsChange}
+          onApplicationNotificationsChange={handleApplicationNotificationsChange}
+          onEventReminderNotificationsChange={handleEventReminderNotificationsChange}
+        />
 
         <!-- Discovery Preferences Section -->
-        <div
-          class="rounded-3xl border border-white/50 bg-white/90 shadow-sm backdrop-blur-sm"
-        >
-          <div class="border-b border-gray-100 px-8 py-6">
-            <h3
-              class="flex items-center space-x-2 text-lg font-semibold text-gray-900"
-            >
-              <Heart size={20} />
-              <span>Discovery Preferences</span>
-            </h3>
-            <p class="mt-1 text-sm text-gray-600">
-              Help us show you relevant events and connections
-            </p>
-          </div>
-
-          <div class="space-y-6 p-8">
-            <!-- Age Range -->
-            <div>
-              <div class="block font-medium text-gray-900">Age Range</div>
-              <p class="mb-4 text-sm text-gray-600">
-                Show events for people between {ageRangeMin} and {ageRangeMax} years
-                old
-              </p>
-              <div class="space-y-4">
-                <div>
-                  <label for="age-range-min" class="block text-sm text-gray-700"
-                    >Minimum Age: {ageRangeMin}</label
-                  >
-                  <input
-                    id="age-range-min"
-                    type="range"
-                    min="18"
-                    max="100"
-                    bind:value={ageRangeMin}
-                    class="mt-1 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
-                    style="background-image: linear-gradient(to right, rgb(147 51 234), rgb(147 51 234));"
-                  />
-                </div>
-                <div>
-                  <label for="age-range-max" class="block text-sm text-gray-700"
-                    >Maximum Age: {ageRangeMax}</label
-                  >
-                  <input
-                    id="age-range-max"
-                    type="range"
-                    min="18"
-                    max="100"
-                    bind:value={ageRangeMax}
-                    class="mt-1 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
-                    style="background-image: linear-gradient(to right, rgb(147 51 234), rgb(147 51 234));"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Distance -->
-            <div>
-              <label for="max-distance" class="block font-medium text-gray-900"
-                >Maximum Distance</label
-              >
-              <p class="mb-4 text-sm text-gray-600">
-                Show events within {maxDistance} miles from your location
-              </p>
-              <input
-                id="max-distance"
-                type="range"
-                min="5"
-                max="100"
-                bind:value={maxDistance}
-                class="mt-1 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
-                style="background-image: linear-gradient(to right, rgb(147 51 234), rgb(147 51 234));"
-              />
-              <div class="mt-1 flex justify-between text-xs text-gray-500">
-                <span>5 miles</span>
-                <span>100 miles</span>
-              </div>
-            </div>
-
-            <!-- Gender Preferences -->
-            <fieldset>
-              <legend class="block font-medium text-gray-900">
-                Gender Preferences
-              </legend>
-              <p class="mb-4 text-sm text-gray-600">
-                Show events from people of these genders (leave empty for all)
-              </p>
-              <div class="grid grid-cols-2 gap-3">
-                {#each ["male", "female", "non_binary", "other"] as gender (gender)}
-                  <button
-                    type="button"
-                    onclick={() => toggleGenderPreference(gender)}
-                    class={`rounded-xl px-4 py-3 text-left transition-colors ${
-                      genderPreferences.includes(gender)
-                        ? "bg-purple-100 text-purple-700 ring-2 ring-purple-600"
-                        : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    {gender === "non_binary"
-                      ? "Non-binary"
-                      : gender.charAt(0).toUpperCase() + gender.slice(1)}
-                  </button>
-                {/each}
-              </div>
-            </fieldset>
-          </div>
-        </div>
+        <DiscoveryPreferences
+          {ageRangeMin}
+          {ageRangeMax}
+          {maxDistance}
+          {genderPreferences}
+          onAgeRangeMinChange={handleAgeRangeMinChange}
+          onAgeRangeMaxChange={handleAgeRangeMaxChange}
+          onMaxDistanceChange={handleMaxDistanceChange}
+          onGenderToggle={toggleGenderPreference}
+        />
 
         <!-- Appearance Section -->
-        <div
-          class="rounded-3xl border border-white/50 bg-white/90 shadow-sm backdrop-blur-sm"
-        >
-          <div class="border-b border-gray-100 px-8 py-6">
-            <h3
-              class="flex items-center space-x-2 text-lg font-semibold text-gray-900"
-            >
-              <Palette size={20} />
-              <span>Appearance</span>
-            </h3>
-            <p class="mt-1 text-sm text-gray-600">
-              Customize how the app looks
-            </p>
-          </div>
-
-          <div class="space-y-4 p-8">
-            <fieldset>
-              <legend class="block font-medium text-gray-900">Theme</legend>
-              <p class="mb-4 text-sm text-gray-600">
-                Choose your preferred theme
-              </p>
-              <div class="grid grid-cols-3 gap-3">
-                {#each [["light", "Light"], ["dark", "Dark"], ["system", "System"]] as [value, label] (value)}
-                  <button
-                    type="button"
-                    onclick={() =>
-                      (theme = value as "light" | "dark" | "system")}
-                    class={`rounded-xl px-4 py-3 text-center transition-colors ${
-                      theme === value
-                        ? "bg-purple-100 text-purple-700 ring-2 ring-purple-600"
-                        : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                {/each}
-              </div>
-            </fieldset>
-          </div>
-        </div>
+        <AppearancePreferences {theme} onThemeChange={handleThemeChange} />
 
         <!-- Save Button (Mobile) -->
         <div class="md:hidden">

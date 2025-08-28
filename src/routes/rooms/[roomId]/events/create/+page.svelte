@@ -7,8 +7,12 @@
   import { page } from "$app/stores";
   import { ArrowLeft, Save } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
-  import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
+  import EventRoomContext from "$lib/components/events/EventRoomContext.svelte";
+  import EventImageSection from "$lib/components/events/EventImageSection.svelte";
+  import EventDetailsForm from "$lib/components/events/EventDetailsForm.svelte";
+  import EventTimingForm from "$lib/components/events/EventTimingForm.svelte";
+  import EventGuestPreferences from "$lib/components/events/EventGuestPreferences.svelte";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const roomId = $page.params.roomId as any;
@@ -166,6 +170,51 @@
     }
   }
 
+  // Event handlers for form components
+  function handleTitleChange(value: string) {
+    title = value;
+  }
+
+  function handleDescriptionChange(value: string) {
+    description = value;
+  }
+
+  function handleImagesChange(images: string[]) {
+    eventImages = images;
+  }
+
+  function handleStartDateChange(value: string) {
+    startDate = value;
+  }
+
+  function handleStartTimeChange(value: string) {
+    startTime = value;
+  }
+
+  function handleEndDateChange(value: string) {
+    endDate = value;
+  }
+
+  function handleEndTimeChange(value: string) {
+    endTime = value;
+  }
+
+  function handleFlexibleTimingChange(value: boolean) {
+    isFlexibleTiming = value;
+  }
+
+  function handleMaxGuestsChange(value: number | undefined) {
+    maxGuests = value;
+  }
+
+  function handleMinAgeChange(value: number | undefined) {
+    minAge = value;
+  }
+
+  function handleMaxAgeChange(value: number | undefined) {
+    maxAge = value;
+  }
+
   // Set default dates (today and tomorrow)
   onMount(() => {
     const now = Date.now();
@@ -229,252 +278,46 @@
   {:else}
     <div class="mx-auto max-w-2xl px-4 py-6">
       <!-- Room Context -->
-      <div
-        class="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
-      >
-        <div class="flex items-center space-x-3">
-          {#if room.primaryImageUrl}
-            <img
-              src={room.primaryImageUrl}
-              alt={room.title}
-              class="h-12 w-12 rounded-lg object-cover"
-            />
-          {:else}
-            <div
-              class="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100"
-            >
-              <span class="font-medium text-purple-600"
-                >{room.title.charAt(0)}</span
-              >
-            </div>
-          {/if}
-          <div>
-            <h3 class="font-medium text-gray-900">{room.title}</h3>
-            <p class="text-sm text-gray-600">{room.city}, {room.state}</p>
-          </div>
-        </div>
-      </div>
+      <EventRoomContext {room} />
 
       <form onsubmit={handleSave} class="space-y-6">
         <!-- Event Photos -->
-        <div class="space-y-4">
-          <h2 class="text-lg font-semibold text-gray-900">Event Photos</h2>
-          <p class="text-sm text-gray-600">
-            Add photos that capture the vibe of your event. These can be
-            different from room photos.
-          </p>
-          <ImageUploader
-            images={eventImages}
-            maxImages={6}
-            onImagesChange={(newImages) => (eventImages = newImages)}
-            label="Add Event Photos"
-          />
-        </div>
+        <EventImageSection {eventImages} onImagesChange={handleImagesChange} />
 
-        <!-- Basic Information -->
-        <div class="space-y-4">
-          <h2 class="text-lg font-semibold text-gray-900">Event Details</h2>
-
-          <div>
-            <label
-              for="title"
-              class="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Event Title *
-            </label>
-            <input
-              id="title"
-              type="text"
-              bind:value={title}
-              placeholder="e.g. Wine & Paint Night, Game Night, Dinner Party"
-              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              for="description"
-              class="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
-              bind:value={description}
-              placeholder="What's the event about? What should people expect? What should they bring?"
-              rows="4"
-              class="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-            ></textarea>
-          </div>
-        </div>
+        <!-- Event Details -->
+        <EventDetailsForm
+          {title}
+          {description}
+          onTitleChange={handleTitleChange}
+          onDescriptionChange={handleDescriptionChange}
+        />
 
         <!-- Timing -->
-        <div class="space-y-4">
-          <h2 class="text-lg font-semibold text-gray-900">Timing</h2>
-
-          <div class="flex items-center space-x-3">
-            <input
-              id="flexible-timing"
-              type="checkbox"
-              bind:checked={isFlexibleTiming}
-              class="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-            />
-            <label for="flexible-timing" class="text-sm text-gray-700">
-              Flexible timing (guests can suggest times)
-            </label>
-          </div>
-
-          {#if !isFlexibleTiming}
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  for="startDate"
-                  class="mb-1 block text-sm font-medium text-gray-700"
-                >
-                  Start Date *
-                </label>
-                <input
-                  id="startDate"
-                  type="date"
-                  bind:value={startDate}
-                  min={todayDateString()}
-                  class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-                  required={!isFlexibleTiming}
-                />
-              </div>
-
-              <div>
-                <label
-                  for="startTime"
-                  class="mb-1 block text-sm font-medium text-gray-700"
-                >
-                  Start Time *
-                </label>
-                <input
-                  id="startTime"
-                  type="time"
-                  bind:value={startTime}
-                  class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-                  required={!isFlexibleTiming}
-                />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  for="endDate"
-                  class="mb-1 block text-sm font-medium text-gray-700"
-                >
-                  End Date
-                </label>
-                <input
-                  id="endDate"
-                  type="date"
-                  bind:value={endDate}
-                  min={startDate || todayDateString()}
-                  class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label
-                  for="endTime"
-                  class="mb-1 block text-sm font-medium text-gray-700"
-                >
-                  End Time
-                </label>
-                <input
-                  id="endTime"
-                  type="time"
-                  bind:value={endTime}
-                  class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-                />
-              </div>
-            </div>
-          {/if}
-        </div>
+        <EventTimingForm
+          {startDate}
+          {startTime}
+          {endDate}
+          {endTime}
+          {isFlexibleTiming}
+          todayDateString={todayDateString()}
+          onStartDateChange={handleStartDateChange}
+          onStartTimeChange={handleStartTimeChange}
+          onEndDateChange={handleEndDateChange}
+          onEndTimeChange={handleEndTimeChange}
+          onFlexibleTimingChange={handleFlexibleTimingChange}
+        />
 
         <!-- Guest Preferences -->
-        <div class="space-y-4">
-          <h2 class="text-lg font-semibold text-gray-900">Guest Preferences</h2>
-
-          <div>
-            <label
-              for="maxGuests"
-              class="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Maximum Guests
-            </label>
-            <input
-              id="maxGuests"
-              type="number"
-              bind:value={maxGuests}
-              min="1"
-              max="50"
-              placeholder="Leave empty for no limit"
-              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                for="minAge"
-                class="mb-1 block text-sm font-medium text-gray-700"
-              >
-                Minimum Age
-              </label>
-              <input
-                id="minAge"
-                type="number"
-                bind:value={minAge}
-                min="18"
-                max="100"
-                class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label
-                for="maxAge"
-                class="mb-1 block text-sm font-medium text-gray-700"
-              >
-                Maximum Age
-              </label>
-              <input
-                id="maxAge"
-                type="number"
-                bind:value={maxAge}
-                min="18"
-                max="100"
-                class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <fieldset>
-            <legend class="mb-2 block text-sm font-medium text-gray-700">
-              Gender Preferences
-            </legend>
-            <div class="flex flex-wrap gap-2">
-              {#each [{ value: "male", label: "Male" }, { value: "female", label: "Female" }, { value: "non_binary", label: "Non-Binary" }, { value: "any", label: "Any" }] as option (option.value)}
-                <button
-                  type="button"
-                  onclick={() => toggleGender(option.value)}
-                  class="rounded-full border-2 px-4 py-2 text-sm transition-colors {preferredGender.includes(
-                    option.value,
-                  )
-                    ? 'border-purple-500 bg-purple-100 text-purple-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300'}"
-                >
-                  {option.label}
-                </button>
-              {/each}
-            </div>
-          </fieldset>
-        </div>
+        <EventGuestPreferences
+          {maxGuests}
+          {minAge}
+          {maxAge}
+          {preferredGender}
+          onMaxGuestsChange={handleMaxGuestsChange}
+          onMinAgeChange={handleMinAgeChange}
+          onMaxAgeChange={handleMaxAgeChange}
+          onGenderToggle={toggleGender}
+        />
 
         <!-- Submit Button (Mobile) -->
         <div class="pt-6 lg:hidden">
