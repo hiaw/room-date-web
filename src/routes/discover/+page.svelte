@@ -4,10 +4,22 @@
   import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { Search, MapPin, Calendar, Filter, Plus } from "lucide-svelte";
-  import EventCard from "$lib/components/EventCard.svelte";
+  import { MapPin, Calendar, Plus } from "lucide-svelte";
 
-  import EventCardSkeleton from "$lib/components/ui/EventCardSkeleton.svelte";
+  // Import our extracted components
+  import EventSearchBar from "$lib/components/discover/EventSearchBar.svelte";
+  import DiscoverFilters from "$lib/components/discover/DiscoverFilters.svelte";
+  import DiscoverEventGrid from "$lib/components/discover/DiscoverEventGrid.svelte";
+
+  // Import the location service and filter store
+  import {
+    getCurrentLocation,
+    getDefaultLocation,
+  } from "$lib/services/location-service.js";
+  import { discoverFilters } from "$lib/stores/discover-filters.js";
+
+  import type { EventData } from "$lib/types/components";
+  import type { LocationState } from "$lib/types/pages";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -16,95 +28,20 @@
     }
   });
 
-  import type {
-    LocationState,
-    AgeRange,
-    GuestCountRange,
-    DateRange,
-    SortBy,
-    SortOrder,
-    ActivityLevel,
-    EventCategory,
-    ActivityLevelOption,
-  } from "$lib/types/pages";
-
-  import type { EventData } from "$lib/types/components";
-
   // Location state
   let userLocation = $state<LocationState | null>(null);
   let locationError = $state<string | null>(null);
 
-  // Search and filter state
-  let searchQuery = $state("");
-  let showFilters = $state(false);
-  let selectedGenders: string[] = $state([]);
-  let ageRange = $state<AgeRange>({ min: 18, max: 65 });
-  let maxDistance = $state(25);
-  let selectedCategories: string[] = $state([]);
-  let selectedActivityLevel = $state<ActivityLevel>(null);
-  let selectedDateRange = $state<DateRange>("any");
-  let showPastEvents = $state(false);
-
-  // Advanced filters
-  let guestCountRange = $state<GuestCountRange>({ min: 1, max: 50 });
-  let sortBy = $state<SortBy>("distance");
-  let sortOrder = $state<SortOrder>("asc");
-
-  // Event categories
-  const eventCategories: EventCategory[] = [
-    { value: "social", label: "Social", emoji: "🎉" },
-    { value: "dining", label: "Dining", emoji: "🍽️" },
-    { value: "games", label: "Games", emoji: "🎮" },
-    { value: "arts", label: "Arts & Culture", emoji: "🎨" },
-    { value: "fitness", label: "Fitness", emoji: "💪" },
-    { value: "professional", label: "Networking", emoji: "💼" },
-    { value: "outdoor", label: "Outdoor", emoji: "🌿" },
-    { value: "music", label: "Music", emoji: "🎵" },
-  ];
-
-  const activityLevels: ActivityLevelOption[] = [
-    {
-      value: "low",
-      label: "Chill",
-      description: "Relaxed, low-key activities",
-    },
-    { value: "medium", label: "Active", description: "Moderate engagement" },
-    {
-      value: "high",
-      label: "High Energy",
-      description: "Active, energetic events",
-    },
-  ];
-
-  // Get user's location on mount
-  onMount(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          userLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          locationError = null;
-        },
-        (error) => {
-          console.error("Location error:", error);
-          locationError =
-            "Could not get your location. Using default location.";
-          // Fall back to San Francisco
-          userLocation = {
-            latitude: 37.7749,
-            longitude: -122.4194,
-          };
-        },
-        { timeout: 10000, enableHighAccuracy: true },
-      );
-    } else {
-      locationError = "Geolocation is not supported. Using default location.";
-      userLocation = {
-        latitude: 37.7749,
-        longitude: -122.4194,
-      };
+  // Get user's location on mount using the location service
+  onMount(async () => {
+    try {
+      const location = await getCurrentLocation();
+      userLocation = location;
+      locationError = null;
+    } catch (error) {
+      console.error("Location error:", error);
+      locationError = "Could not get your location. Using default location.";
+      userLocation = getDefaultLocation();
     }
   });
 
@@ -114,7 +51,7 @@
       ? useQuery(api.events.getEventsNearUser, {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
-          radiusMiles: maxDistance,
+          radiusMiles: $discoverFilters.maxDistance,
           limit: 20,
         })
       : null,
@@ -123,182 +60,6 @@
   let events = $derived((eventsQueryResult?.data ?? []) as EventData[]);
   let loading = $derived(eventsQueryResult?.isLoading ?? true);
   let error = $derived(eventsQueryResult?.error);
-
-  // Debounced search to prevent excessive filtering
-  let searchTimeout: ReturnType<typeof setTimeout>;
-  function handleSearch(query: string) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      searchQuery = query.toLowerCase();
-    }, 300); // 300ms debounce
-  }
-
-  function toggleFilter() {
-    showFilters = !showFilters;
-  }
-
-  // Memoized filter functions for better performance
-  let searchRegex = $derived(
-    searchQuery
-      ? new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
-      : null,
-  );
-
-  // Pre-compute date ranges for better performance
-  let todayRange = $derived(() => {
-    const now = Date.now();
-    const today = new Date(now);
-    const todayStart = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
-    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-    return { start: todayStart, end: todayEnd };
-  });
-
-  let weekRange = $derived(() => {
-    const now = Date.now();
-    const today = new Date(now);
-    const todayStart = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
-    const weekStart = new Date(
-      todayStart.getTime() - todayStart.getDay() * 24 * 60 * 60 * 1000,
-    );
-    const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return { start: weekStart, end: weekEnd };
-  });
-
-  let monthRange = $derived(() => {
-    const now = Date.now();
-    const today = new Date(now);
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    return { start: monthStart, end: monthEnd };
-  });
-
-  // Filter events based on search and filters
-  let filteredEvents = $derived(() => {
-    let filtered = events.filter((event: EventData) => {
-      if (!event) return false;
-
-      // Search filter - use regex for better performance
-      if (searchRegex) {
-        const searchableText = [
-          event.title,
-          event.description,
-          event.roomTitle,
-          event.roomDescription,
-          event.category,
-          ...(event.tags || []),
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        if (!searchRegex.test(searchableText)) return false;
-      }
-
-      // Gender filter
-      if (selectedGenders.length > 0 && event.preferredGender) {
-        const hasMatchingGender = selectedGenders.some((gender) =>
-          event.preferredGender?.includes(gender),
-        );
-        if (!hasMatchingGender) return false;
-      }
-
-      // Age filter (if event specifies age requirements)
-      if (event.minAge && ageRange.max < event.minAge) return false;
-      if (event.maxAge && ageRange.min > event.maxAge) return false;
-
-      // Category filter
-      if (selectedCategories.length > 0 && event.category) {
-        if (!selectedCategories.includes(event.category)) return false;
-      }
-
-      // Activity level filter
-      if (
-        selectedActivityLevel &&
-        event.activityLevel !== selectedActivityLevel
-      ) {
-        return false;
-      }
-
-      // Date range filter - use pre-computed ranges
-      if (selectedDateRange !== "any" && event.startTime) {
-        const eventDate = new Date(event.startTime);
-
-        switch (selectedDateRange) {
-          case "today": {
-            const todayRangeObj = todayRange();
-            if (
-              eventDate < todayRangeObj.start ||
-              eventDate >= todayRangeObj.end
-            )
-              return false;
-            break;
-          }
-          case "this_week": {
-            const weekRangeObj = weekRange();
-            if (eventDate < weekRangeObj.start || eventDate >= weekRangeObj.end)
-              return false;
-            break;
-          }
-          case "this_month": {
-            const monthRangeObj = monthRange();
-            if (
-              eventDate < monthRangeObj.start ||
-              eventDate >= monthRangeObj.end
-            )
-              return false;
-            break;
-          }
-        }
-      }
-
-      // Past events filter
-      if (!showPastEvents && event.startTime) {
-        const eventDate = new Date(event.startTime);
-        const now = new Date();
-        if (eventDate < now) return false;
-      }
-
-      // Guest count filter
-      if (event.maxGuests) {
-        if (
-          event.maxGuests < guestCountRange.min ||
-          event.maxGuests > guestCountRange.max
-        )
-          return false;
-      }
-
-      return true;
-    });
-
-    // Sort filtered events
-    return filtered.sort((a: EventData, b: EventData) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case "distance":
-          comparison = (a.distance || 0) - (b.distance || 0);
-          break;
-        case "date":
-          comparison = (a.startTime || 0) - (b.startTime || 0);
-          break;
-        case "popularity":
-          comparison = (b.applicationCount || 0) - (a.applicationCount || 0);
-          break;
-        case "newest":
-          comparison = (b._creationTime || 0) - (a._creationTime || 0);
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-  });
 </script>
 
 <svelte:head>
@@ -318,31 +79,11 @@
           <h1 class="text-2xl font-bold text-gray-900">Discover</h1>
           <p class="text-sm text-gray-600">Find amazing events near you</p>
         </div>
-        <button
-          onclick={toggleFilter}
-          class="micro-bounce focus-ring rounded-xl bg-purple-100 p-2 text-purple-600 transition-colors hover:bg-purple-200"
-          aria-label="Filters"
-        >
-          <Filter size={20} class="icon-spin" />
-        </button>
+        <DiscoverFilters />
       </div>
 
-      <!-- Search Bar -->
-      <div class="relative">
-        <Search
-          class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400"
-        />
-        <input
-          type="text"
-          placeholder="Search events, rooms, or activities..."
-          class="input-focus w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pr-4 pl-10 transition-all duration-200 focus:outline-none"
-          bind:value={searchQuery}
-          oninput={(e) => {
-            const target = e.target as HTMLInputElement;
-            handleSearch(target.value);
-          }}
-        />
-      </div>
+      <!-- Search Bar Component -->
+      <EventSearchBar />
 
       <!-- Location Status -->
       {#if locationError}
@@ -357,7 +98,8 @@
           <div class="flex items-center">
             <MapPin class="mr-2 h-4 w-4 text-green-500" />
             <span class="text-sm text-green-700"
-              >Showing events within {maxDistance} miles of your location</span
+              >Showing events within {$discoverFilters.maxDistance} miles of your
+              location</span
             >
           </div>
         </div>
@@ -369,285 +111,16 @@
           </div>
         </div>
       {/if}
-
-      <!-- Filter Panel -->
-      {#if showFilters}
-        <div
-          class="animate-in slide-in-from-top-2 mt-4 space-y-6 rounded-xl border border-gray-200 bg-gray-50 p-4 duration-300"
-        >
-          <!-- Distance Filter -->
-          <div>
-            <label
-              for="distance-slider"
-              class="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Distance: {maxDistance} miles
-            </label>
-            <input
-              id="distance-slider"
-              type="range"
-              min="1"
-              max="50"
-              bind:value={maxDistance}
-              class="slider h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
-            />
-          </div>
-
-          <!-- Event Categories -->
-          <div>
-            <span class="mb-3 block text-sm font-medium text-gray-700">
-              Event Categories
-            </span>
-            <div class="grid grid-cols-2 gap-2">
-              {#each eventCategories as category (category.value)}
-                <button
-                  type="button"
-                  onclick={() => {
-                    if (selectedCategories.includes(category.value)) {
-                      selectedCategories = selectedCategories.filter(
-                        (c) => c !== category.value,
-                      );
-                    } else {
-                      selectedCategories = [
-                        ...selectedCategories,
-                        category.value,
-                      ];
-                    }
-                  }}
-                  class="micro-bounce focus-ring flex items-center space-x-2 rounded-lg border-2 px-3 py-2 text-sm transition-all duration-200 {selectedCategories.includes(
-                    category.value,
-                  )
-                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
-                >
-                  <span class="transition-transform duration-200"
-                    >{category.emoji}</span
-                  >
-                  <span>{category.label}</span>
-                </button>
-              {/each}
-            </div>
-          </div>
-
-          <!-- Activity Level -->
-          <div>
-            <span class="mb-3 block text-sm font-medium text-gray-700">
-              Activity Level
-            </span>
-            <div class="space-y-2">
-              {#each activityLevels as level (level.value)}
-                <button
-                  type="button"
-                  onclick={() => {
-                    selectedActivityLevel =
-                      selectedActivityLevel === level.value
-                        ? null
-                        : level.value;
-                  }}
-                  class="micro-bounce focus-ring flex w-full items-start space-x-3 rounded-lg border-2 px-3 py-2 text-left transition-all duration-200 {selectedActivityLevel ===
-                  level.value
-                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
-                >
-                  <div class="flex-1">
-                    <div class="font-medium">{level.label}</div>
-                    <div class="text-xs opacity-75">{level.description}</div>
-                  </div>
-                </button>
-              {/each}
-            </div>
-          </div>
-
-          <!-- Date Range -->
-          <div>
-            <span class="mb-3 block text-sm font-medium text-gray-700">
-              When
-            </span>
-            <div class="grid grid-cols-2 gap-2">
-              {#each [{ value: "any" as DateRange, label: "Anytime" }, { value: "today" as DateRange, label: "Today" }, { value: "this_week" as DateRange, label: "This Week" }, { value: "this_month" as DateRange, label: "This Month" }] as option (option.value)}
-                <button
-                  type="button"
-                  onclick={() => (selectedDateRange = option.value)}
-                  class="micro-bounce focus-ring rounded-lg border-2 px-3 py-2 text-sm transition-all duration-200 {selectedDateRange ===
-                  option.value
-                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
-                >
-                  {option.label}
-                </button>
-              {/each}
-            </div>
-          </div>
-
-          <!-- Age Range -->
-          <div>
-            <span class="mb-2 block text-sm font-medium text-gray-700">
-              Age Range: {ageRange.min} - {ageRange.max}
-            </span>
-            <div class="flex items-center space-x-4">
-              <input
-                type="number"
-                min="18"
-                max="100"
-                bind:value={ageRange.min}
-                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
-                placeholder="Min"
-                aria-label="Minimum age"
-              />
-              <span class="text-gray-500">to</span>
-              <input
-                type="number"
-                min="18"
-                max="100"
-                bind:value={ageRange.max}
-                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
-                placeholder="Max"
-                aria-label="Maximum age"
-              />
-            </div>
-          </div>
-
-          <!-- Gender Preferences -->
-          <div>
-            <span class="mb-2 block text-sm font-medium text-gray-700"
-              >Gender Preferences</span
-            >
-            <div class="flex flex-wrap gap-2">
-              {#each ["male", "female", "non_binary", "any"] as gender (gender)}
-                <button
-                  type="button"
-                  onclick={() => {
-                    if (selectedGenders.includes(gender)) {
-                      selectedGenders = selectedGenders.filter(
-                        (g) => g !== gender,
-                      );
-                    } else {
-                      selectedGenders = [...selectedGenders, gender];
-                    }
-                  }}
-                  class="micro-bounce focus-ring rounded-full border-2 px-3 py-1 text-sm transition-all duration-200 {selectedGenders.includes(
-                    gender,
-                  )
-                    ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
-                    : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
-                >
-                  {gender
-                    .replace("_", " ")
-                    .replace(/\b\w/g, (l) => l.toUpperCase())}
-                </button>
-              {/each}
-            </div>
-          </div>
-
-          <!-- Guest Count Filter -->
-          <div>
-            <span class="mb-2 block text-sm font-medium text-gray-700">
-              Guest Count: {guestCountRange.min} - {guestCountRange.max}
-            </span>
-            <div class="flex items-center space-x-4">
-              <input
-                type="number"
-                min="1"
-                max="50"
-                bind:value={guestCountRange.min}
-                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
-                placeholder="Min"
-                aria-label="Minimum guest count"
-              />
-              <span class="text-gray-500">to</span>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                bind:value={guestCountRange.max}
-                class="w-20 rounded-lg border border-gray-300 p-2 text-sm"
-                placeholder="Max"
-                aria-label="Maximum guest count"
-              />
-            </div>
-          </div>
-
-          <!-- Sort Options -->
-          <div>
-            <span class="mb-3 block text-sm font-medium text-gray-700">
-              Sort By
-            </span>
-            <div class="space-y-2">
-              {#each [{ value: "distance" as SortBy, label: "Distance" }, { value: "date" as SortBy, label: "Date" }, { value: "popularity" as SortBy, label: "Popularity" }, { value: "newest" as SortBy, label: "Newest First" }] as option (option.value)}
-                <div class="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onclick={() => (sortBy = option.value)}
-                    class="micro-bounce focus-ring flex-1 rounded-lg border-2 px-3 py-2 text-left text-sm transition-all duration-200 {sortBy ===
-                    option.value
-                      ? 'scale-105 border-purple-500 bg-purple-100 text-purple-700'
-                      : 'border-gray-300 bg-white text-gray-600 hover:scale-105 hover:border-purple-300'}"
-                  >
-                    {option.label}
-                  </button>
-                  {#if sortBy === option.value}
-                    <button
-                      type="button"
-                      onclick={() =>
-                        (sortOrder = sortOrder === "asc" ? "desc" : "asc")}
-                      class="ml-2 cursor-pointer rounded border-none bg-transparent px-2 py-1 text-xs hover:text-purple-800"
-                      aria-label="Toggle sort order"
-                    >
-                      {sortOrder === "asc" ? "↑" : "↓"}
-                    </button>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          </div>
-
-          <!-- Advanced Options -->
-          <div class="border-t border-gray-200 pt-4">
-            <div class="flex items-center space-x-3">
-              <input
-                id="show-past-events"
-                type="checkbox"
-                bind:checked={showPastEvents}
-                class="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-              />
-              <label for="show-past-events" class="text-sm text-gray-700">
-                Show past events
-              </label>
-            </div>
-          </div>
-
-          <!-- Clear Filters -->
-          <div class="border-t border-gray-200 pt-4">
-            <button
-              type="button"
-              onclick={() => {
-                selectedCategories = [];
-                selectedActivityLevel = null;
-                selectedDateRange = "any";
-                selectedGenders = [];
-                ageRange = { min: 18, max: 65 };
-                maxDistance = 25;
-                showPastEvents = false;
-                guestCountRange = { min: 1, max: 50 };
-                sortBy = "distance";
-                sortOrder = "asc";
-              }}
-              class="btn-hover-lift focus-ring w-full rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 transition-all duration-200"
-            >
-              Clear All Filters
-            </button>
-          </div>
-        </div>
-      {/if}
     </div>
   </div>
 
-  <!-- Events List -->
+  <!-- Events Grid Component -->
   <div class="px-4 py-4">
     {#if loading}
       <div class="space-y-4">
         {#each Array.from({ length: 3 }, (_, index) => index) as index (index)}
-          <EventCardSkeleton />
+          <!-- We'll need to import the skeleton component -->
+          <div class="h-48 animate-pulse rounded-lg bg-gray-200 p-4"></div>
         {/each}
       </div>
     {:else if error}
@@ -689,14 +162,12 @@
           <span>Try Again</span>
         </button>
       </div>
-    {:else if filteredEvents().length === 0}
+    {:else if events.length === 0}
       <div class="py-16 text-center">
         <Calendar class="mx-auto mb-4 h-12 w-12 text-gray-400" />
         <h3 class="mb-2 text-lg font-medium text-gray-900">No events found</h3>
         <p class="mb-6 text-gray-600">
-          {searchQuery
-            ? "Try adjusting your search or filters"
-            : "Be the first to create an event in your area!"}
+          Be the first to create an event in your area!
         </p>
         <button
           onclick={() => goto("/my-rooms")}
@@ -710,33 +181,7 @@
         </button>
       </div>
     {:else}
-      <div class="space-y-4">
-        {#each filteredEvents() as event, index (event._id)}
-          <div class="stagger-item" style="animation-delay: {index * 0.1}s">
-            <EventCard {event} />
-          </div>
-        {/each}
-      </div>
+      <DiscoverEventGrid {events} />
     {/if}
   </div>
 </div>
-
-<style>
-  .slider::-webkit-slider-thumb {
-    appearance: none;
-    height: 20px;
-    width: 20px;
-    border-radius: 50%;
-    background: #8b5cf6;
-    cursor: pointer;
-  }
-
-  .slider::-moz-range-thumb {
-    height: 20px;
-    width: 20px;
-    border-radius: 50%;
-    background: #8b5cf6;
-    cursor: pointer;
-    border: none;
-  }
-</style>
