@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useMutation } from "convex-svelte";
+  import { useQuery, useConvexClient } from "convex-svelte";
   import { api } from "../../../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
@@ -25,7 +25,7 @@
   let roomLoading = $derived(roomQuery?.isLoading ?? true);
 
   // Create event mutation
-  let createEvent = useMutation(api.events.createEvent);
+  let convex = useConvexClient();
 
   // Form state
   let title = $state("");
@@ -143,7 +143,7 @@
         isActive: true,
       };
 
-      await createEvent(eventData);
+      await convex.mutation(api.events.createEvent, eventData);
       goto("/my-rooms");
     } catch (error) {
       console.error("Failed to create event:", error);

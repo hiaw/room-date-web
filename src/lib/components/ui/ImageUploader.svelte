@@ -1,9 +1,21 @@
-<svelte:options ssr={false} />
-
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { Upload, X, Camera } from "lucide-svelte";
   import { useConvexClient } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
+  import { loadApi } from "$lib/convex/api.js";
+
+  // Import API only on client side to avoid SSR issues
+  let api: any = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in ImageUploader:", error);
+      });
+  }
 
   interface Props {
     images?: string[];
@@ -29,13 +41,20 @@
 
   const convex = useConvexClient();
   let uploading = $state(false);
-  let fileInput: HTMLInputElement;
+  let fileInput = $state<HTMLInputElement>();
   let uploadError = $state<string | null>(null);
 
   async function handleFileSelect(event: Event) {
     const target = event.target as HTMLInputElement;
     const files = target.files;
     if (!files || files.length === 0) return;
+
+    // Check if API is loaded
+    if (!api) {
+      uploadError = "Upload service not ready. Please try again.";
+      setTimeout(() => (uploadError = null), 5000);
+      return;
+    }
 
     const remainingSlots = maxImages - images.length;
     const filesToUpload = Array.from(files).slice(0, remainingSlots);
@@ -147,108 +166,110 @@
   }
 </script>
 
-<div class="space-y-4">
-  <input
-    bind:this={fileInput}
-    type="file"
-    multiple
-    {accept}
-    class="hidden"
-    onchange={handleFileSelect}
-    {disabled}
-  />
+{#if browser}
+  <div class="space-y-4">
+    <input
+      bind:this={fileInput}
+      type="file"
+      multiple
+      {accept}
+      class="hidden"
+      onchange={handleFileSelect}
+      {disabled}
+    />
 
-  <!-- Image Grid -->
-  {#if images.length > 0}
-    <div class="grid grid-cols-3 gap-4">
-      {#each images as image, index (index)}
-        <div class="group relative aspect-square">
-          <img
-            src={image}
-            alt="Uploaded image {index + 1}"
-            class="h-full w-full rounded-xl border-2 border-gray-200 object-cover"
-          />
+    <!-- Image Grid -->
+    {#if images.length > 0}
+      <div class="grid grid-cols-3 gap-4">
+        {#each images as image, index (index)}
+          <div class="group relative aspect-square">
+            <img
+              src={image}
+              alt="Uploaded image {index + 1}"
+              class="h-full w-full rounded-xl border-2 border-gray-200 object-cover"
+            />
+            <button
+              type="button"
+              onclick={() => removeImage(index)}
+              class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 hover:bg-red-600"
+              {disabled}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        {/each}
+
+        <!-- Add More Button -->
+        {#if images.length < maxImages}
           <button
             type="button"
-            onclick={() => removeImage(index)}
-            class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 hover:bg-red-600"
-            {disabled}
+            onclick={openFileDialog}
+            disabled={disabled || uploading}
+            class="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <X size={14} />
+            {#if uploading}
+              <div
+                class="h-6 w-6 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
+              ></div>
+            {:else}
+              <Camera size={24} />
+              <span class="mt-1 text-xs">Add More</span>
+            {/if}
           </button>
-        </div>
-      {/each}
-
-      <!-- Add More Button -->
-      {#if images.length < maxImages}
-        <button
-          type="button"
-          onclick={openFileDialog}
-          disabled={disabled || uploading}
-          class="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {#if uploading}
-            <div
-              class="h-6 w-6 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
-            ></div>
-          {:else}
-            <Camera size={24} />
-            <span class="mt-1 text-xs">Add More</span>
-          {/if}
-        </button>
-      {/if}
-    </div>
-  {/if}
-
-  <!-- Upload Button -->
-  {#if images.length === 0}
-    <button
-      type="button"
-      onclick={openFileDialog}
-      disabled={disabled || uploading}
-      class="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 py-8 text-gray-500 transition-colors hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {#if uploading}
-        <div
-          class="mb-2 h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
-        ></div>
-        <span>Uploading...</span>
-      {:else}
-        <Upload size={32} class="mb-2" />
-        <span class="font-medium">{label}</span>
-        <span class="mt-1 text-sm text-gray-400">
-          Select up to {maxImages} image{maxImages === 1 ? "" : "s"}
-        </span>
-      {/if}
-    </button>
-  {/if}
-
-  <!-- Error Message -->
-  {#if uploadError}
-    <div class="rounded-lg border border-red-200 bg-red-50 p-3">
-      <div class="flex items-center">
-        <svg
-          class="mr-2 h-4 w-4 text-red-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-          />
-        </svg>
-        <span class="text-sm text-red-700">{uploadError}</span>
+        {/if}
       </div>
-    </div>
-  {/if}
+    {/if}
 
-  <!-- Progress indicator -->
-  {#if images.length > 0 && images.length < maxImages}
-    <p class="text-center text-sm text-gray-500">
-      {images.length} / {maxImages} images uploaded
-    </p>
-  {/if}
-</div>
+    <!-- Upload Button -->
+    {#if images.length === 0}
+      <button
+        type="button"
+        onclick={openFileDialog}
+        disabled={disabled || uploading}
+        class="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 py-8 text-gray-500 transition-colors hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {#if uploading}
+          <div
+            class="mb-2 h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
+          ></div>
+          <span>Uploading...</span>
+        {:else}
+          <Upload size={32} class="mb-2" />
+          <span class="font-medium">{label}</span>
+          <span class="mt-1 text-sm text-gray-400">
+            Select up to {maxImages} image{maxImages === 1 ? "" : "s"}
+          </span>
+        {/if}
+      </button>
+    {/if}
+
+    <!-- Error Message -->
+    {#if uploadError}
+      <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+        <div class="flex items-center">
+          <svg
+            class="mr-2 h-4 w-4 text-red-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+          <span class="text-sm text-red-700">{uploadError}</span>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Progress indicator -->
+    {#if images.length > 0 && images.length < maxImages}
+      <p class="text-center text-sm text-gray-500">
+        {images.length} / {maxImages} images uploaded
+      </p>
+    {/if}
+  </div>
+{/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery, useMutation } from "convex-svelte";
+  import { useQuery, useConvexClient } from "convex-svelte";
   import { api } from "../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
@@ -22,7 +22,7 @@
   let loading = $derived(profileQuery?.isLoading ?? true);
 
   // Update profile mutation
-  let updateProfile = useMutation(api.userProfiles.updateUserProfile);
+  let convex = useConvexClient();
 
   // Form state
   let displayName = $state("");
@@ -76,7 +76,7 @@
         updateData.dateOfBirth = new Date(dateOfBirth).getTime();
       }
 
-      await updateProfile(updateData);
+      await convex.mutation(api.userProfiles.updateUserProfile, updateData);
       goto("/profile");
     } catch (error) {
       console.error("Failed to update profile:", error);

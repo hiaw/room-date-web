@@ -1,14 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useMutation } from "convex-svelte";
+  import { useConvexClient } from "convex-svelte";
+  import { api } from "../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
+  import { browser } from "$app/environment";
   import { ArrowLeft, Save, MapPin } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
 
-  // Create room mutation
-  let createRoom = useMutation(api.rooms.createRoom);
+  // Get convex client - only on client side
+  let convex = browser ? useConvexClient() : null;
 
   // Redirect if not authenticated
   onMount(() => {
@@ -16,9 +18,6 @@
       goto("/");
     }
   });
-
-  // Create room mutation
-  // let createRoom = useMutation(api.rooms.createRoom); // Temporarily commented out
 
   // Form state
   let title = $state("");
@@ -34,6 +33,11 @@
 
   async function handleSave(event: Event) {
     event.preventDefault();
+
+    if (!convex) {
+      alert("Room creation not available");
+      return;
+    }
 
     if (!title.trim()) {
       alert("Please enter a room title");
@@ -96,7 +100,7 @@
         isActive: true,
       };
 
-      await createRoom(roomData);
+      await convex.mutation(api.rooms.createRoom, roomData);
       goto("/my-rooms");
     } catch (error) {
       console.error("Failed to create room:", error);
