@@ -10,7 +10,8 @@
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
 
-  const roomId = $page.params.roomId;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const roomId = $page.params.roomId as any;
 
   // Redirect if not authenticated
   onMount(() => {
@@ -40,6 +41,7 @@
   let maxAge = $state<number | undefined>(65);
   let preferredGender = $state<string[]>(["any"]);
   let saving = $state(false);
+  let eventImages: string[] = $state([]);
 
   // Calculate today's date for min date constraints
   let todayDateString = $derived(() => {
@@ -106,7 +108,6 @@
     }
 
     saving = true;
-    lastSubmissionTime = Date.now();
 
     try {
       let startTimestamp: number | undefined;
@@ -337,7 +338,7 @@
                   id="startDate"
                   type="date"
                   bind:value={startDate}
-                  min={todayDateString}
+                  min={todayDateString()}
                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
                   required={!isFlexibleTiming}
                 />
@@ -372,7 +373,7 @@
                   id="endDate"
                   type="date"
                   bind:value={endDate}
-                  min={startDate || todayDateString}
+                  min={startDate || todayDateString()}
                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
                 />
               </div>
@@ -478,7 +479,7 @@
         <!-- Submit Button (Mobile) -->
         <div class="pt-6 lg:hidden">
           <Button
-            onclick={handleSave}
+            onclick={() => handleSave(new Event("click"))}
             disabled={saving || !title.trim()}
             class="w-full"
           >

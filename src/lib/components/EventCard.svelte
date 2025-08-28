@@ -187,7 +187,6 @@
               `https://api.dicebear.com/7.x/initials/svg?seed=${event.hostName || "Anonymous"}`}
             alt={event.hostName || "Host"}
             class="h-8 w-8 rounded-full object-cover"
-            onload={() => (imageLoaded = true)}
             onerror={(e) => {
               // Fallback to initials if image fails
               const target = e.target as HTMLImageElement;

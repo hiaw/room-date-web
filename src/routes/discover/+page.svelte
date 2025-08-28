@@ -28,6 +28,8 @@
     ActivityLevelOption,
   } from "$lib/types/pages";
 
+  import type { EventData } from "$lib/types/components";
+
   // Location state
   let userLocation = $state<LocationState | null>(null);
   let locationError = $state<string | null>(null);
@@ -118,7 +120,7 @@
       : null,
   );
 
-  let events = $derived(eventsQueryResult?.data ?? []);
+  let events = $derived((eventsQueryResult?.data ?? []) as EventData[]);
   let loading = $derived(eventsQueryResult?.isLoading ?? true);
   let error = $derived(eventsQueryResult?.error);
 
@@ -180,7 +182,7 @@
 
   // Filter events based on search and filters
   let filteredEvents = $derived(() => {
-    let filtered = events.filter((event: unknown) => {
+    let filtered = events.filter((event: EventData) => {
       if (!event) return false;
 
       // Search filter - use regex for better performance
@@ -276,7 +278,7 @@
     });
 
     // Sort filtered events
-    return filtered.sort((a: unknown, b: unknown) => {
+    return filtered.sort((a: EventData, b: EventData) => {
       let comparison = 0;
 
       switch (sortBy) {
@@ -687,7 +689,7 @@
           <span>Try Again</span>
         </button>
       </div>
-    {:else if filteredEvents.length === 0}
+    {:else if filteredEvents().length === 0}
       <div class="py-16 text-center">
         <Calendar class="mx-auto mb-4 h-12 w-12 text-gray-400" />
         <h3 class="mb-2 text-lg font-medium text-gray-900">No events found</h3>
@@ -709,9 +711,9 @@
       </div>
     {:else}
       <div class="space-y-4">
-        {#each filteredEvents as event, index (event._id)}
+        {#each filteredEvents() as event, index (event._id)}
           <div class="stagger-item" style="animation-delay: {index * 0.1}s">
-            <EventCard event={event as EventData} />
+            <EventCard {event} />
           </div>
         {/each}
       </div>

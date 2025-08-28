@@ -5,7 +5,7 @@
   import { loadApi } from "$lib/convex/api.js";
 
   // Import API only on client side to avoid SSR issues
-  let api: any = null;
+  let api: typeof import("../../../convex/_generated/api.js").api | null = null;
 
   if (browser) {
     loadApi()
@@ -71,7 +71,7 @@
 
         // Get upload URL from Convex
         const uploadUrl = await convex.mutation(
-          api.files.generateUploadUrl,
+          api!.files.generateUploadUrl,
           {},
         );
 
@@ -87,7 +87,7 @@
         const { storageId } = await result.json();
 
         // Get the file URL
-        const fileUrl = await convex.mutation(api.files.getFileUrl, {
+        const fileUrl = await convex.mutation(api!.files.getFileUrl, {
           storageId,
         });
 
@@ -95,7 +95,10 @@
       });
 
       const uploadedUrls = await Promise.all(uploadPromises);
-      onImagesChange([...images, ...uploadedUrls.filter(Boolean)]);
+      const validUrls = uploadedUrls.filter(
+        (url): url is string => url !== null,
+      );
+      onImagesChange([...images, ...validUrls]);
     } catch (error) {
       console.error("Upload error:", error);
       uploadError =

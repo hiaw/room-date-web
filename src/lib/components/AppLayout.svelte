@@ -5,9 +5,11 @@
   import { Search, Calendar, MessageCircle, User } from "lucide-svelte";
   import OfflineIndicator from "./ui/OfflineIndicator.svelte";
 
-  import type { AppLayoutProps } from "$lib/types/components";
+  interface Props {
+    children: import("svelte").Snippet;
+  }
 
-  let { children }: Omit<AppLayoutProps, "currentRoute"> = $props();
+  let { children }: Props = $props();
 
   const navItems = [
     {

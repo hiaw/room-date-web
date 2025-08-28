@@ -18,7 +18,8 @@
 
   // Fetch current profile
   let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
-  let profile = $derived(profileQuery?.data);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let profile = $derived(profileQuery?.data as any);
   let loading = $derived(profileQuery?.isLoading ?? true);
 
   // Update profile mutation
@@ -216,7 +217,7 @@
               id="dateOfBirth"
               type="date"
               bind:value={dateOfBirth}
-              max={maxDateOfBirth}
+              max={maxDateOfBirth()}
               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
             />
             {#if dateOfBirth}
@@ -246,7 +247,7 @@
         <!-- Submit Button (Mobile) -->
         <div class="pt-6 lg:hidden">
           <Button
-            onclick={handleSave}
+            onclick={() => handleSave(new Event("click"))}
             disabled={saving || !displayName.trim()}
             class="w-full"
           >

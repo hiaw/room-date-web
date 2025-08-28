@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import type { Snippet } from "svelte";
 
   interface Props<T> {
     items: T[];
     itemHeight: number;
     containerHeight: number;
-    renderItem: (item: T, index: number) => unknown;
+    renderItem: Snippet<[item: T, index: number]>;
   }
 
   let { items, itemHeight, containerHeight, renderItem }: Props<unknown> =
@@ -18,20 +19,20 @@
   let startIndex = $derived(Math.floor(scrollTop / itemHeight));
   let endIndex = $derived(
     Math.min(
-      startIndex() + Math.ceil(containerHeight / itemHeight) + 2, // +2 for buffer
+      startIndex + Math.ceil(containerHeight / itemHeight) + 2, // +2 for buffer
       items.length,
     ),
   );
 
   let visibleItems = $derived(
-    items.slice(startIndex(), endIndex()).map((item, index) => ({
+    items.slice(startIndex, endIndex).map((item, index) => ({
       item,
-      index: startIndex() + index,
+      index: startIndex + index,
     })),
   );
 
   let totalHeight = $derived(items.length * itemHeight);
-  let offsetY = $derived(startIndex() * itemHeight);
+  let offsetY = $derived(startIndex * itemHeight);
 
   function handleScroll(event: Event) {
     const target = event.target as HTMLElement;

@@ -54,7 +54,7 @@ export interface AuthFormProps {
 // App Layout Component Types
 export interface AppLayoutProps {
   currentRoute: string | null | undefined;
-  children?: unknown;
+  children: import("svelte").Snippet;
 }
 
 // Navigation Item Type
@@ -108,7 +108,7 @@ export interface VirtualizedListProps<T = unknown> {
   items: T[];
   itemHeight: number;
   containerHeight: number;
-  renderItem: (item: T, index: number) => unknown;
+  renderItem: import("svelte").Snippet<[item: T, index: number]>;
 }
 
 // Offline Indicator Component Types

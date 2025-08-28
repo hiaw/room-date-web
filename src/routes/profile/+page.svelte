@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { useQuery } from "convex-svelte";
   import { api } from "../../convex/_generated/api.js";
-  import { isAuthenticated } from "$lib/stores/auth.js";
+  import { isAuthenticated, authStore } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import {
     User,
@@ -31,7 +31,8 @@
 
   // Reactive queries
   let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
-  let profile = $derived(profileQueryResult.data);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let profile = $derived(profileQueryResult.data as any);
   let loading = $derived(profileQueryResult.isLoading);
 
   function handleEditProfile() {
@@ -84,7 +85,8 @@
       .join(", ");
   }
 
-  function formatLocation(profile: unknown): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function formatLocation(profile: any): string {
     const parts = [];
     if (profile?.city) parts.push(profile.city);
     if (profile?.state) parts.push(profile.state);

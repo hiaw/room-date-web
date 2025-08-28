@@ -35,13 +35,15 @@
   // Group events by room
   let eventsByRoom = $derived(
     events.reduce(
-      (acc: Record<string, unknown[]>, event: unknown) => {
-        const roomId = (event as { roomId: string }).roomId;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (acc: Record<string, any[]>, event: any) => {
+        const roomId = event.roomId;
         if (!acc[roomId]) acc[roomId] = [];
         acc[roomId].push(event);
         return acc;
       },
-      {} as Record<string, unknown[]>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {} as Record<string, any[]>,
     ),
   );
 
@@ -67,7 +69,8 @@
     return `${count} events`;
   }
 
-  function getLocationDisplay(room: unknown): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function getLocationDisplay(room: any): string {
     const parts = [];
     if (room.city) parts.push(room.city);
     if (room.state) parts.push(room.state);

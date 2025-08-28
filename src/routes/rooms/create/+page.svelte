@@ -24,10 +24,10 @@
   let description = $state("");
   let streetAddress = $state("");
   let city = $state("");
-  let state = $state("");
+  let stateLocation = $state("");
   let zipCode = $state("");
   let country = $state("United States");
-  let images = $state<string[]>([]);
+  let images: string[] = $state([]);
   let saving = $state(false);
   let locationLoading = $state(false);
 
@@ -72,7 +72,7 @@
 
       // Geocode the address
       if (streetAddress && city) {
-        const fullAddress = `${streetAddress}, ${city}${state ? ", " + state : ""}${zipCode ? " " + zipCode : ""}, ${country}`;
+        const fullAddress = `${streetAddress}, ${city}${stateLocation ? ", " + stateLocation : ""}${zipCode ? " " + zipCode : ""}, ${country}`;
         try {
           await fetch(
             `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(fullAddress)}&key=YOUR_API_KEY`,
@@ -89,7 +89,7 @@
         description: description.trim() || undefined,
         streetAddress: streetAddress.trim(),
         city: city.trim(),
-        state: state.trim() || undefined,
+        state: stateLocation.trim() || undefined,
         zipCode: zipCode.trim() || undefined,
         country: country.trim(),
         latitude,
@@ -136,7 +136,7 @@
             streetAddress =
               `${addr.house_number || ""} ${addr.road || ""}`.trim();
             city = addr.city || addr.town || addr.village || "";
-            state = addr.state || "";
+            stateLocation = addr.state || "";
             zipCode = addr.postcode || "";
             country = addr.country || "United States";
           }
@@ -324,15 +324,15 @@
 
           <div>
             <label
-              for="state"
-              class="mb-1 block text-sm font-medium text-gray-700"
+              for="stateLocation"
+              class="mb-2 block text-sm font-medium text-gray-700"
             >
-              State/Province
+              State / Province
             </label>
             <input
-              id="state"
+              id="stateLocation"
               type="text"
-              bind:value={state}
+              bind:value={stateLocation}
               placeholder="CA"
               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
             />
@@ -376,7 +376,7 @@
       <!-- Submit Button (Mobile) -->
       <div class="pt-6 lg:hidden">
         <Button
-          onclick={handleSave}
+          onclick={() => handleSave(new Event("click"))}
           disabled={saving || !title.trim()}
           class="w-full"
         >

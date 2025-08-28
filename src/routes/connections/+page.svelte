@@ -35,7 +35,8 @@
 
   // Filter connections/conversations based on search
   let filteredConnections = $derived(
-    connections.filter((connection: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    connections.filter((connection: any) => {
       if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
       return (
@@ -47,7 +48,8 @@
   );
 
   let filteredConversations = $derived(
-    conversations.filter((conversation: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    conversations.filter((conversation: any) => {
       if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
       return (

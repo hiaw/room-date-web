@@ -123,9 +123,9 @@
           </div>
         </div>
         <Button
-          onclick={(e) => handleSave(e)}
+          onclick={() => handleSave(new Event("click"))}
           disabled={saving}
-          class="flex items-center space-x-2"
+          class="bg-purple-600 text-white hover:bg-purple-700"
         >
           {#if saving}
             <LoadingSpinner />
