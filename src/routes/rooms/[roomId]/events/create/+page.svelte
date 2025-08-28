@@ -454,10 +454,10 @@
             </div>
           </div>
 
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
+          <fieldset>
+            <legend class="mb-2 block text-sm font-medium text-gray-700">
               Gender Preferences
-            </label>
+            </legend>
             <div class="flex flex-wrap gap-2">
               {#each [{ value: "male", label: "Male" }, { value: "female", label: "Female" }, { value: "non_binary", label: "Non-Binary" }, { value: "any", label: "Any" }] as option (option.value)}
                 <button
@@ -473,7 +473,7 @@
                 </button>
               {/each}
             </div>
-          </div>
+          </fieldset>
         </div>
 
         <!-- Submit Button (Mobile) -->
