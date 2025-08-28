@@ -23,7 +23,7 @@
   });
 
   // Reactive queries
-  let roomsQueryResult = useQuery(api.rooms.getUserRooms, {});
+  let roomsQueryResult = useQuery(api.rooms.getMyRooms, {});
   let eventsQueryResult = useQuery(api.events.getUserEvents, {});
 
   let rooms = $derived(roomsQueryResult.data ?? []);
