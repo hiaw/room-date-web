@@ -109,13 +109,45 @@
         >
           Notification Preferences
         </button>
-        <button
-          onclick={handleSignOut}
-          class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50"
-        >
-          <LogOut size={18} />
-          <span>Sign Out</span>
-        </button>
+
+        <!-- Divider -->
+        <div class="border-t border-gray-100 pt-3">
+          <button
+            onclick={() => goto("/about")}
+            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            About Room Dates
+          </button>
+          <button
+            onclick={() => goto("/help")}
+            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            Help & Support
+          </button>
+          <button
+            onclick={() => goto("/privacy")}
+            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            Privacy Policy
+          </button>
+          <button
+            onclick={() => goto("/terms")}
+            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            Terms of Service
+          </button>
+        </div>
+
+        <!-- Sign Out -->
+        <div class="border-t border-gray-100 pt-3">
+          <button
+            onclick={handleSignOut}
+            class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50"
+          >
+            <LogOut size={18} />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
     </div>
   {/if}
