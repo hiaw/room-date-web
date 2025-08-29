@@ -25,7 +25,9 @@ export const events = defineTable({
     ),
   ),
   maxGuests: v.optional(v.number()),
-  preferredGender: v.optional(v.array(v.string())), // ['male', 'female', 'non_binary', 'any']
+  // Guest preferences - array where index represents guest slot (0-based)
+  // Each element is the preferred gender for that specific guest slot
+  guestGenderPreferences: v.optional(v.array(v.string())), // ['male', 'female', 'non_binary', 'any']
   minAge: v.optional(v.number()),
   maxAge: v.optional(v.number()),
   // Event categorization and interests

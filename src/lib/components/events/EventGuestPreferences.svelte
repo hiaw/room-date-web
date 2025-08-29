@@ -3,22 +3,22 @@
     maxGuests: number | undefined;
     minAge: number | undefined;
     maxAge: number | undefined;
-    preferredGender: string[];
+    guestGenderPreferences: string[];
     onMaxGuestsChange: (value: number | undefined) => void;
     onMinAgeChange: (value: number | undefined) => void;
     onMaxAgeChange: (value: number | undefined) => void;
-    onGenderToggle: (gender: string) => void;
+    onGuestGenderPreferencesChange: (preferences: string[]) => void;
   }
 
   let {
     maxGuests,
     minAge,
     maxAge,
-    preferredGender,
+    guestGenderPreferences,
     onMaxGuestsChange,
     onMinAgeChange,
     onMaxAgeChange,
-    onGenderToggle,
+    onGuestGenderPreferencesChange,
   }: Props = $props();
 
   const genderOptions = [
@@ -28,9 +28,65 @@
     { value: "any", label: "Any" },
   ];
 
+  // Create array of guest gender preferences based on maxGuests
+  let guestSlots = $derived.by(() => {
+    if (!maxGuests || maxGuests <= 0) return [];
+
+    const slots = maxGuests;
+    const preferences = [...guestGenderPreferences];
+
+    // Ensure we have enough slots - fill missing ones with "any"
+    while (preferences.length < slots) {
+      preferences.push("any");
+    }
+
+    // Trim excess if maxGuests was reduced
+    if (preferences.length > slots) {
+      preferences.splice(slots);
+    }
+
+    return preferences;
+  });
+
+  // For bulk operations when guests > 5
+  let bulkGenderSelection = $state("any");
+
   function handleMaxGuestsChange(value: string) {
     const num = value === "" ? undefined : Number(value);
     onMaxGuestsChange(num);
+
+    // Update guest preferences array to match new size
+    if (num) {
+      const newPreferences = [...guestGenderPreferences];
+      while (newPreferences.length < num) {
+        newPreferences.push("any");
+      }
+      if (newPreferences.length > num) {
+        newPreferences.splice(num);
+      }
+      onGuestGenderPreferencesChange(newPreferences);
+    } else {
+      // If no maxGuests, clear preferences
+      onGuestGenderPreferencesChange([]);
+    }
+  }
+
+  function handleGuestGenderChange(guestIndex: number, gender: string) {
+    const newPreferences = [...guestGenderPreferences];
+    // Ensure array is large enough
+    while (newPreferences.length <= guestIndex) {
+      newPreferences.push("any");
+    }
+    newPreferences[guestIndex] = gender;
+    onGuestGenderPreferencesChange(newPreferences);
+  }
+
+  function handleBulkGenderChange(gender: string) {
+    bulkGenderSelection = gender;
+    if (maxGuests) {
+      const newPreferences = Array(maxGuests).fill(gender);
+      onGuestGenderPreferencesChange(newPreferences);
+    }
   }
 
   function handleMinAgeChange(value: string) {
@@ -100,22 +156,70 @@
 
   <fieldset>
     <legend class="mb-2 block text-sm font-medium text-gray-700">
-      Gender Preferences
+      Gender Preferences for Each Guest
     </legend>
-    <div class="flex flex-wrap gap-2">
-      {#each genderOptions as option (option.value)}
-        <button
-          type="button"
-          onclick={() => onGenderToggle(option.value)}
-          class="rounded-full border-2 px-4 py-2 text-sm transition-colors {preferredGender.includes(
-            option.value,
-          )
-            ? 'border-purple-500 bg-purple-100 text-purple-700'
-            : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300'}"
-        >
-          {option.label}
-        </button>
-      {/each}
-    </div>
+
+    {#if maxGuests && maxGuests > 0}
+      {#if maxGuests > 5}
+        <!-- Bulk selection for 5+ guests -->
+        <div class="mb-4 rounded-lg bg-gray-50 p-3">
+          <div class="mb-2 flex items-center gap-3">
+            <span class="text-sm font-medium text-gray-700"
+              >Apply to all {maxGuests} guests:</span
+            >
+          </div>
+          <div class="flex flex-wrap gap-2">
+            {#each genderOptions as option (option.value)}
+              <button
+                type="button"
+                onclick={() => handleBulkGenderChange(option.value)}
+                class="rounded-full border-2 px-3 py-1 text-sm transition-colors {bulkGenderSelection ===
+                option.value
+                  ? 'border-purple-500 bg-purple-100 text-purple-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300'}"
+              >
+                {option.label}
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Individual overrides -->
+        <div class="mb-3 text-sm text-gray-600">
+          Or set individual preferences (optional):
+        </div>
+      {/if}
+
+      <!-- Individual guest preferences -->
+      <div class="max-h-64 space-y-3 overflow-y-auto">
+        {#each guestSlots as guestGender, guestIndex (guestIndex)}
+          <div class="flex items-center gap-3">
+            <span class="min-w-16 text-sm font-medium text-gray-600">
+              Guest {guestIndex + 1}:
+            </span>
+            <div class="flex flex-wrap gap-2">
+              {#each genderOptions as option (option.value)}
+                <button
+                  type="button"
+                  onclick={() =>
+                    handleGuestGenderChange(guestIndex, option.value)}
+                  class="rounded-full border-2 px-3 py-1 text-sm transition-colors {guestGender ===
+                  option.value
+                    ? 'border-purple-500 bg-purple-100 text-purple-700'
+                    : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300'}"
+                >
+                  {option.label}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="text-sm text-gray-500 italic">
+        Set a maximum number of guests above to configure gender preferences for
+        each guest slot.
+      </p>
+    {/if}
   </fieldset>
 </div>

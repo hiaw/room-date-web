@@ -80,9 +80,9 @@ export function matchesSearchFilters(
   if (filters.maxAge && event.minAge && event.minAge > filters.maxAge)
     return false;
 
-  if (filters.preferredGender && event.preferredGender) {
+  if (filters.preferredGender && event.guestGenderPreferences) {
     const hasMatch = filters.preferredGender.some((gender) =>
-      event.preferredGender!.includes(gender),
+      event.guestGenderPreferences!.includes(gender),
     );
     if (!hasMatch) return false;
   }

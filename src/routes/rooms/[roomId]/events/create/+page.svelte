@@ -43,7 +43,7 @@
   let maxGuests = $state<number | undefined>(undefined);
   let minAge = $state<number | undefined>(18);
   let maxAge = $state<number | undefined>(65);
-  let preferredGender = $state<string[]>(["any"]);
+  let guestGenderPreferences = $state<string[]>([]);
   let saving = $state(false);
   let eventImages: string[] = $state([]);
 
@@ -139,13 +139,14 @@
         endTime: endTimestamp,
         isFlexibleTiming,
         maxGuests,
-        preferredGender:
-          preferredGender.length > 0 ? preferredGender : undefined,
+        guestGenderPreferences:
+          guestGenderPreferences.length > 0
+            ? guestGenderPreferences
+            : undefined,
         minAge,
         maxAge,
         eventImages,
         primaryEventImageUrl: eventImages[0] || undefined,
-        isActive: true,
       };
 
       await convex.mutation(api.events.createEvent, eventData);
@@ -162,12 +163,8 @@
     goto("/my-rooms");
   }
 
-  function toggleGender(gender: string) {
-    if (preferredGender.includes(gender)) {
-      preferredGender = preferredGender.filter((g) => g !== gender);
-    } else {
-      preferredGender = [...preferredGender, gender];
-    }
+  function handleGuestGenderPreferencesChange(preferences: string[]) {
+    guestGenderPreferences = preferences;
   }
 
   // Event handlers for form components
@@ -312,11 +309,11 @@
           {maxGuests}
           {minAge}
           {maxAge}
-          {preferredGender}
+          {guestGenderPreferences}
           onMaxGuestsChange={handleMaxGuestsChange}
           onMinAgeChange={handleMinAgeChange}
           onMaxAgeChange={handleMaxAgeChange}
-          onGenderToggle={toggleGender}
+          onGuestGenderPreferencesChange={handleGuestGenderPreferencesChange}
         />
 
         <!-- Submit Button (Mobile) -->

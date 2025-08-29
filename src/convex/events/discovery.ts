@@ -1,6 +1,6 @@
 import { query } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { calculateDistance, calculateUserAge } from "../lib/event-helpers.js";
+import { calculateDistance, calculateUserAge } from "../lib/eventHelpers.js";
 import { discoverEventsArgs, eventsNearUserArgs } from "./types.js";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";

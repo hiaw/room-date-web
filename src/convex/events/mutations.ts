@@ -1,6 +1,6 @@
 import { mutation } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { validateEventTiming, validateAgeRange } from "../lib/event-helpers.js";
+import { validateEventTiming, validateAgeRange } from "../lib/eventHelpers.js";
 import { createEventArgs, updateEventArgs } from "./types.js";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
@@ -54,7 +54,7 @@ export const createEvent = mutation({
       isFlexibleTiming: args.isFlexibleTiming,
       suggestedTimeSlots: args.suggestedTimeSlots,
       maxGuests: args.maxGuests,
-      preferredGender: args.preferredGender,
+      guestGenderPreferences: args.guestGenderPreferences,
       minAge: args.minAge,
       maxAge: args.maxAge,
       eventImages: args.eventImages || [],
@@ -122,8 +122,8 @@ export const updateEvent = mutation({
     if (args.suggestedTimeSlots !== undefined)
       updateData.suggestedTimeSlots = args.suggestedTimeSlots;
     if (args.maxGuests !== undefined) updateData.maxGuests = args.maxGuests;
-    if (args.preferredGender !== undefined)
-      updateData.preferredGender = args.preferredGender;
+    if (args.guestGenderPreferences !== undefined)
+      updateData.guestGenderPreferences = args.guestGenderPreferences;
     if (args.minAge !== undefined) updateData.minAge = args.minAge;
     if (args.maxAge !== undefined) updateData.maxAge = args.maxAge;
     if (args.eventImages !== undefined)
