@@ -72,19 +72,19 @@
       let latitude: number | undefined;
       let longitude: number | undefined;
 
-      // Geocode the address
-      if (streetAddress && city) {
-        const fullAddress = `${streetAddress}, ${city}${stateLocation ? ", " + stateLocation : ""}${zipCode ? " " + zipCode : ""}, ${country}`;
-        try {
-          await fetch(
-            `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(fullAddress)}&key=YOUR_API_KEY`,
-          );
-          // For now, use a simple geocoding approach or skip coordinates
-          // In production, you'd want to use a proper geocoding service
-        } catch {
-          console.warn("Geocoding failed, creating room without coordinates");
-        }
-      }
+      // Geocode the address (commented out until API key is configured)
+      // if (streetAddress && city) {
+      //   const fullAddress = `${streetAddress}, ${city}${stateLocation ? ", " + stateLocation : ""}${zipCode ? " " + zipCode : ""}, ${country}`;
+      //   try {
+      //     await fetch(
+      //       `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(fullAddress)}&key=YOUR_API_KEY`,
+      //     );
+      //     // For now, use a simple geocoding approach or skip coordinates
+      //     // In production, you'd want to use a proper geocoding service
+      //   } catch {
+      //     console.warn("Geocoding failed, creating room without coordinates");
+      //   }
+      // }
 
       const roomData = {
         title: title.trim(),
@@ -99,7 +99,6 @@
         locationVerified: false,
         images,
         primaryImageUrl: images[0] || undefined,
-        isActive: true,
       };
 
       await convex.mutation(api.rooms.createRoom, roomData);
