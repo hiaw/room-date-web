@@ -16,10 +16,7 @@ export function setupConvexAuth(convex: ConvexClient) {
 
   const token = getConvexAuthToken();
   if (token) {
-    console.log("Setting Convex auth token");
     convex.setAuth(() => Promise.resolve(token));
-  } else {
-    console.log("No Convex auth token found");
   }
 }
 
@@ -27,6 +24,5 @@ export function setupConvexAuth(convex: ConvexClient) {
 export function updateConvexAuth(convex: ConvexClient, token: string) {
   if (!browser || !convex) return;
 
-  console.log("Updating Convex auth token");
   convex.setAuth(() => Promise.resolve(token));
 }

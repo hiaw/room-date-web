@@ -24,7 +24,6 @@ function buildUserDataFromProfile(profile: OAuthProfile): UserDataUpdates {
 function buildEnhancementUpdates(
   existingUser: ExistingUser,
   profile: OAuthProfile,
-  includeEmail = false,
 ): UserDataUpdates {
   const updates: UserDataUpdates = {};
 
@@ -35,9 +34,7 @@ function buildEnhancementUpdates(
   if (!existingUser.image && profile?.image) {
     updates.image = profile.image;
   }
-  if (includeEmail && !existingUser.email && profile?.email) {
-    updates.email = profile.email;
-  }
+  // Email is never updated for security reasons (used for account linking)
   if (!existingUser.emailVerificationTime && profile?.emailVerified) {
     updates.emailVerificationTime = Date.now();
   }
@@ -54,8 +51,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
         const user = await ctx.db.get(args.existingUserId);
         if (user) {
           // Only populate missing fields (enhance principle)
-          // Don't include email as it's used for account linking
-          const updates = buildEnhancementUpdates(user, args.profile, false);
+          const updates = buildEnhancementUpdates(user, args.profile);
 
           if (Object.keys(updates).length > 0) {
             await ctx.db.patch(args.existingUserId, updates);
@@ -73,19 +69,12 @@ export const { auth, signIn, signOut, store } = convexAuth({
 
         if (existingUser) {
           // Update existing user with any missing profile data
-          const updates = buildEnhancementUpdates(
-            existingUser,
-            args.profile,
-            false,
-          );
+          const updates = buildEnhancementUpdates(existingUser, args.profile);
 
           if (Object.keys(updates).length > 0) {
             await ctx.db.patch(existingUser._id, updates);
           }
 
-          console.log(
-            `Linking ${args.provider.id} account to existing user: ${existingUser.email}`,
-          );
           return existingUser._id;
         }
       }
