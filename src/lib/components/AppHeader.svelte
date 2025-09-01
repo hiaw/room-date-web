@@ -30,33 +30,16 @@
       // First clear local auth state immediately
       authStore.signOut();
       convex.setAuth(() => Promise.resolve(null));
-      
+
       // Then try to sign out from server (best effort)
       await convex.action(api.auth.signOut, {});
     } catch (err) {
       console.warn("Sign out action failed:", err);
     }
-    
+
     // Force navigation to home page with sign out parameter
     if (browser) {
-      window.location.href = '/?signedOut=true';
-    }
-  }
-
-    try {
-      // First clear local auth state immediately
-      authStore.signOut();
-      convex.setAuth(() => Promise.resolve(null));
-
-      // Then try to sign out from server (best effort)
-      await convex.action(api.auth.signOut, {});
-    } catch (err) {
-      console.warn("Sign out action failed:", err);
-    }
-
-    // Force navigation to home page
-    if (browser) {
-      window.location.href = "/";
+      window.location.href = "/?signedOut=true";
     }
   }
 </script>
