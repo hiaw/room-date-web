@@ -3,25 +3,67 @@ import { Password } from "@convex-dev/auth/providers/Password";
 import Google from "@auth/core/providers/google";
 import type { MutationCtx } from "./_generated/server";
 
+// Type for user data that can be updated
+interface UserDataUpdates {
+  name?: string;
+  image?: string;
+  email?: string;
+  emailVerificationTime?: number;
+}
+
+// Helper function to build user data from profile
+function buildUserDataFromProfile(profile: any): UserDataUpdates {
+  const data: UserDataUpdates = {};
+  if (profile?.name) data.name = profile.name;
+  if (profile?.image) data.image = profile.image;
+  if (profile?.email) data.email = profile.email;
+  if (profile?.emailVerified) {
+    data.emailVerificationTime = Date.now();
+  }
+  return data;
+}
+
+// Helper function to build updates for existing user (enhance principle)
+function buildEnhancementUpdates(
+  existingUser: any,
+  profile: any,
+  includeEmail = false,
+): UserDataUpdates {
+  const updates: UserDataUpdates = {};
+
+  // Only populate missing fields
+  if (!existingUser.name && profile?.name) {
+    updates.name = profile.name;
+  }
+  if (!existingUser.image && profile?.image) {
+    updates.image = profile.image;
+  }
+  if (includeEmail && !existingUser.email && profile?.email) {
+    updates.email = profile.email;
+  }
+  if (!existingUser.emailVerificationTime && profile?.emailVerified) {
+    updates.emailVerificationTime = Date.now();
+  }
+
+  return updates;
+}
+
 export const { auth, signIn, signOut, store } = convexAuth({
   providers: [Password, Google],
   callbacks: {
     async createOrUpdateUser(ctx: MutationCtx, args) {
       // If this is updating an existing user, handle the update
       if (args.existingUserId !== null) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const updates: any = {};
-        if (args.profile?.name) updates.name = args.profile.name;
-        if (args.profile?.image) updates.image = args.profile.image;
-        if (args.profile?.email) updates.email = args.profile.email;
-        if (args.profile?.emailVerified) {
-          updates.emailVerificationTime = Date.now();
-        }
+        const user = await ctx.db.get(args.existingUserId);
+        if (user) {
+          // Only populate missing fields (enhance principle)
+          // Don't include email as it's used for account linking
+          const updates = buildEnhancementUpdates(user, args.profile, false);
 
-        if (Object.keys(updates).length > 0) {
-          await ctx.db.patch(args.existingUserId, updates);
+          if (Object.keys(updates).length > 0) {
+            await ctx.db.patch(args.existingUserId, updates);
+          }
         }
-
         return args.existingUserId;
       }
 
@@ -34,20 +76,11 @@ export const { auth, signIn, signOut, store } = convexAuth({
 
         if (existingUser) {
           // Update existing user with any missing profile data
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const updates: any = {};
-          if (!existingUser.name && args.profile.name) {
-            updates.name = args.profile.name;
-          }
-          if (!existingUser.image && args.profile.image) {
-            updates.image = args.profile.image;
-          }
-          if (
-            !existingUser.emailVerificationTime &&
-            args.profile.emailVerified
-          ) {
-            updates.emailVerificationTime = Date.now();
-          }
+          const updates = buildEnhancementUpdates(
+            existingUser,
+            args.profile,
+            false,
+          );
 
           if (Object.keys(updates).length > 0) {
             await ctx.db.patch(existingUser._id, updates);
@@ -61,14 +94,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
       }
 
       // Create new user if no existing user found
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const userData: any = {};
-      if (args.profile?.name) userData.name = args.profile.name;
-      if (args.profile?.image) userData.image = args.profile.image;
-      if (args.profile?.email) userData.email = args.profile.email;
-      if (args.profile?.emailVerified) {
-        userData.emailVerificationTime = Date.now();
-      }
+      const userData = buildUserDataFromProfile(args.profile);
 
       const userId = await ctx.db.insert("users", userData);
       console.log(`Created new user: ${args.profile?.email}`);

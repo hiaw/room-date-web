@@ -38,21 +38,25 @@
           // Store the tokens if they exist
           if (result?.tokens) {
             const tokens = result.tokens;
-            authStore.setAuthSuccess({ _id: "", email: "", name: "" }, tokens);
 
-            // IMPORTANT: Update the Convex client with the new auth token
+            // Update the Convex client with the new auth token to fetch the user
             convex.setAuth(() => Promise.resolve(tokens.token));
 
-            // Clear the verifier and URL parameters
+            // Clear the verifier and URL parameters before async operations
             sessionStorage.removeItem("oauth_verifier");
             replaceState("/", {});
 
-            // Get user data after tokens are stored
+            // Get user data and then update the store
             const userData = await convex.query(api.users.getUserProfile, {});
             if (userData) {
-              authStore.setUser(userData);
+              authStore.setAuthSuccess(userData, tokens);
               // After successful auth, redirect to discover page
               goto("/discover");
+            } else {
+              // This is an error state, we have tokens but no user.
+              authStore.setAuthError(
+                "Failed to retrieve user profile after login.",
+              );
             }
           } else {
             console.error("OAuth callback result:", result);
