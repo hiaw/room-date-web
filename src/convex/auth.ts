@@ -80,6 +80,11 @@ export const { auth, signIn, signOut, store } = convexAuth({
       }
 
       // Create new user if no existing user found
+      // Validate that email exists before creating user
+      if (!args.profile?.email) {
+        throw new Error("Cannot create a new user without an email address.");
+      }
+
       const userData = buildUserDataFromProfile(args.profile);
 
       const userId = await ctx.db.insert("users", userData);
