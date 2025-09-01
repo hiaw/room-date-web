@@ -42,14 +42,14 @@
 
   // Initialize form when profile loads
   $effect(() => {
-    if (profile) {
-      displayName = profile.displayName || "";
-      bio = profile.bio || "";
-      dateOfBirth = profile.dateOfBirth
-        ? new Date(profile.dateOfBirth).toISOString().split("T")[0]
+    if (profile?.profile) {
+      displayName = profile.profile.displayName || "";
+      bio = profile.profile.bio || "";
+      dateOfBirth = profile.profile.dateOfBirth
+        ? new Date(profile.profile.dateOfBirth).toISOString().split("T")[0]
         : "";
-      location = profile.location || "";
-      profileImages = profile.profileImages || [];
+      location = profile.profile.location || "";
+      profileImages = profile.profile.profileImages || [];
     }
   });
 
@@ -88,7 +88,7 @@
   }
 
   function handleBack() {
-    if (profile?.isProfileComplete) {
+    if (profile?.profile?.isProfileComplete) {
       goto("/profile");
     } else {
       goto("/");
