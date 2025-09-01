@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { Home, ArrowLeft, Search } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";

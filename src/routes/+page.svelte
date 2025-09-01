@@ -28,7 +28,6 @@
         const verifier = sessionStorage.getItem("oauth_verifier");
 
         if (verifier) {
-          console.log("Processing OAuth callback with code and verifier");
           // Complete the OAuth flow
           const result = await convex.action(api.auth.signIn, {
             provider: "google",
@@ -38,17 +37,11 @@
 
           // Store the tokens if they exist
           if (result?.tokens) {
-            authStore.setAuthSuccess(
-              { _id: "", email: "", name: "" },
-              result.tokens,
-            );
+            const tokens = result.tokens;
+            authStore.setAuthSuccess({ _id: "", email: "", name: "" }, tokens);
 
             // IMPORTANT: Update the Convex client with the new auth token
-            console.log(
-              "Setting Convex auth token after OAuth:",
-              result.tokens.token,
-            );
-            convex.setAuth(() => Promise.resolve(result.tokens.token));
+            convex.setAuth(() => Promise.resolve(tokens.token));
 
             // Clear the verifier and URL parameters
             sessionStorage.removeItem("oauth_verifier");

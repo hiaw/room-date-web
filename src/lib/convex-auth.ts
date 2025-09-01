@@ -1,5 +1,6 @@
 import { browser } from "$app/environment";
 import { getStoredToken } from "./auth.js";
+import type { ConvexClient } from "convex/browser";
 
 // Get auth token from Convex Auth
 export function getConvexAuthToken(): string | null {
@@ -10,7 +11,7 @@ export function getConvexAuthToken(): string | null {
 }
 
 // Set up Convex client with proper auth
-export function setupConvexAuth(convex: any) {
+export function setupConvexAuth(convex: ConvexClient) {
   if (!browser || !convex) return;
 
   const token = getConvexAuthToken();
@@ -23,7 +24,7 @@ export function setupConvexAuth(convex: any) {
 }
 
 // Update Convex client auth token (call this when tokens change)
-export function updateConvexAuth(convex: any, token: string) {
+export function updateConvexAuth(convex: ConvexClient, token: string) {
   if (!browser || !convex) return;
 
   console.log("Updating Convex auth token");

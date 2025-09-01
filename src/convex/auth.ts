@@ -9,6 +9,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
     async createOrUpdateUser(ctx: MutationCtx, args) {
       // If this is updating an existing user, handle the update
       if (args.existingUserId !== null) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updates: any = {};
         if (args.profile?.name) updates.name = args.profile.name;
         if (args.profile?.image) updates.image = args.profile.image;
@@ -33,6 +34,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
 
         if (existingUser) {
           // Update existing user with any missing profile data
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const updates: any = {};
           if (!existingUser.name && args.profile.name) {
             updates.name = args.profile.name;
@@ -59,6 +61,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
       }
 
       // Create new user if no existing user found
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const userData: any = {};
       if (args.profile?.name) userData.name = args.profile.name;
       if (args.profile?.image) userData.image = args.profile.image;
