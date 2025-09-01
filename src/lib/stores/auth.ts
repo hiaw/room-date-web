@@ -1,10 +1,6 @@
 import { writable, derived } from "svelte/store";
-import {
-  setTokens,
-  clearTokens,
-  getStoredToken,
-  type AuthTokens,
-} from "../auth.js";
+import { setTokens, clearTokens, getStoredToken } from "../auth.js";
+import type { AuthTokens } from "../types/index.js";
 import { formatUserName } from "../utils/user.js";
 
 import type { User, AuthState } from "$lib/types/stores";

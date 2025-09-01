@@ -2,17 +2,14 @@ import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import Google from "@auth/core/providers/google";
 import type { MutationCtx } from "./_generated/server";
-
-// Type for user data that can be updated
-interface UserDataUpdates {
-  name?: string;
-  image?: string;
-  email?: string;
-  emailVerificationTime?: number;
-}
+import type {
+  OAuthProfile,
+  ExistingUser,
+  UserDataUpdates,
+} from "../lib/types/domains/user-types.js";
 
 // Helper function to build user data from profile
-function buildUserDataFromProfile(profile: any): UserDataUpdates {
+function buildUserDataFromProfile(profile: OAuthProfile): UserDataUpdates {
   const data: UserDataUpdates = {};
   if (profile?.name) data.name = profile.name;
   if (profile?.image) data.image = profile.image;
@@ -25,8 +22,8 @@ function buildUserDataFromProfile(profile: any): UserDataUpdates {
 
 // Helper function to build updates for existing user (enhance principle)
 function buildEnhancementUpdates(
-  existingUser: any,
-  profile: any,
+  existingUser: ExistingUser,
+  profile: OAuthProfile,
   includeEmail = false,
 ): UserDataUpdates {
   const updates: UserDataUpdates = {};

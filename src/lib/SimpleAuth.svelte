@@ -1,7 +1,7 @@
 <script lang="ts">
   import { useConvexClient } from "convex-svelte";
   import { api } from "../convex/_generated/api.js";
-  import { type AuthTokens } from "./auth.js";
+  import type { AuthTokens } from "./types/index.js";
   import { authStore } from "./stores/auth.js";
   import AuthForm from "./components/auth/AuthForm.svelte";
   import ErrorMessage from "./components/ui/ErrorMessage.svelte";

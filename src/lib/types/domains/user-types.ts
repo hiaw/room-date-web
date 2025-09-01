@@ -50,6 +50,34 @@ export interface UpdateSettingsData {
   theme?: "light" | "dark" | "system";
 }
 
+// OAuth and Account Linking Types
+export interface OAuthProfile {
+  name?: string;
+  image?: string;
+  email?: string;
+  emailVerified?: boolean;
+}
+
+export interface ExistingUser {
+  name?: string;
+  image?: string;
+  email?: string;
+  emailVerificationTime?: number;
+}
+
+export interface UserDataUpdates {
+  name?: string;
+  image?: string;
+  email?: string;
+  emailVerificationTime?: number;
+}
+
+// Auth Token Types
+export interface AuthTokens {
+  token: string;
+  refreshToken: string;
+}
+
 // Security Types
 export type SecurityEvent = Doc<"securityEvents">;
 export type SecuritySeverity = "low" | "medium" | "high" | "critical";
