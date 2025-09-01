@@ -83,7 +83,6 @@ export const { auth, signIn, signOut, store } = convexAuth({
       const userData = buildUserDataFromProfile(args.profile);
 
       const userId = await ctx.db.insert("users", userData);
-      console.log(`Created new user: ${args.profile?.email}`);
       return userId;
     },
   },

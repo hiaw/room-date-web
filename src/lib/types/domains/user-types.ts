@@ -58,19 +58,16 @@ export interface OAuthProfile {
   emailVerified?: boolean;
 }
 
-export interface ExistingUser {
-  name?: string;
-  image?: string;
-  email?: string;
-  emailVerificationTime?: number;
-}
-
+// User data structure for OAuth profile updates
 export interface UserDataUpdates {
   name?: string;
   image?: string;
   email?: string;
   emailVerificationTime?: number;
 }
+
+// Alias for existing user data (same structure as updates)
+export type ExistingUser = UserDataUpdates;
 
 // Auth Token Types
 export interface AuthTokens {
