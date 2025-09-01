@@ -50,6 +50,31 @@ export interface UpdateSettingsData {
   theme?: "light" | "dark" | "system";
 }
 
+// OAuth and Account Linking Types
+export interface OAuthProfile {
+  name?: string;
+  image?: string;
+  email?: string;
+  emailVerified?: boolean;
+}
+
+// User data structure for OAuth profile updates
+export interface UserDataUpdates {
+  name?: string;
+  image?: string;
+  email?: string;
+  emailVerificationTime?: number;
+}
+
+// Alias for existing user data (same structure as updates)
+export type ExistingUser = UserDataUpdates;
+
+// Auth Token Types
+export interface AuthTokens {
+  token: string;
+  refreshToken: string;
+}
+
 // Security Types
 export type SecurityEvent = Doc<"securityEvents">;
 export type SecuritySeverity = "low" | "medium" | "high" | "critical";

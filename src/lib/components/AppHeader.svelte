@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from "$app/environment";
+  import { goto } from "$app/navigation";
   import { useConvexClient } from "convex-svelte";
   import { authStore, userDisplayName } from "../stores/auth.js";
   import Button from "./ui/Button.svelte";
@@ -27,13 +28,18 @@
     }
 
     try {
+      // First clear local auth state immediately
+      authStore.signOut();
+      convex.setAuth(() => Promise.resolve(null));
+
+      // Then try to sign out from server (best effort)
       await convex.action(api.auth.signOut, {});
     } catch (err) {
       console.warn("Sign out action failed:", err);
-    } finally {
-      convex.setAuth(() => Promise.resolve(null));
-      authStore.signOut();
     }
+
+    // Navigate to home page with sign out parameter using SvelteKit navigation
+    await goto("/?signedOut=true", { invalidateAll: true });
   }
 </script>
 

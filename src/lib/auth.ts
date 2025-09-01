@@ -1,12 +1,8 @@
 import { browser } from "$app/environment";
+import type { AuthTokens } from "./types/index.js";
 
 const JWT_STORAGE_KEY = "convex-jwt-token";
 const REFRESH_TOKEN_STORAGE_KEY = "convex-refresh-token";
-
-export interface AuthTokens {
-  token: string;
-  refreshToken: string;
-}
 
 export const getStoredToken = (): string | null => {
   if (!browser) return null;

@@ -14,6 +14,12 @@
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
 
+    // Don't process OAuth callback if user just signed out
+    if (urlParams.get("signedOut") === "true") {
+      authStore.signOut();
+      return;
+    }
+
     if (code) {
       try {
         authStore.setLoading(true);
@@ -31,25 +37,35 @@
 
           // Store the tokens if they exist
           if (result?.tokens) {
-            authStore.setAuthSuccess(
-              { _id: "", email: "", name: "" },
-              result.tokens,
-            );
-          }
+            const tokens = result.tokens;
 
-          // Clear the verifier and URL parameters
-          sessionStorage.removeItem("oauth_verifier");
-          replaceState("/", {});
+            // Update the Convex client with the new auth token to fetch the user
+            convex.setAuth(() => Promise.resolve(tokens.token));
 
-          // Get user data after tokens are stored
-          const userData = await convex.query(api.users.getUserProfile, {});
-          if (userData) {
-            authStore.setUser(userData);
-            // After successful auth, redirect to discover page
-            goto("/discover");
+            // Clear the verifier and URL parameters before async operations
+            sessionStorage.removeItem("oauth_verifier");
+            replaceState("/", {});
+
+            // Get user data and then update the store
+            const userData = await convex.query(api.users.getUserProfile, {});
+            if (userData) {
+              authStore.setAuthSuccess(userData, tokens);
+              // After successful auth, redirect to discover page
+              goto("/discover");
+            } else {
+              // This is an error state, we have tokens but no user.
+              authStore.setAuthError(
+                "Failed to retrieve user profile after login.",
+              );
+            }
+          } else {
+            console.error("OAuth callback result:", result);
+            authStore.setAuthError("No tokens received from OAuth");
           }
         } else {
-          authStore.setAuthError("OAuth verification failed");
+          authStore.setAuthError(
+            "OAuth verification failed - no verifier found",
+          );
         }
       } catch (err) {
         console.error("OAuth callback failed:", err);

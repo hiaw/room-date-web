@@ -16,16 +16,9 @@
   } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
-  import EventCard from "$lib/components/EventCard.svelte";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eventId = $page.params.eventId as any;
-
-  // Get current user from event data
-  let currentUserId = $derived(() => {
-    // We'll get this from the event query result which includes user context
-    return event?.userApplication ? "authenticated" : null;
-  });
 
   // Redirect if not authenticated
   onMount(() => {

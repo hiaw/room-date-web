@@ -1,31 +1,23 @@
 <script lang="ts">
   import { PUBLIC_CONVEX_URL } from "$env/static/public";
-  import { setupConvex, useConvexClient } from "convex-svelte";
-  import { getStoredToken } from "$lib/auth.js";
-  import { onMount } from "svelte";
   import { browser } from "$app/environment";
+  import { setupConvex, useConvexClient } from "convex-svelte";
+  import { onMount } from "svelte";
+  import { setupConvexAuth } from "$lib/convex-auth.js";
   import AppLayout from "$lib/components/AppLayout.svelte";
   import "../app.css";
 
   const { children } = $props();
 
-  // Setup Convex first
+  // Setup Convex
   setupConvex(PUBLIC_CONVEX_URL);
 
-  // Then configure auth after mount
   onMount(() => {
-    const token = getStoredToken();
-    if (token) {
-      const convex = useConvexClient();
-      convex.setAuth(() => Promise.resolve(token));
-    }
-
     // Validate OAuth state parameter on page load (CSRF protection)
     if (browser && typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const receivedState = urlParams.get("state");
       const storedState = sessionStorage.getItem("oauth_state");
-
       if (receivedState && storedState) {
         if (receivedState !== storedState) {
           console.error(
@@ -42,6 +34,9 @@
         sessionStorage.removeItem("oauth_state");
       }
     }
+
+    const convex = useConvexClient();
+    setupConvexAuth(convex);
   });
 </script>
 

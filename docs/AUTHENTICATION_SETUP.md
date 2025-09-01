@@ -11,7 +11,35 @@ Before you begin, make sure you have:
 - ✅ The project cloned and dependencies installed (`npm install`)
 - ✅ Convex development environment initialized (`npx convex dev`)
 
-## Required Environment Variables
+## Account Linking
+
+**✨ NEW**: Users with the same email address are automatically recognized as the same account regardless of login method.
+
+### How It Works
+
+- **First Login**: User creates account with email/password
+- **Subsequent Login**: User logs in with Google OAuth using the same email
+- **Result**: Both authentication methods are linked to the same user account
+
+### Features
+
+- **Seamless Experience**: No duplicate accounts for the same email
+- **Profile Merging**: OAuth profile data (name, image) enhances existing accounts
+- **Data Preservation**: All user data (rooms, events, connections) stays with the original account
+- **Automatic Linking**: Happens transparently during login - no user action required
+
+### Technical Implementation
+
+The system uses a custom `createOrUpdateUser` callback in `src/convex/auth.ts` that:
+
+1. **During new sign-ups**: Checks if a user with the same email already exists
+2. **If exists**: Links the new authentication method to the existing user account
+3. **Profile Enhancement**: Updates existing user with any missing profile data from OAuth
+4. **If doesn't exist**: Creates a new account as normal
+
+This ensures that email addresses serve as the unique identifier for user accounts across all authentication methods.
+
+## Environment Variables
 
 Your Convex deployment needs these environment variables to enable authentication:
 
