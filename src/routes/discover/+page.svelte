@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery } from "convex-svelte";
+  import { useQuery, useConvexClient } from "convex-svelte";
   import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { MapPin, Calendar, Plus } from "lucide-svelte";
+  import { MapPin, Calendar, Plus, Settings } from "lucide-svelte";
 
   // Import our extracted components
   import EventSearchBar from "$lib/components/discover/EventSearchBar.svelte";
@@ -28,22 +28,96 @@
     }
   });
 
+  // Get user profile to check for saved location
+  let convex = useConvexClient();
+  let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let profile = $derived(profileQuery?.data as any);
+
   // Location state
   let userLocation = $state<LocationState | null>(null);
   let locationError = $state<string | null>(null);
+  let showLocationPrompt = $state(false);
 
-  // Get user's location on mount using the location service
+  // Get user's location on mount using the location service or profile
   onMount(async () => {
     try {
+      // First, try to get location from user profile
+      if (profile?.profile?.latitude && profile?.profile?.longitude) {
+        userLocation = {
+          latitude: profile.profile.latitude,
+          longitude: profile.profile.longitude,
+          city: profile.profile.location || "Unknown",
+        };
+        locationError = null;
+        return;
+      }
+
+      // If no saved location, try to get current location
       const location = await getCurrentLocation();
       userLocation = location;
       locationError = null;
+
+      // Optionally save this location to user profile
+      if (profile?.profile && !profile.profile.latitude) {
+        showLocationPrompt = true;
+      }
     } catch (error) {
       console.error("Location error:", error);
-      locationError = "Could not get your location. Using default location.";
-      userLocation = getDefaultLocation();
+      locationError =
+        "Could not get your location. Please enable location access or add your location in profile settings.";
+      showLocationPrompt = true;
     }
   });
+
+  // Also watch for profile changes
+  $effect(() => {
+    if (
+      profile?.profile?.latitude &&
+      profile?.profile?.longitude &&
+      !userLocation
+    ) {
+      userLocation = {
+        latitude: profile.profile.latitude,
+        longitude: profile.profile.longitude,
+        city: profile.profile.location || "Unknown",
+      };
+      locationError = null;
+      showLocationPrompt = false;
+    }
+  });
+
+  async function handleSaveLocation() {
+    try {
+      const location = await getCurrentLocation();
+
+      // Save to user profile
+      await convex.mutation(api.userProfiles.updateUserProfile, {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        location:
+          (location as LocationState & { city?: string }).city ||
+          `${location.latitude}, ${location.longitude}`,
+        locationSharing: true,
+      });
+
+      userLocation = location;
+      locationError = null;
+      showLocationPrompt = false;
+    } catch (error) {
+      console.error("Failed to get/save location:", error);
+      alert(
+        "Could not get your location. Please enable location permissions or add your location manually in profile settings.",
+      );
+    }
+  }
+
+  function handleSkipLocation() {
+    showLocationPrompt = false;
+    userLocation = getDefaultLocation();
+    locationError =
+      "Using default location. Add your location in profile settings for better event recommendations.";
+  }
 
   // Reactive query - recreate the query when params change
   let eventsQueryResult = $derived(
@@ -86,11 +160,51 @@
       <EventSearchBar />
 
       <!-- Location Status -->
-      {#if locationError}
+      {#if showLocationPrompt}
+        <div class="mt-3 rounded-lg border border-purple-200 bg-purple-50 p-4">
+          <div class="flex items-start justify-between">
+            <div class="flex items-start">
+              <MapPin class="mt-0.5 mr-2 h-4 w-4 text-purple-500" />
+              <div>
+                <p class="text-sm font-medium text-purple-800">
+                  Enable Location for Better Discovery
+                </p>
+                <p class="mt-1 text-xs text-purple-700">
+                  Share your location to see events near you and let others find
+                  your events.
+                </p>
+              </div>
+            </div>
+            <div class="ml-4 flex space-x-2">
+              <button
+                onclick={handleSaveLocation}
+                class="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700"
+              >
+                Enable
+              </button>
+              <button
+                onclick={handleSkipLocation}
+                class="rounded-lg border border-purple-300 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      {:else if locationError}
         <div class="mt-3 rounded-lg border border-orange-200 bg-orange-50 p-3">
-          <div class="flex items-center">
-            <MapPin class="mr-2 h-4 w-4 text-orange-500" />
-            <span class="text-sm text-orange-700">{locationError}</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <MapPin class="mr-2 h-4 w-4 text-orange-500" />
+              <span class="text-sm text-orange-700">{locationError}</span>
+            </div>
+            <button
+              onclick={() => goto("/profile/edit")}
+              class="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-700"
+            >
+              <Settings size={12} class="mr-1 inline" />
+              Settings
+            </button>
           </div>
         </div>
       {:else if userLocation}
@@ -98,8 +212,8 @@
           <div class="flex items-center">
             <MapPin class="mr-2 h-4 w-4 text-green-500" />
             <span class="text-sm text-green-700"
-              >Showing events within {$discoverFilters.maxDistance} miles of your
-              location</span
+              >Showing events within {$discoverFilters.maxDistance} miles of {userLocation.city ||
+                "your location"}</span
             >
           </div>
         </div>
