@@ -36,12 +36,8 @@
   async function handleNext() {
     if (step === 1) {
       // Validate basic info
-      if (!displayName.trim() || !dateOfBirth || !bio.trim()) {
-        alert("Please fill in all fields");
-        return;
-      }
-      if (bio.trim().length < 20) {
-        alert("Bio must be at least 20 characters");
+      if (!displayName.trim() || !dateOfBirth) {
+        alert("Please fill in all required fields");
         return;
       }
       step = 2;
@@ -78,24 +74,11 @@
           latitude = position.coords.latitude;
           longitude = position.coords.longitude;
 
-          // Reverse geocode to get address
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=en`,
-          );
-          const data = await response.json();
-
-          if (data && data.address) {
-            const addr = data.address;
-            location = [
-              addr.city || addr.town || addr.village,
-              addr.state,
-              addr.country,
-            ]
-              .filter(Boolean)
-              .join(", ");
-          }
+          // Just use coordinates as location description for now
+          // This avoids CSP issues with external geocoding services
+          location = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
         } catch (error) {
-          console.error("Reverse geocoding failed:", error);
+          console.error("Location processing failed:", error);
           location = `${latitude?.toFixed(4) || "0"}, ${longitude?.toFixed(4) || "0"}`;
         } finally {
           gettingLocation = false;
@@ -134,7 +117,7 @@
       await convex.mutation(api.userProfiles.updateUserProfile, {
         displayName: displayName.trim(),
         dateOfBirth: new Date(dateOfBirth).getTime(),
-        bio: bio.trim(),
+        bio: bio.trim() || undefined, // Only save if provided
         location: location || undefined,
         latitude,
         longitude,
@@ -208,7 +191,9 @@
               bind:value={displayName}
               type="text"
               placeholder="How should others see your name?"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+              class="w-full rounded-lg border {!displayName.trim()
+                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500'} px-3 py-2 focus:ring-1 focus:outline-none"
             />
           </div>
 
@@ -224,7 +209,9 @@
               bind:value={dateOfBirth}
               type="date"
               max={maxDateOfBirth()}
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+              class="w-full rounded-lg border {!dateOfBirth
+                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500'} px-3 py-2 focus:ring-1 focus:outline-none"
             />
             <p class="mt-1 text-xs text-gray-500">Must be 18 or older</p>
           </div>
@@ -234,17 +221,17 @@
               for="bio"
               class="mb-1 block text-sm font-medium text-gray-700"
             >
-              About You
+              About You <span class="text-gray-400">(Optional)</span>
             </label>
             <textarea
               id="bio"
               bind:value={bio}
-              placeholder="Tell others about yourself, your interests, what you're looking for..."
-              rows="4"
+              placeholder="Tell others about yourself (optional)..."
+              rows="3"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
             ></textarea>
             <p class="mt-1 text-xs text-gray-500">
-              {bio.length}/20 minimum characters
+              This is optional - focus on photos and availability instead
             </p>
           </div>
         </div>
@@ -375,8 +362,7 @@
           <Button
             onclick={handleNext}
             disabled={saving ||
-              (step === 1 &&
-                (!displayName.trim() || !dateOfBirth || bio.length < 20))}
+              (step === 1 && (!displayName.trim() || !dateOfBirth))}
           >
             {#if saving}
               <div
