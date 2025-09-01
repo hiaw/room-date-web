@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from "$app/environment";
+  import { goto } from "$app/navigation";
   import { useConvexClient } from "convex-svelte";
   import { authStore, userDisplayName } from "../stores/auth.js";
   import Button from "./ui/Button.svelte";
@@ -37,10 +38,8 @@
       console.warn("Sign out action failed:", err);
     }
 
-    // Force navigation to home page with sign out parameter
-    if (browser) {
-      window.location.href = "/?signedOut=true";
-    }
+    // Navigate to home page with sign out parameter using SvelteKit navigation
+    await goto("/?signedOut=true", { invalidateAll: true });
   }
 </script>
 
