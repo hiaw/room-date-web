@@ -1,20 +1,34 @@
 import { mutation } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import type { SecurityActionResult, LoginSecurityResult } from "./types.js";
 
 /**
  * Monitor and respond to suspicious security events
  */
 export const monitorSecurityEvent = mutation({
   args: {
-    eventType: v.string(),
+    eventType: v.union(
+      v.literal("multiple_failed_logins"),
+      v.literal("device_fingerprint_mismatch"),
+      v.literal("rapid_session_creation"),
+      v.literal("token_reuse_detected"),
+      v.literal("suspicious_login_pattern"),
+      v.literal("account_lockout"),
+      v.literal("password_breach_detected"),
+      v.literal("unusual_location_access"),
+    ),
     deviceFingerprint: v.optional(v.string()),
     userAgent: v.optional(v.string()),
     details: v.optional(v.any()),
   },
-  handler: async (ctx, { eventType, details }) => {
+  handler: async (
+    ctx,
+    { eventType, details },
+  ): Promise<SecurityActionResult> => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return { success: false };
+    if (!userId)
+      return { success: false, actionsTaken: { revokedSessions: false } };
 
     console.log(`Security Monitor [${userId}]:`, eventType, details);
 
@@ -75,9 +89,17 @@ export const checkLoginSecurity = mutation({
     deviceFingerprint: v.optional(v.string()),
     userAgent: v.optional(v.string()),
   },
-  handler: async (ctx, { deviceFingerprint, userAgent }) => {
+  handler: async (
+    ctx,
+    { deviceFingerprint, userAgent },
+  ): Promise<LoginSecurityResult> => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return { isSuspicious: false };
+    if (!userId)
+      return {
+        isSuspicious: false,
+        recentSessionCount: 0,
+        recommendedAction: "allow",
+      };
 
     // Get user's recent sessions to analyze patterns
     const recentSessions = await ctx.db

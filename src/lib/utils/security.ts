@@ -1,18 +1,10 @@
 import { browser } from "$app/environment";
-
-export interface DeviceFingerprint {
-  userAgent: string;
-  screen: {
-    width: number;
-    height: number;
-    colorDepth: number;
-  };
-  timezone: string;
-  language: string;
-  platform: string;
-  cookieEnabled: boolean;
-  hash: string;
-}
+import {
+  SECURITY_THRESHOLDS,
+  type DeviceFingerprint,
+  type SecurityEvent,
+  type SecurityCheckFunctions,
+} from "../types/security.js";
 
 /**
  * Generate a device fingerprint for security tracking
@@ -119,21 +111,9 @@ export function isRecentSession(
 }
 
 /**
- * Security thresholds for different operations (in minutes)
- */
-export const SECURITY_THRESHOLDS = {
-  CHANGE_PASSWORD: 15, // 15 minutes
-  DELETE_ACCOUNT: 30, // 30 minutes
-  CHANGE_EMAIL: 15, // 15 minutes
-  CREATE_EVENT: 60, // 1 hour
-  JOIN_EVENT: 120, // 2 hours
-  SEND_MESSAGE: 240, // 4 hours
-} as const;
-
-/**
  * Enhanced security checks for different operations
  */
-export const SecurityCheck = {
+export const SecurityCheck: SecurityCheckFunctions = {
   /**
    * Check if recent authentication is required for profile changes
    */
@@ -180,17 +160,6 @@ export function getSecurityTimeDescription(minutes: number): string {
   }
   return minutes === 1 ? "1 minute" : `${minutes} minutes`;
 }
-
-/**
- * Security event types for monitoring
- */
-export type SecurityEvent =
-  | "device_mismatch"
-  | "suspicious_location"
-  | "multiple_sessions"
-  | "token_reuse"
-  | "failed_auth"
-  | "secure_logout";
 
 /**
  * Log security events (could be extended to send to analytics)
