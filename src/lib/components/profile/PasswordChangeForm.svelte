@@ -5,7 +5,7 @@
   import ErrorMessage from "../ui/ErrorMessage.svelte";
 
   interface Props {
-    onSubmit: (newPassword: string) => Promise<void>;
+    onSubmit: (currentPassword: string, newPassword: string) => Promise<void>;
     loading?: boolean;
     error?: string | null;
     onCancel?: () => void;
@@ -13,8 +13,10 @@
 
   let { onSubmit, loading = false, error = null, onCancel }: Props = $props();
 
+  let currentPassword = $state("");
   let newPassword = $state("");
   let confirmPassword = $state("");
+  let showCurrentPassword = $state(false);
   let showNewPassword = $state(false);
   let showConfirmPassword = $state(false);
   let validationErrors = $state<string[]>([]);
@@ -30,6 +32,12 @@
 
     validationErrors = [];
 
+    // Check if current password is provided
+    if (!currentPassword.trim()) {
+      validationErrors = ["Current password is required"];
+      return;
+    }
+
     // Validate password strength
     if (!passwordValidation.valid) {
       validationErrors = passwordValidation.errors;
@@ -42,13 +50,18 @@
       return;
     }
 
-    await onSubmit(newPassword);
+    await onSubmit(currentPassword, newPassword);
 
     // Reset form on success (if no error)
     if (!error) {
+      currentPassword = "";
       newPassword = "";
       confirmPassword = "";
     }
+  }
+
+  function toggleShowCurrentPassword() {
+    showCurrentPassword = !showCurrentPassword;
   }
 
   function toggleShowNewPassword() {
@@ -65,6 +78,39 @@
     {#if validationErrors.length > 0 || error}
       <ErrorMessage message={error || validationErrors.join(", ")} />
     {/if}
+
+    <!-- Current Password -->
+    <div>
+      <label
+        for="current-password"
+        class="mb-2 block text-sm font-medium text-gray-700"
+      >
+        Current Password
+      </label>
+      <div class="relative">
+        <input
+          id="current-password"
+          type={showCurrentPassword ? "text" : "password"}
+          bind:value={currentPassword}
+          disabled={loading}
+          required
+          placeholder="Enter current password"
+          class="w-full rounded-xl border border-gray-200 py-3 pr-12 pl-4 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
+        />
+        <button
+          type="button"
+          onclick={toggleShowCurrentPassword}
+          class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+          disabled={loading}
+        >
+          {#if showCurrentPassword}
+            <EyeOff size={18} />
+          {:else}
+            <Eye size={18} />
+          {/if}
+        </button>
+      </div>
+    </div>
 
     <!-- New Password -->
     <div>
@@ -191,7 +237,10 @@
       {/if}
       <Button
         type="submit"
-        disabled={loading || !passwordValidation.valid || !passwordsMatch}
+        disabled={loading ||
+          !passwordValidation.valid ||
+          !passwordsMatch ||
+          !currentPassword.trim()}
         {loading}
         class="flex-1 bg-purple-600 text-white hover:bg-purple-700"
       >

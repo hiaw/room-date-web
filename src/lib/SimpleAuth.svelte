@@ -4,12 +4,25 @@
   import type { AuthTokens } from "./types/index.js";
   import { authStore } from "./stores/auth.js";
   import AuthForm from "./components/auth/AuthForm.svelte";
+  import ForgotPasswordForm from "./components/auth/ForgotPasswordForm.svelte";
+  import PasswordResetCompleteForm from "./components/auth/PasswordResetCompleteForm.svelte";
   import ErrorMessage from "./components/ui/ErrorMessage.svelte";
+
+  interface Props {
+    passwordResetCode?: string;
+  }
+
+  let { passwordResetCode }: Props = $props();
 
   const convex = useConvexClient();
 
   let isSignUp = false;
+  let showForgotPassword = false;
   let authError = "";
+  let forgotPasswordError = "";
+  let forgotPasswordSuccess = false;
+  let passwordResetError = "";
+  let passwordResetSuccess = false;
 
   async function handleAuthSubmit(
     email: string,
@@ -87,9 +100,94 @@
     authStore.setLoading(false);
   }
 
+  async function handlePasswordResetComplete(
+    email: string,
+    newPassword: string,
+  ) {
+    authStore.setLoading(true);
+    passwordResetError = "";
+
+    try {
+      // Use the correct password reset verification flow with email
+      const result = await convex.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          email: email,
+          code: passwordResetCode,
+          newPassword: newPassword,
+          flow: "reset-verification",
+        },
+      });
+
+      if (result && typeof result === "object" && "tokens" in result) {
+        const authResult = result as { tokens: AuthTokens };
+
+        // Set authentication on the Convex client
+        convex.setAuth(() => Promise.resolve(authResult.tokens.token));
+
+        // Get user data and update the store
+        const userData = await convex.query(api.users.getUserProfile, {});
+        if (userData) {
+          authStore.setAuthSuccess(userData, authResult.tokens);
+        }
+      }
+
+      passwordResetSuccess = true;
+    } catch (err) {
+      console.error("Password reset error:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to reset password";
+      passwordResetError = errorMessage;
+    } finally {
+      authStore.setLoading(false);
+    }
+  }
+
+  function hidePasswordResetComplete() {
+    passwordResetError = "";
+    passwordResetSuccess = false;
+    // Navigate back to normal auth flow
+    window.location.href = "/";
+  }
+
+  async function handleForgotPassword(email: string) {
+    authStore.setLoading(true);
+    forgotPasswordError = "";
+
+    try {
+      await convex.action(api.changePassword.default, {
+        email,
+      });
+
+      forgotPasswordSuccess = true;
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to send reset email";
+      forgotPasswordError = errorMessage;
+    } finally {
+      authStore.setLoading(false);
+    }
+  }
+
+  function showForgotPasswordForm() {
+    showForgotPassword = true;
+    authError = "";
+    forgotPasswordError = "";
+    forgotPasswordSuccess = false;
+  }
+
+  function hideForgotPasswordForm() {
+    showForgotPassword = false;
+    forgotPasswordError = "";
+    forgotPasswordSuccess = false;
+  }
+
   function toggleMode() {
     isSignUp = !isSignUp;
     authError = "";
+    showForgotPassword = false;
+    forgotPasswordError = "";
+    forgotPasswordSuccess = false;
   }
 
   function clearError() {
@@ -97,7 +195,7 @@
   }
 
   // Subscribe to auth store for loading state
-  $: ({ isLoading } = $authStore);
+  const { isLoading } = $derived($authStore);
 </script>
 
 <div class="w-full">
@@ -107,30 +205,61 @@
     </div>
   {/if}
 
-  <AuthForm
-    onSubmit={handleAuthSubmit}
-    {isSignUp}
-    loading={isLoading}
-    error={authError}
-  />
+  {#if passwordResetCode}
+    <!-- Password Reset Completion Flow -->
+    <PasswordResetCompleteForm
+      onSubmit={handlePasswordResetComplete}
+      onCancel={hidePasswordResetComplete}
+      loading={isLoading}
+      error={passwordResetError}
+      success={passwordResetSuccess}
+    />
+  {:else if showForgotPassword}
+    <!-- Forgot Password Flow -->
+    <ForgotPasswordForm
+      onSubmit={handleForgotPassword}
+      onBack={hideForgotPasswordForm}
+      loading={isLoading}
+      error={forgotPasswordError}
+      success={forgotPasswordSuccess}
+    />
+  {:else}
+    <!-- Normal Auth Flow -->
+    <AuthForm
+      onSubmit={handleAuthSubmit}
+      {isSignUp}
+      loading={isLoading}
+      error={authError}
+    />
 
-  <div class="mt-6 text-center">
-    <p class="text-sm text-gray-600">
-      {isSignUp ? "Already have an account?" : "Don't have an account?"}
-    </p>
-    <button
-      onclick={toggleMode}
-      class="mt-1 font-semibold text-purple-600 transition-colors hover:text-purple-700"
-      disabled={isLoading}
-    >
-      {isSignUp ? "Sign In" : "Sign Up"}
-    </button>
-  </div>
+    <div class="mt-6 text-center">
+      <p class="text-sm text-gray-600">
+        {isSignUp ? "Already have an account?" : "Don't have an account?"}
+      </p>
+      <button
+        onclick={toggleMode}
+        class="mt-1 font-semibold text-purple-600 transition-colors hover:text-purple-700"
+        disabled={isLoading}
+      >
+        {isSignUp ? "Sign In" : "Sign Up"}
+      </button>
+    </div>
 
-  {#if !isSignUp}
-    <p class="mt-4 text-center text-xs leading-relaxed text-gray-500">
-      New to Room Dates? Create an account to start hosting events and
-      connecting with people in your area.
-    </p>
+    {#if !isSignUp}
+      <div class="mt-4 text-center">
+        <button
+          onclick={showForgotPasswordForm}
+          class="text-sm text-purple-600 transition-colors hover:text-purple-700 hover:underline"
+          disabled={isLoading}
+        >
+          Forgot your password?
+        </button>
+      </div>
+
+      <p class="mt-4 text-center text-xs leading-relaxed text-gray-500">
+        New to Room Dates? Create an account to start hosting events and
+        connecting with people in your area.
+      </p>
+    {/if}
   {/if}
 </div>

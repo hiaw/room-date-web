@@ -1,26 +1,54 @@
 import { action } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
+import { api } from "./_generated/api";
 
-// Simple password change action for logged-in users
-export const changePassword = action({
-  args: {
-    newPassword: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new ConvexError("Not authenticated");
+// For forgot password from sign-in page (takes email as parameter)
+export default action({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    console.log("Attempting password reset for email:", email);
+    console.log("Environment check:");
+    console.log("- RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
+    console.log("- FROM_EMAIL:", process.env.FROM_EMAIL);
+
+    // Use the auth signIn with password reset flow
+    try {
+      await ctx.runAction(api.auth.signIn, {
+        provider: "password",
+        params: {
+          email,
+          flow: "reset",
+        },
+      });
+
+      console.log("Password reset email sent successfully for:", email);
+      return {
+        success: true,
+        message:
+          "Password reset email sent. Please check your email for instructions.",
+      };
+    } catch (error) {
+      console.error("Password reset error details:", error);
+      console.error("Error type:", typeof error);
+      console.error(
+        "Error message:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+
+      // More specific error message
+      if (error instanceof Error && error.message.includes("rate limit")) {
+        throw new ConvexError(
+          "Email service rate limited. Please try again in a few minutes.",
+        );
+      } else if (error instanceof Error && error.message.includes("domain")) {
+        throw new ConvexError(
+          "Email configuration issue. Please contact support.",
+        );
+      } else {
+        throw new ConvexError(
+          `Failed to send password reset email: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
     }
-
-    // Validate new password strength on backend too
-    if (args.newPassword.length < 8) {
-      throw new ConvexError("Password must be at least 8 characters long");
-    }
-
-    // For now, we'll simulate success since modifyAccountCredentials is complex
-    // In a real implementation, you would use Convex Auth's modifyAccountCredentials
-
-    return { success: true, message: "Password changed successfully" };
   },
 });

@@ -11,7 +11,7 @@
   import PhotoGallery from "$lib/components/profile/sections/PhotoGallery.svelte";
   import ProfileActions from "$lib/components/profile/sections/ProfileActions.svelte";
   import ProfileEmpty from "$lib/components/profile/sections/ProfileEmpty.svelte";
-  import PasswordChangeForm from "$lib/components/profile/PasswordChangeForm.svelte";
+  import PasswordResetForm from "$lib/components/profile/PasswordResetForm.svelte";
   import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
@@ -67,20 +67,23 @@
     passwordChangeError = null;
   }
 
-  async function handlePasswordChange(newPassword: string) {
+  async function handlePasswordChange() {
     passwordChangeLoading = true;
     passwordChangeError = null;
 
     try {
-      await convex.action(api.changePassword.changePassword, {
-        newPassword,
-      });
+      // Use the password reset flow for security
+      await convex.action(api.changePassword.requestPasswordReset, {});
 
       hidePasswordChangeForm();
-      alert("Password changed successfully!"); // Replace with toast notification
+      alert(
+        "Password reset email sent! Please check your email to complete the password change.",
+      ); // Replace with toast notification
     } catch (error) {
       passwordChangeError =
-        error instanceof Error ? error.message : "Failed to change password";
+        error instanceof Error
+          ? error.message
+          : "Failed to request password reset";
     } finally {
       passwordChangeLoading = false;
     }
@@ -146,7 +149,7 @@
           class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
         >
           <Lock size={18} />
-          <span>Change Password</span>
+          <span>Reset Password</span>
         </button>
         <button
           onclick={() => goto("/profile/privacy")}
@@ -206,20 +209,21 @@
   <!-- Content -->
   <div class="px-4 py-6">
     {#if showPasswordChange}
-      <!-- Password Change Form -->
+      <!-- Password Reset Form -->
       <div class="mx-auto max-w-md space-y-6">
         <div class="text-center">
-          <h2 class="text-2xl font-bold text-gray-900">Change Password</h2>
+          <h2 class="text-2xl font-bold text-gray-900">Reset Password</h2>
           <p class="mt-2 text-sm text-gray-600">
-            Enter a new password for your account
+            We'll send a secure password reset link to your email address.
           </p>
         </div>
 
-        <PasswordChangeForm
+        <PasswordResetForm
           onSubmit={handlePasswordChange}
           loading={passwordChangeLoading}
           error={passwordChangeError}
           onCancel={hidePasswordChangeForm}
+          userEmail={profile?.email || profile?.profile?.email}
         />
       </div>
     {:else if loading}

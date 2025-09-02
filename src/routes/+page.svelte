@@ -9,8 +9,10 @@
 
   const convex = useConvexClient();
 
+  let passwordResetCode = $state<string | undefined>(undefined);
+
   onMount(async () => {
-    // Handle OAuth callback
+    // Handle OAuth callback and password reset codes
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
 
@@ -21,13 +23,14 @@
     }
 
     if (code) {
-      try {
-        authStore.setLoading(true);
+      // Check if this is a password reset code or OAuth code
+      const verifier = sessionStorage.getItem("oauth_verifier");
 
-        // Get the verifier from sessionStorage (stored during OAuth initiation)
-        const verifier = sessionStorage.getItem("oauth_verifier");
+      if (verifier) {
+        // This is an OAuth code - handle OAuth flow
+        try {
+          authStore.setLoading(true);
 
-        if (verifier) {
           // Complete the OAuth flow
           const result = await convex.action(api.auth.signIn, {
             provider: "google",
@@ -44,7 +47,11 @@
 
             // Clear the verifier and URL parameters before async operations
             sessionStorage.removeItem("oauth_verifier");
-            replaceState("/", {});
+
+            // Use a timeout to ensure router is initialized
+            setTimeout(() => {
+              replaceState("/", {});
+            }, 100);
 
             // Get user data and then update the store
             const userData = await convex.query(api.users.getUserProfile, {});
@@ -62,17 +69,23 @@
             console.error("OAuth callback result:", result);
             authStore.setAuthError("No tokens received from OAuth");
           }
-        } else {
-          authStore.setAuthError(
-            "OAuth verification failed - no verifier found",
-          );
+        } catch (err) {
+          console.error("OAuth callback failed:", err);
+          authStore.setAuthError("Sign-in failed");
+          // Use timeout for error case too
+          setTimeout(() => {
+            replaceState("/", {});
+          }, 100);
+        } finally {
+          authStore.setLoading(false);
         }
-      } catch (err) {
-        console.error("OAuth callback failed:", err);
-        authStore.setAuthError("Sign-in failed");
-        replaceState("/", {});
-      } finally {
-        authStore.setLoading(false);
+      } else {
+        // This is likely a password reset code - set it for the UI
+        passwordResetCode = code;
+        // Clean up the URL but keep the password reset code in state
+        setTimeout(() => {
+          replaceState("/", {});
+        }, 100);
       }
     } else {
       // Normal page load - check for existing auth
@@ -113,5 +126,5 @@
 {#if $isAuthenticated}
   <AuthenticatedView />
 {:else}
-  <UnauthenticatedView />
+  <UnauthenticatedView {passwordResetCode} />
 {/if}
