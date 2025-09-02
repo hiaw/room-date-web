@@ -1,16 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery } from "convex-svelte";
+  import { useQuery, useConvexClient } from "convex-svelte";
   import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated, authStore } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { Edit3, Settings, LogOut } from "lucide-svelte";
+  import { Edit3, Settings, LogOut, Lock } from "lucide-svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import ProfileHeader from "$lib/components/profile/sections/ProfileHeader.svelte";
   import ProfileDetails from "$lib/components/profile/sections/ProfileDetails.svelte";
   import PhotoGallery from "$lib/components/profile/sections/PhotoGallery.svelte";
   import ProfileActions from "$lib/components/profile/sections/ProfileActions.svelte";
   import ProfileEmpty from "$lib/components/profile/sections/ProfileEmpty.svelte";
+  import PasswordChangeForm from "$lib/components/profile/PasswordChangeForm.svelte";
   import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
@@ -23,6 +24,7 @@
 
   // State
   let showSettings = $state(false);
+  let showPasswordChange = $state(false);
 
   // Reactive queries
   let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
@@ -30,6 +32,13 @@
     profileQueryResult.data as UserProfileResponse | undefined,
   );
   let loading = $derived(profileQueryResult.isLoading);
+
+  // Convex client for actions
+  const convex = useConvexClient();
+
+  // Password change state
+  let passwordChangeLoading = $state(false);
+  let passwordChangeError = $state<string | null>(null);
 
   function handleEditProfile() {
     goto("/profile/edit");
@@ -45,6 +54,35 @@
       goto("/");
     } catch (error) {
       console.error("Sign out failed:", error);
+    }
+  }
+
+  function showPasswordChangeForm() {
+    showPasswordChange = true;
+    showSettings = false;
+  }
+
+  function hidePasswordChangeForm() {
+    showPasswordChange = false;
+    passwordChangeError = null;
+  }
+
+  async function handlePasswordChange(newPassword: string) {
+    passwordChangeLoading = true;
+    passwordChangeError = null;
+
+    try {
+      await convex.action(api.changePassword.changePassword, {
+        newPassword,
+      });
+
+      hidePasswordChangeForm();
+      alert("Password changed successfully!"); // Replace with toast notification
+    } catch (error) {
+      passwordChangeError =
+        error instanceof Error ? error.message : "Failed to change password";
+    } finally {
+      passwordChangeLoading = false;
     }
   }
 
@@ -104,6 +142,13 @@
     >
       <div class="space-y-3">
         <button
+          onclick={showPasswordChangeForm}
+          class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          <Lock size={18} />
+          <span>Change Password</span>
+        </button>
+        <button
           onclick={() => goto("/profile/privacy")}
           class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
         >
@@ -160,7 +205,24 @@
 
   <!-- Content -->
   <div class="px-4 py-6">
-    {#if loading}
+    {#if showPasswordChange}
+      <!-- Password Change Form -->
+      <div class="mx-auto max-w-md space-y-6">
+        <div class="text-center">
+          <h2 class="text-2xl font-bold text-gray-900">Change Password</h2>
+          <p class="mt-2 text-sm text-gray-600">
+            Enter a new password for your account
+          </p>
+        </div>
+
+        <PasswordChangeForm
+          onSubmit={handlePasswordChange}
+          loading={passwordChangeLoading}
+          error={passwordChangeError}
+          onCancel={hidePasswordChangeForm}
+        />
+      </div>
+    {:else if loading}
       <div class="flex items-center justify-center py-16">
         <LoadingSpinner />
       </div>
