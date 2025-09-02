@@ -8,6 +8,13 @@
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import type { Id } from "../../../convex/_generated/dataModel";
+  import type {
+    MessagePageState,
+    MessageSubmitHandler,
+    MessageKeyDownHandler,
+    NavigationHandler,
+    MessageTimeFormatOptions,
+  } from "$lib/types/domains/message-page";
 
   // Get connection ID from URL
   const connectionId = $derived($page.params.id as Id<"connections">);
@@ -19,7 +26,7 @@
     }
   });
 
-  // State
+  // State with proper typing
   let messageText = $state("");
   let messagesContainer: HTMLDivElement;
   let isSubmitting = $state(false);
@@ -66,8 +73,8 @@
     }
   });
 
-  // Event handlers
-  async function handleSendMessage() {
+  // Event handlers with proper typing
+  const handleSendMessage: MessageSubmitHandler = async () => {
     if (!messageText.trim()) return;
 
     isSubmitting = true;
@@ -83,16 +90,23 @@
     } finally {
       isSubmitting = false;
     }
-  }
+  };
 
-  function handleKeyDown(event: KeyboardEvent) {
+  const handleKeyDown: MessageKeyDownHandler = (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage();
     }
-  }
+  };
 
-  function formatTime(timestamp: number) {
+  const handleBackToConnections: NavigationHandler = () => {
+    goto("/connections");
+  };
+
+  function formatTime(
+    timestamp: number,
+    options: MessageTimeFormatOptions = {},
+  ): string {
     const date = new Date(timestamp);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -142,7 +156,7 @@
       <Button
         variant="secondary"
         size="sm"
-        onclick={() => goto("/connections")}
+        onclick={handleBackToConnections}
         class="p-2"
       >
         {#snippet children()}
@@ -207,7 +221,7 @@
         <p class="mb-4 text-gray-600">
           This conversation doesn't exist or you don't have access to it.
         </p>
-        <Button onclick={() => goto("/connections")}>
+        <Button onclick={handleBackToConnections}>
           {#snippet children()}
             Back to Connections
           {/snippet}

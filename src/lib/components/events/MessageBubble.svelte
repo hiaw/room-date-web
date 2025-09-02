@@ -2,19 +2,13 @@
   import { useQuery } from "convex-svelte";
   import { api } from "../../../convex/_generated/api.js";
   import { formatDistanceToNow } from "date-fns";
+  import type { Doc } from "../../../convex/_generated/dataModel";
 
-  interface Message {
-    _id: string;
-    _creationTime: number;
-    content: string;
-    senderId: string;
-    senderDisplayName: string;
-    senderProfileImageUrl?: string;
-    messageType: "text" | "system";
-  }
+  // Use the actual event message type from Convex schema
+  type EventMessage = Doc<"eventMessages">;
 
   interface Props {
-    message: Message;
+    message: EventMessage;
   }
 
   let { message }: Props = $props();

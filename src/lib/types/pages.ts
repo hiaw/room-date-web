@@ -1,6 +1,9 @@
 // Page Types
 // Types for page-specific state, filters, and data structures
 
+import type { Message, ConnectionId } from "./domains/messaging";
+import type { UserWithProfile } from "./domains/user-types";
+
 // Discover Page Types
 export interface LocationState {
   latitude: number;
@@ -140,24 +143,14 @@ export interface ConnectionsPageState {
 }
 
 // Messages Page Types
-export interface MessageWithDetails {
-  _id: string;
-  connectionId: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  messageType: "text" | "image" | "system";
-  isRead: boolean;
-  imageUrl?: string;
-  _creationTime: number;
-  sender?: unknown; // Use proper user type
+export interface MessageWithDetails extends Message {
   senderDisplayName?: string;
   senderProfileImageUrl?: string;
 }
 
 export interface Conversation {
-  connectionId: string;
-  otherUser: unknown; // Use proper user type
+  connectionId: ConnectionId;
+  otherUser?: UserWithProfile;
   messages: MessageWithDetails[];
   unreadCount: number;
   lastMessage?: MessageWithDetails;
