@@ -2,6 +2,10 @@ import { mutation } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { SecurityActionResult, LoginSecurityResult } from "./types.js";
+import {
+  SECURITY_THRESHOLDS,
+  SecurityUtils,
+} from "../lib/securityConstants.js";
 
 /**
  * Monitor and respond to suspicious security events
@@ -86,8 +90,9 @@ export const monitorSecurityEvent = mutation({
     // Check for specific suspicious patterns
     switch (eventType) {
       case "multiple_failed_logins":
-        // If more than 5 failed attempts, revoke sessions
-        shouldRevokeAllSessions = (details?.attemptCount || 0) > 5;
+        // If more than the threshold of failed attempts, revoke sessions
+        shouldRevokeAllSessions =
+          (details?.attemptCount || 0) > SECURITY_THRESHOLDS.MAX_FAILED_LOGINS;
         break;
 
       case "device_fingerprint_mismatch":
@@ -97,7 +102,8 @@ export const monitorSecurityEvent = mutation({
 
       case "rapid_session_creation":
         // If too many sessions created quickly, might be an attack
-        shouldRevokeAllSessions = (details?.sessionCount || 0) > 3;
+        shouldRevokeAllSessions =
+          (details?.sessionCount || 0) > SECURITY_THRESHOLDS.MAX_RAPID_SESSIONS;
         break;
 
       case "token_reuse_detected":
@@ -169,16 +175,17 @@ export const checkLoginSecurity = mutation({
       .withIndex("userId", (q) => q.eq("userId", userId))
       .collect();
 
-    const now = Date.now();
-    const fifteenMinutesAgo = now - 15 * 60 * 1000;
+    // Calculate time window for recent session analysis
+    const timeWindowAgo = SecurityUtils.getTimeWindowStart("rapid_session");
 
-    // Count recent session creations
+    // Count recent session creations within the security time window
     const recentSessionCount = recentSessions.filter(
-      (session) => session._creationTime > fifteenMinutesAgo,
+      (session) => session._creationTime > timeWindowAgo,
     ).length;
 
     // Flag as suspicious if too many recent sessions
-    const isSuspicious = recentSessionCount > 3;
+    const isSuspicious =
+      recentSessionCount > SECURITY_THRESHOLDS.MAX_SESSIONS_IN_WINDOW;
 
     if (isSuspicious) {
       console.log(`Suspicious activity detected for user ${userId}:`, {

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { SECURITY_THRESHOLDS, SecurityUtils } from "./lib/securityConstants.js";
 
 export type SecurityEventType =
   | "auth_success"
@@ -96,15 +97,18 @@ async function checkAndTriggerSecurityMonitoring(
     .query("securityEvents")
     .filter((q: any) => q.eq(q.field("eventType"), "auth_failure"))
     .filter((q: any) => q.eq(q.field("identifier"), email))
-    .filter(
-      (q: any) => q.gt(q.field("timestamp"), Date.now() - 15 * 60 * 1000), // Last 15 minutes
+    .filter((q: any) =>
+      q.gt(
+        q.field("timestamp"),
+        SecurityUtils.getTimeWindowStart("failed_login"),
+      ),
     )
     .collect();
 
   const attemptCount = recentFailures.length;
 
-  // If we have multiple failed attempts, trigger security monitoring
-  if (attemptCount >= 3) {
+  // If we have reached the threshold for failed attempts, trigger security monitoring
+  if (attemptCount >= SECURITY_THRESHOLDS.MIN_FAILED_LOGINS_FOR_MONITORING) {
     try {
       // Import the security monitoring function
       const { monitorSecurityEvent } = await import("./auth/security.js");
@@ -115,7 +119,7 @@ async function checkAndTriggerSecurityMonitoring(
           email: email,
           attemptCount: attemptCount,
           timestamp: Date.now(),
-          riskScore: Math.min(attemptCount * 20, 100), // Scale risk score
+          riskScore: SecurityUtils.calculateRiskScore(attemptCount),
         },
       });
 
