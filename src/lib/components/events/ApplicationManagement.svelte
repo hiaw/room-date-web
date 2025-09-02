@@ -1,40 +1,66 @@
 <script lang="ts">
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../convex/api.js";
   import ApplicantCard from "./ApplicantCard.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import { Users, Clock, CheckCircle, XCircle } from "lucide-svelte";
   import type { ApplicationManagementProps } from "$lib/types/components.js";
   import type { Id } from "../../../convex/_generated/dataModel";
+  import { browser } from "$app/environment";
 
   let { eventId }: ApplicationManagementProps = $props();
 
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error(
+          "Failed to load Convex API in ApplicationManagement:",
+          error,
+        );
+      });
+  }
+
   // Fetch applications for this event
-  let applicationsQuery = useQuery(api.eventApplications.getEventApplications, {
-    eventId,
-  });
+  let applicationsQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).eventApplications.getEventApplications, {
+          eventId,
+        })
+      : null,
+  );
   let applications = $derived(applicationsQuery?.data ?? []);
   let applicationsLoading = $derived(applicationsQuery?.isLoading ?? true);
 
   // Convex client for mutations
   let convex = useConvexClient();
+
+  // Track processing applications
   let processingApplications = $state(new Set<string>());
 
-  // Filter applications by status
+  // Derived states with proper typing
   let pendingApplications = $derived(
-    applications.filter((app) => app.status === "pending"),
+    applications.filter((app: { status: string }) => app.status === "pending"),
   );
   let approvedApplications = $derived(
-    applications.filter((app) => app.status === "approved"),
+    applications.filter((app: { status: string }) => app.status === "approved"),
   );
   let rejectedApplications = $derived(
-    applications.filter((app) => app.status === "rejected"),
+    applications.filter((app: { status: string }) => app.status === "rejected"),
   );
 
-  async function handleApprove(
-    applicationId: string,
-    message?: string,
-  ): Promise<void> {
+  // Handle application approval
+  async function handleApprove(applicationId: string, message?: string) {
+    if (!api) {
+      console.error("API not available");
+      return;
+    }
+
     processingApplications.add(applicationId);
 
     try {
@@ -55,6 +81,11 @@
     applicationId: string,
     message?: string,
   ): Promise<void> {
+    if (!api) {
+      console.error("API not available");
+      return;
+    }
+
     processingApplications.add(applicationId);
 
     try {

@@ -3,17 +3,31 @@
   import { goto } from "$app/navigation";
   import { authStore } from "$lib/stores/auth.js";
   import { useQuery } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../convex/api.js";
   import { Search, Calendar, MessageCircle, User } from "lucide-svelte";
   import OfflineIndicator from "./ui/OfflineIndicator.svelte";
   import OnboardingModal from "./profile/OnboardingModal.svelte";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
+  import { browser } from "$app/environment";
 
   interface Props {
     children: import("svelte").Snippet;
   }
 
   let { children }: Props = $props();
+
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in AppLayout:", error);
+      });
+  }
 
   const navItems = [
     {
@@ -51,11 +65,14 @@
 
   // Check if user profile is complete
   let profileQuery = $derived(
-    isAuthenticated ? useQuery(api.userProfiles.getUserProfile, {}) : null,
+    isAuthenticated && api
+      ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {})
+      : null,
   );
   let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
   let shouldShowOnboarding = $derived(
     isAuthenticated &&
+      api &&
       profile &&
       !profile?.profile?.isProfileComplete &&
       currentPath !== "/profile/edit", // Don't show if already editing profile

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../../lib/convex/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { browser } from "$app/environment";
@@ -13,6 +13,19 @@
 
   // Get convex client - only on client side
   let convex = browser ? useConvexClient() : null;
+
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in room create page:", error);
+      });
+  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -109,6 +122,10 @@
         images,
         primaryImageUrl: images[0] || undefined,
       };
+
+      if (!api || !convex) {
+        throw new Error("API or Convex client not available");
+      }
 
       await convex.mutation(api.rooms.createRoom, roomData);
       goto("/my-rooms");

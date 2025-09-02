@@ -1,6 +1,6 @@
 <script lang="ts">
   import { useConvexClient } from "convex-svelte";
-  import { loadApi } from "../../convex/api.js";
+  import { loadApi, type ConvexAPI } from "../../convex/api.js";
   import { authStore } from "../../stores/auth.js";
   import Button from "../ui/Button.svelte";
   import { browser } from "$app/environment";
@@ -15,7 +15,7 @@
   const convex = useConvexClient();
 
   // Import API only on client side
-  let api: any = null;
+  let api: ConvexAPI | null = null;
 
   if (browser) {
     loadApi()

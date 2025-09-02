@@ -2,10 +2,10 @@
   import { browser } from "$app/environment";
   import { Upload, X, Camera } from "lucide-svelte";
   import { useConvexClient } from "convex-svelte";
-  import { loadApi } from "$lib/convex/api.js";
+  import { loadApi, type ConvexAPI } from "$lib/convex/api.js";
 
   // Import API only on client side to avoid SSR issues
-  let api: any = null;
+  let api: ConvexAPI | null = null;
 
   if (browser) {
     loadApi()

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../../lib/convex/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Save } from "lucide-svelte";
@@ -9,6 +9,20 @@
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
+  import { browser } from "$app/environment";
+
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in profile edit page:", error);
+      });
+  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -18,7 +32,9 @@
   });
 
   // Fetch current profile
-  let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let profileQuery = $derived(
+    api ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {}) : null,
+  );
   let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
   let loading = $derived(profileQuery?.isLoading ?? true);
 
@@ -78,6 +94,10 @@
 
       if (dateOfBirth) {
         updateData.dateOfBirth = new Date(dateOfBirth).getTime();
+      }
+
+      if (!api) {
+        throw new Error("API not available");
       }
 
       await convex.mutation(api.userProfiles.updateUserProfile, updateData);

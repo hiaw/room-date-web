@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../../../lib/convex/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -11,8 +11,22 @@
   import MessageBubble from "$lib/components/events/MessageBubble.svelte";
   import ParticipantsList from "$lib/components/events/ParticipantsList.svelte";
   import type { Id } from "../../../../convex/_generated/dataModel";
+  import { browser } from "$app/environment";
 
   const eventId = $page.params.eventId as Id<"events">;
+
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in event chat page:", error);
+      });
+  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -25,33 +39,51 @@
   let convex = useConvexClient();
 
   // Check if user can access this chat
-  let accessQuery = useQuery(api.eventChat.canAccessEventChat, { eventId });
+  let accessQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).eventChat.canAccessEventChat, { eventId })
+      : null,
+  );
   let canAccess = $derived(accessQuery?.data);
   let accessLoading = $derived(accessQuery?.isLoading ?? true);
 
   // Get event chat info
-  let chatInfoQuery = useQuery(api.eventChat.getEventChatInfo, { eventId });
+  let chatInfoQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).eventChat.getEventChatInfo, { eventId })
+      : null,
+  );
   let chatInfo = $derived(
     canAccess?.canAccess ? chatInfoQuery?.data : undefined,
   );
 
   // Get messages
-  let messagesQuery = useQuery(api.eventChat.getEventMessages, { eventId });
+  let messagesQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).eventChat.getEventMessages, { eventId })
+      : null,
+  );
   let messages = $derived(
     canAccess?.canAccess ? messagesQuery?.data?.page || [] : [],
   );
   let messagesLoading = $derived(messagesQuery?.isLoading ?? true);
 
   // Get participants
-  let participantsQuery = useQuery(api.eventChat.getEventChatParticipants, {
-    eventId,
-  });
+  let participantsQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).eventChat.getEventChatParticipants, {
+          eventId,
+        })
+      : null,
+  );
   let participants = $derived(
     canAccess?.canAccess ? participantsQuery?.data || [] : [],
   );
 
   // Get current user profile data (move from MessageBubble)
-  let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let userProfileQuery = $derived(
+    api ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {}) : null,
+  );
   let currentUserData = $derived(userProfileQuery?.data);
   let currentUser = $derived(currentUserData?.user);
   let currentUserProfile = $derived(currentUserData?.profile);
@@ -75,7 +107,7 @@
 
   // Mark messages as seen when page loads
   onMount(async () => {
-    if (canAccess?.canAccess) {
+    if (canAccess?.canAccess && api) {
       try {
         await convex.mutation(api.eventChat.markEventMessagesSeen, { eventId });
       } catch (error) {
@@ -86,7 +118,7 @@
 
   async function handleSendMessage() {
     const content = messageInput.trim();
-    if (!content || sending) return;
+    if (!content || sending || !api) return;
 
     const tempMessage = content;
     messageInput = "";
@@ -125,7 +157,7 @@
   // Cleanup
   onDestroy(() => {
     // Mark messages as seen when leaving
-    if (canAccess?.canAccess) {
+    if (canAccess?.canAccess && api) {
       convex
         .mutation(api.eventChat.markEventMessagesSeen, { eventId })
         .catch(console.error);
@@ -212,7 +244,7 @@
           <MessageBubble
             {message}
             currentUserId={currentUser?._id}
-            {currentUserProfile}
+            currentUserProfile={currentUserProfile ?? undefined}
           />
         {/each}
       {/if}

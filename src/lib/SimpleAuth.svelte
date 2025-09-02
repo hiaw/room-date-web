@@ -1,6 +1,6 @@
 <script lang="ts">
   import { useConvexClient } from "convex-svelte";
-  import { loadApi } from "./convex/api.js";
+  import { loadApi, type ConvexAPI } from "./convex/api.js";
   import { goto } from "$app/navigation";
   import type { AuthTokens } from "./types/index.js";
   import { authStore } from "./stores/auth.js";
@@ -19,7 +19,7 @@
   const convex = useConvexClient();
 
   // Import API only on client side
-  let api: any = null;
+  let api: ConvexAPI | null = null;
 
   if (browser) {
     loadApi()
@@ -30,14 +30,6 @@
         console.error("Failed to load Convex API in SimpleAuth:", error);
       });
   }
-
-  interface Props {
-    passwordResetCode?: string;
-  }
-
-  let { passwordResetCode }: Props = $props();
-
-  const convex = useConvexClient();
 
   let isSignUp = $state(false);
   let showForgotPassword = $state(false);
@@ -132,6 +124,11 @@
     email: string,
     newPassword: string,
   ) {
+    if (!api) {
+      passwordResetError = "API not ready";
+      return;
+    }
+
     authStore.setLoading(true);
     passwordResetError = "";
 
@@ -179,6 +176,11 @@
   }
 
   async function handleForgotPassword(email: string) {
+    if (!api) {
+      forgotPasswordError = "API not ready";
+      return;
+    }
+
     authStore.setLoading(true);
     forgotPasswordError = "";
 

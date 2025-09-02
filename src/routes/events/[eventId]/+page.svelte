@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../../lib/convex/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -19,8 +19,25 @@
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import ApplicationManagement from "$lib/components/events/ApplicationManagement.svelte";
   import type { Id } from "../../../convex/_generated/dataModel";
+  import { browser } from "$app/environment";
 
   const eventId = $page.params.eventId as Id<"events">;
+
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error(
+          "Failed to load Convex API in event details page:",
+          error,
+        );
+      });
+  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -30,16 +47,24 @@
   });
 
   // Fetch event details
-  let eventQuery = useQuery(api.events.getEvent, { eventId });
+  let eventQuery = $derived(
+    api ? useQuery((api as ConvexAPI).events.getEvent, { eventId }) : null,
+  );
   let event = $derived(eventQuery?.data);
   let eventLoading = $derived(eventQuery?.isLoading ?? true);
 
   // Get current user to check ownership
-  let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let userProfileQuery = $derived(
+    api ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {}) : null,
+  );
   let currentUser = $derived(userProfileQuery?.data?.user);
 
   // Check chat access
-  let chatAccessQuery = useQuery(api.eventChat.canAccessEventChat, { eventId });
+  let chatAccessQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).eventChat.canAccessEventChat, { eventId })
+      : null,
+  );
   let canAccessChat = $derived(chatAccessQuery?.data?.canAccess ?? false);
 
   // Create convex client for mutations
@@ -57,7 +82,7 @@
   }
 
   async function handleApply() {
-    if (!event) return;
+    if (!event || !api) return;
 
     applying = true;
     try {
@@ -66,7 +91,7 @@
         message: "", // Could add a form for this later
       });
       // Refresh event data to show updated application status
-      eventQuery = useQuery(api.events.getEvent, { eventId });
+      // Note: In a real app, this would be reactive via Convex subscriptions
     } catch (error) {
       console.error("Failed to apply:", error);
       alert("Failed to apply to event. Please try again.");
@@ -76,7 +101,7 @@
   }
 
   async function handleBookmark() {
-    if (!event) return;
+    if (!event || !api) return;
 
     bookmarking = true;
     try {
@@ -89,8 +114,7 @@
           eventId: event._id,
         });
       }
-      // Refresh event data
-      eventQuery = useQuery(api.events.getEvent, { eventId });
+      // Note: In a real app, this would be reactive via Convex subscriptions
     } catch (error) {
       console.error("Failed to bookmark:", error);
       alert("Failed to bookmark event. Please try again.");

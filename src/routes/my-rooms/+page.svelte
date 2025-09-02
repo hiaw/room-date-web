@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../lib/convex/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
@@ -9,6 +9,20 @@
   import ApplicationsList from "$lib/components/rooms/ApplicationsList.svelte";
   import RoomsList from "$lib/components/rooms/RoomsList.svelte";
   import RoomsEmptyState from "$lib/components/rooms/RoomsEmptyState.svelte";
+  import { browser } from "$app/environment";
+
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in my-rooms page:", error);
+      });
+  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -18,20 +32,25 @@
   });
 
   // Reactive queries
-  let roomsQueryResult = useQuery(api.rooms.getMyRooms, {});
-  let eventsQueryResult = useQuery(api.events.getUserEvents, {});
-  let applicationsQueryResult = useQuery(
-    api.eventApplications.getMyApplications,
-    {},
+  let roomsQueryResult = $derived(
+    api ? useQuery((api as ConvexAPI).rooms.getMyRooms, {}) : null,
+  );
+  let eventsQueryResult = $derived(
+    api ? useQuery((api as ConvexAPI).events.getUserEvents, {}) : null,
+  );
+  let applicationsQueryResult = $derived(
+    api
+      ? useQuery((api as ConvexAPI).eventApplications.getMyApplications, {})
+      : null,
   );
 
-  let rooms = $derived(roomsQueryResult.data ?? []);
-  let events = $derived(eventsQueryResult.data ?? []);
-  let applications = $derived(applicationsQueryResult.data ?? []);
+  let rooms = $derived(roomsQueryResult?.data ?? []);
+  let events = $derived(eventsQueryResult?.data ?? []);
+  let applications = $derived(applicationsQueryResult?.data ?? []);
   let loading = $derived(
-    roomsQueryResult.isLoading ||
-      eventsQueryResult.isLoading ||
-      applicationsQueryResult.isLoading,
+    (roomsQueryResult?.isLoading ?? true) ||
+      (eventsQueryResult?.isLoading ?? true) ||
+      (applicationsQueryResult?.isLoading ?? true),
   );
 
   // Group events by room

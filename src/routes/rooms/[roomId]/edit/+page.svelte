@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useConvexClient, useQuery } from "convex-svelte";
-  import { api } from "../../../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../../../lib/convex/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -16,12 +16,27 @@
   // Get convex client - only on client side
   let convex = browser ? useConvexClient() : null;
 
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in room edit page:", error);
+      });
+  }
+
   // Get room ID from URL
   let roomId = $page.params.roomId as Id<"rooms">;
 
   // Query to get room data
   let roomQuery = $derived(
-    browser ? useQuery(api.rooms.getRoom, { roomId }) : null,
+    browser && api
+      ? useQuery((api as ConvexAPI).rooms.getRoom, { roomId })
+      : null,
   );
   let room = $derived(roomQuery ? roomQuery.data : null);
 
@@ -139,6 +154,10 @@
         images,
         primaryImageUrl: images[0] || undefined,
       };
+
+      if (!api || !convex) {
+        throw new Error("API or Convex client not available");
+      }
 
       await convex.mutation(api.rooms.updateRoom, roomData);
       goto("/my-rooms");

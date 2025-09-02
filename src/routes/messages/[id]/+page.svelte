@@ -2,7 +2,7 @@
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../../lib/convex/api.js";
   import { isAuthenticated, currentUser } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
@@ -14,9 +14,23 @@
     NavigationHandler,
   } from "$lib/types/domains/message-page";
   import { ArrowLeft } from "lucide-svelte";
+  import { browser } from "$app/environment";
 
   // Get connection ID from URL
   const connectionId = $derived($page.params.id as Id<"connections">);
+
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in messages page:", error);
+      });
+  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -31,21 +45,29 @@
   let isSubmitting = $state(false);
 
   // Queries
-  const messagesQuery = useQuery(api.connections.getMessages, () => ({
-    connectionId,
-  }));
-  const connectionQuery = useQuery(api.connections.getConnection, () => ({
-    connectionId,
-  }));
+  const messagesQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).connections.getMessages, () => ({
+          connectionId,
+        }))
+      : null,
+  );
+  const connectionQuery = $derived(
+    api
+      ? useQuery((api as ConvexAPI).connections.getConnection, () => ({
+          connectionId,
+        }))
+      : null,
+  );
 
   // Convex client for mutations
   const convex = useConvexClient();
 
   // Derived state
-  const messages = $derived(messagesQuery.data?.messages ?? []);
-  const connection = $derived(connectionQuery.data);
+  const messages = $derived(messagesQuery?.data?.messages ?? []);
+  const connection = $derived(connectionQuery?.data);
   const loading = $derived(
-    messagesQuery.isLoading || connectionQuery.isLoading,
+    (messagesQuery?.isLoading ?? true) || (connectionQuery?.isLoading ?? true),
   );
   const otherUser = $derived(connection?.otherUser);
   const currentUserId = $derived($currentUser?._id);
@@ -62,14 +84,14 @@
   });
 
   // More efficient message read tracking
-  let markAsReadTimeout: number | undefined;
+  let markAsReadTimeout: ReturnType<typeof setTimeout> | undefined;
 
   function markMessagesAsRead() {
     if (markAsReadTimeout) {
       clearTimeout(markAsReadTimeout);
     }
     markAsReadTimeout = setTimeout(() => {
-      if (connectionId) {
+      if (connectionId && api) {
         convex.mutation(api.connections.markMessagesAsRead, { connectionId });
       }
     }, 1000); // Debounce for 1 second
@@ -93,7 +115,7 @@
 
   // Event handlers with proper typing
   const handleSendMessage: MessageSubmitHandler = async () => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || !api) return;
 
     isSubmitting = true;
     try {

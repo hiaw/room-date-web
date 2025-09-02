@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { api } from "../../convex/_generated/api.js";
+  import { loadApi, type ConvexAPI } from "../../lib/convex/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { MapPin, Calendar, Plus, Settings } from "lucide-svelte";
+  import { browser } from "$app/environment";
 
   // Import our extracted components
   import EventSearchBar from "$lib/components/discover/EventSearchBar.svelte";
@@ -22,6 +23,19 @@
   import type { LocationState } from "$lib/types/pages";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
+  // Import API only on client side
+  let api: ConvexAPI | null = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in discover page:", error);
+      });
+  }
+
   // Redirect if not authenticated
   onMount(() => {
     if (!$isAuthenticated) {
@@ -31,7 +45,9 @@
 
   // Get user profile to check for saved location
   let convex = useConvexClient();
-  let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let profileQuery = $derived(
+    api ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {}) : null,
+  );
   let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
 
   // Location state
@@ -88,6 +104,11 @@
   });
 
   async function handleSaveLocation() {
+    if (!api) {
+      console.error("API not available");
+      return;
+    }
+
     try {
       const location = await getCurrentLocation();
 
@@ -121,8 +142,8 @@
 
   // Reactive query - recreate the query when params change
   let eventsQueryResult = $derived(
-    userLocation
-      ? useQuery(api.events.getEventsNearUser, {
+    userLocation && api
+      ? useQuery((api as ConvexAPI).events.getEventsNearUser, {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
           radiusMiles: $discoverFilters.maxDistance,
