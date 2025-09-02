@@ -1,12 +1,13 @@
 import { query, mutation } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import type { SessionRevokeResult, SessionInfo } from "./types.js";
 
 /**
  * Get all active sessions for the current user
  */
 export const getUserSessions = query({
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<SessionInfo[]> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Must be authenticated to view sessions");
@@ -59,25 +60,34 @@ export const revokeSession = mutation({
 
 /**
  * Revoke all sessions except the current one
- * Note: We can't easily identify the "current" session without additional metadata
- * So this revokes all sessions, forcing a re-login
+ * Keeps the most recent session active (which should be the current session)
  */
 export const revokeAllOtherSessions = mutation({
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<SessionRevokeResult> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Must be authenticated to revoke sessions");
     }
 
-    // Get all sessions for this user
+    // Get all sessions for this user, ordered by creation time descending
     const sessions = await ctx.db
       .query("authSessions")
       .withIndex("userId", (q) => q.eq("userId", userId))
+      .order("desc")
       .collect();
 
-    // For simplicity, we'll revoke all sessions (user will need to re-login)
-    // In a more sophisticated implementation, you'd track which session is current
-    const deletePromises = sessions.map((session) =>
+    // If there's only one session or none, there's nothing to revoke
+    if (sessions.length <= 1) {
+      return {
+        success: true,
+        revokedCount: 0,
+        message: "No other sessions to revoke",
+      };
+    }
+
+    // Keep the most recent session (first in desc order) and revoke all others
+    const sessionsToRevoke = sessions.slice(1);
+    const deletePromises = sessionsToRevoke.map((session) =>
       ctx.db.delete(session._id),
     );
 
@@ -85,7 +95,8 @@ export const revokeAllOtherSessions = mutation({
 
     return {
       success: true,
-      revokedCount: deletePromises.length,
+      revokedCount: sessionsToRevoke.length,
+      message: `Successfully revoked ${sessionsToRevoke.length} other session(s)`,
     };
   },
 });

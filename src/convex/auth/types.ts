@@ -101,3 +101,22 @@ export const DEFAULT_SECURITY_CONFIG: SecurityRuleConfig = {
   autoRevokeOnSuspiciousActivity: true,
   requireMfaForHighRisk: false,
 };
+
+// Session Management Types
+
+// Session revocation result
+export interface SessionRevokeResult {
+  success: boolean;
+  revokedCount: number;
+  message: string;
+}
+
+// Basic session information
+export interface SessionInfo {
+  _id: string;
+  _creationTime: number;
+  expirationTime: number;
+  userAgent: string;
+  deviceFingerprint: string;
+  lastActivity: number;
+}
