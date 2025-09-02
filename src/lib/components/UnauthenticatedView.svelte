@@ -8,6 +8,12 @@
     Users,
     Sparkles,
   } from "lucide-svelte";
+
+  interface Props {
+    passwordResetCode?: string;
+  }
+
+  let { passwordResetCode }: Props = $props();
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
@@ -101,7 +107,7 @@
           </p>
         </div>
 
-        <SimpleAuth />
+        <SimpleAuth {passwordResetCode} />
       </div>
     </div>
   </div>

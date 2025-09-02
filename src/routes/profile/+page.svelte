@@ -1,16 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useQuery } from "convex-svelte";
+  import { useQuery, useConvexClient } from "convex-svelte";
   import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated, authStore } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { Edit3, Settings, LogOut } from "lucide-svelte";
+  import { Edit3, Settings, LogOut, Lock } from "lucide-svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import ProfileHeader from "$lib/components/profile/sections/ProfileHeader.svelte";
   import ProfileDetails from "$lib/components/profile/sections/ProfileDetails.svelte";
   import PhotoGallery from "$lib/components/profile/sections/PhotoGallery.svelte";
   import ProfileActions from "$lib/components/profile/sections/ProfileActions.svelte";
   import ProfileEmpty from "$lib/components/profile/sections/ProfileEmpty.svelte";
+  import PasswordResetForm from "$lib/components/profile/PasswordResetForm.svelte";
   import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
@@ -23,6 +24,7 @@
 
   // State
   let showSettings = $state(false);
+  let showPasswordResetRequest = $state(false);
 
   // Reactive queries
   let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
@@ -30,6 +32,13 @@
     profileQueryResult.data as UserProfileResponse | undefined,
   );
   let loading = $derived(profileQueryResult.isLoading);
+
+  // Convex client for actions
+  const convex = useConvexClient();
+
+  // Password reset request state
+  let passwordResetRequestLoading = $state(false);
+  let passwordResetRequestError = $state<string | null>(null);
 
   function handleEditProfile() {
     goto("/profile/edit");
@@ -45,6 +54,47 @@
       goto("/");
     } catch (error) {
       console.error("Sign out failed:", error);
+    }
+  }
+
+  function showPasswordResetRequestForm() {
+    showPasswordResetRequest = true;
+    showSettings = false;
+  }
+
+  function hidePasswordResetRequestForm() {
+    showPasswordResetRequest = false;
+    passwordResetRequestError = null;
+  }
+
+  async function handlePasswordResetRequest() {
+    passwordResetRequestLoading = true;
+    passwordResetRequestError = null;
+
+    try {
+      // Ensure we have the user's email
+      if (!profile?.user?.email) {
+        throw new Error(
+          "Unable to find your email address. Please try logging out and back in.",
+        );
+      }
+
+      // Use the password reset flow for security
+      await convex.action(api.changePassword.default, {
+        email: profile.user.email,
+      });
+
+      hidePasswordResetRequestForm();
+      alert(
+        "Password reset email sent! Please check your email to complete the password change.",
+      ); // Replace with toast notification
+    } catch (error) {
+      passwordResetRequestError =
+        error instanceof Error
+          ? error.message
+          : "Failed to request password reset";
+    } finally {
+      passwordResetRequestLoading = false;
     }
   }
 
@@ -104,6 +154,13 @@
     >
       <div class="space-y-3">
         <button
+          onclick={showPasswordResetRequestForm}
+          class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          <Lock size={18} />
+          <span>Reset Password</span>
+        </button>
+        <button
           onclick={() => goto("/profile/privacy")}
           class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
         >
@@ -160,7 +217,25 @@
 
   <!-- Content -->
   <div class="px-4 py-6">
-    {#if loading}
+    {#if showPasswordResetRequest}
+      <!-- Password Reset Form -->
+      <div class="mx-auto max-w-md space-y-6">
+        <div class="text-center">
+          <h2 class="text-2xl font-bold text-gray-900">Reset Password</h2>
+          <p class="mt-2 text-sm text-gray-600">
+            We'll send a secure password reset link to your email address.
+          </p>
+        </div>
+
+        <PasswordResetForm
+          onSubmit={handlePasswordResetRequest}
+          loading={passwordResetRequestLoading}
+          error={passwordResetRequestError}
+          onCancel={hidePasswordResetRequestForm}
+          userEmail={profile?.user?.email || ""}
+        />
+      </div>
+    {:else if loading}
       <div class="flex items-center justify-center py-16">
         <LoadingSpinner />
       </div>

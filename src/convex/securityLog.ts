@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { SECURITY_THRESHOLDS, SecurityUtils } from "./lib/securityConstants.js";
 
 export type SecurityEventType =
   | "auth_success"
@@ -22,6 +23,7 @@ export type SecuritySeverity = "low" | "medium" | "high" | "critical";
 
 /**
  * Log a security event for monitoring and audit purposes
+ * Enhanced to trigger security monitoring for suspicious patterns
  */
 export const logSecurityEvent = mutation({
   args: {
@@ -41,7 +43,7 @@ export const logSecurityEvent = mutation({
       v.literal("image_uploaded"),
       v.literal("spam_detected"),
     ),
-    identifier: v.optional(v.string()),
+    identifier: v.optional(v.string()), // Usually email for auth events
     metadata: v.optional(v.any()),
     severity: v.optional(
       v.union(
@@ -58,6 +60,7 @@ export const logSecurityEvent = mutation({
     // Determine severity if not provided
     const severity = args.severity || getDefaultSeverity(args.eventType);
 
+    // Log the security event
     await ctx.db.insert("securityEvents", {
       eventType: args.eventType,
       userId: userId || undefined,
@@ -66,8 +69,62 @@ export const logSecurityEvent = mutation({
       timestamp: Date.now(),
       severity,
     });
+
+    // For auth failures, check for patterns and trigger security monitoring
+    if (args.eventType === "auth_failure" && args.identifier) {
+      await checkAndTriggerSecurityMonitoring(ctx, args.identifier);
+    }
   },
 });
+
+/**
+ * Check for suspicious patterns and trigger security monitoring
+ */
+async function checkAndTriggerSecurityMonitoring(
+  ctx: MutationCtx,
+  email: string,
+) {
+  // Get recent auth failures for this email/identifier
+  const recentFailures = await ctx.db
+    .query("securityEvents")
+    .filter((q) => q.eq(q.field("eventType"), "auth_failure"))
+    .filter((q) => q.eq(q.field("identifier"), email))
+    .filter((q) =>
+      q.gt(
+        q.field("timestamp"),
+        SecurityUtils.getTimeWindowStart("failed_login"),
+      ),
+    )
+    .collect();
+
+  const attemptCount = recentFailures.length;
+
+  // If we have reached the threshold for failed attempts, trigger security monitoring
+  if (attemptCount >= SECURITY_THRESHOLDS.MIN_FAILED_LOGINS_FOR_MONITORING) {
+    try {
+      // Import the security monitoring function
+      const { monitorSecurityEvent } = await import("./auth/security.js");
+
+      // Use type assertion to work around Convex type complexity
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await ctx.runMutation(monitorSecurityEvent as any, {
+        eventType: "multiple_failed_logins",
+        details: {
+          email: email,
+          attemptCount: attemptCount,
+          timestamp: Date.now(),
+          riskScore: SecurityUtils.calculateRiskScore(attemptCount),
+        },
+      });
+
+      console.log(
+        `Triggered security monitoring for ${email} after ${attemptCount} failed attempts`,
+      );
+    } catch (error) {
+      console.error("Failed to trigger security monitoring:", error);
+    }
+  }
+}
 
 /**
  * Get recent security events for monitoring

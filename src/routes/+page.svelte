@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { replaceState, goto } from "$app/navigation";
   import { useConvexClient } from "convex-svelte";
   import { api } from "../convex/_generated/api.js";
@@ -9,8 +9,19 @@
 
   const convex = useConvexClient();
 
+  let passwordResetCode = $state<string | undefined>(undefined);
+
+  /**
+   * Safely clean up URL parameters after navigation is stable
+   * Uses tick() to ensure DOM updates are complete before navigation changes
+   */
+  async function safeReplaceState(url: string): Promise<void> {
+    await tick(); // Wait for any pending DOM updates
+    replaceState(url, {});
+  }
+
   onMount(async () => {
-    // Handle OAuth callback
+    // Handle OAuth callback and password reset codes
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
 
@@ -21,13 +32,14 @@
     }
 
     if (code) {
-      try {
-        authStore.setLoading(true);
+      // Check if this is a password reset code or OAuth code
+      const verifier = sessionStorage.getItem("oauth_verifier");
 
-        // Get the verifier from sessionStorage (stored during OAuth initiation)
-        const verifier = sessionStorage.getItem("oauth_verifier");
+      if (verifier) {
+        // This is an OAuth code - handle OAuth flow
+        try {
+          authStore.setLoading(true);
 
-        if (verifier) {
           // Complete the OAuth flow
           const result = await convex.action(api.auth.signIn, {
             provider: "google",
@@ -44,7 +56,9 @@
 
             // Clear the verifier and URL parameters before async operations
             sessionStorage.removeItem("oauth_verifier");
-            replaceState("/", {});
+
+            // Clean up URL parameters after DOM updates are complete
+            await safeReplaceState("/");
 
             // Get user data and then update the store
             const userData = await convex.query(api.users.getUserProfile, {});
@@ -62,17 +76,19 @@
             console.error("OAuth callback result:", result);
             authStore.setAuthError("No tokens received from OAuth");
           }
-        } else {
-          authStore.setAuthError(
-            "OAuth verification failed - no verifier found",
-          );
+        } catch (err) {
+          console.error("OAuth callback failed:", err);
+          authStore.setAuthError("Sign-in failed");
+          // Clean up URL on error
+          await safeReplaceState("/");
+        } finally {
+          authStore.setLoading(false);
         }
-      } catch (err) {
-        console.error("OAuth callback failed:", err);
-        authStore.setAuthError("Sign-in failed");
-        replaceState("/", {});
-      } finally {
-        authStore.setLoading(false);
+      } else {
+        // This is likely a password reset code - set it for the UI
+        passwordResetCode = code;
+        // Clean up the URL but keep the password reset code in state
+        await safeReplaceState("/");
       }
     } else {
       // Normal page load - check for existing auth
@@ -113,5 +129,5 @@
 {#if $isAuthenticated}
   <AuthenticatedView />
 {:else}
-  <UnauthenticatedView />
+  <UnauthenticatedView {passwordResetCode} />
 {/if}

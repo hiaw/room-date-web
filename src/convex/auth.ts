@@ -1,5 +1,7 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
+import { generatePasswordResetEmail } from "./lib/emailTemplates.js";
+import { Email } from "@convex-dev/auth/providers/Email";
 import Google from "@auth/core/providers/google";
 import type { MutationCtx } from "./_generated/server";
 import type {
@@ -43,7 +45,61 @@ function buildEnhancementUpdates(
 }
 
 export const { auth, signIn, signOut, store } = convexAuth({
-  providers: [Password, Google],
+  providers: [
+    Password({
+      reset: Email({
+        id: "password-reset",
+        sendVerificationRequest: async ({ identifier: email, url }) => {
+          console.log("Sending password reset email to:", email);
+          console.log("Reset URL:", url);
+
+          // Validate required environment variables
+          if (!process.env.RESEND_API_KEY) {
+            console.error("RESEND_API_KEY is not set in environment variables");
+            throw new Error(
+              "Email service is not configured. RESEND_API_KEY is missing.",
+            );
+          }
+
+          const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
+          const appName = process.env.APP_NAME || "Room Dates";
+
+          // Generate email content using templates
+          const emailContent = generatePasswordResetEmail({
+            appName,
+            email,
+            url,
+          });
+
+          // Resend API call
+          const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: fromEmail,
+              to: email,
+              ...emailContent,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("Failed to send email:", error);
+            throw new Error(
+              `Failed to send password reset email: ${response.status} ${response.statusText}`,
+            );
+          }
+
+          const result = await response.json();
+          console.log("Password reset email sent successfully:", result);
+        },
+      }),
+    }),
+    Google,
+  ],
   callbacks: {
     async createOrUpdateUser(ctx: MutationCtx, args) {
       // If this is updating an existing user, handle the update
