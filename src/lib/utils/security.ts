@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { clearTokens } from "../auth.js";
 import {
   SECURITY_THRESHOLDS,
   type DeviceFingerprint,
@@ -182,8 +183,7 @@ export function secureLogout(): void {
   if (!browser) return;
 
   // Clear auth tokens
-  localStorage.removeItem("convex-jwt-token");
-  localStorage.removeItem("convex-refresh-token");
+  clearTokens();
 
   // Clear device fingerprint
   clearDeviceFingerprint();
