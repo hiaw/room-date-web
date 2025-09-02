@@ -13,6 +13,7 @@
     Clock,
     Heart,
     Send,
+    MessageCircle,
   } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
@@ -36,6 +37,10 @@
   // Get current user to check ownership
   let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
   let currentUser = $derived(userProfileQuery?.data?.user);
+
+  // Check chat access
+  let chatAccessQuery = useQuery(api.eventChat.canAccessEventChat, { eventId });
+  let canAccessChat = $derived(chatAccessQuery?.data?.canAccess ?? false);
 
   // Create convex client for mutations
   let convex = useConvexClient();
@@ -333,11 +338,25 @@
               <p class="text-sm text-yellow-700">Waiting for host response</p>
             </div>
           {:else if event.userApplication.status === "approved"}
-            <div
-              class="rounded-xl border border-green-200 bg-green-50 p-4 text-center"
-            >
-              <p class="font-medium text-green-800">Application Approved</p>
-              <p class="text-sm text-green-700">You're going to this event!</p>
+            <div class="space-y-3">
+              {#if canAccessChat}
+                <Button
+                  onclick={() => goto(`/events/${eventId}/chat`)}
+                  variant="secondary"
+                  class="w-full"
+                >
+                  <MessageCircle size={16} class="mr-2" />
+                  Join Chat
+                </Button>
+              {/if}
+              <div
+                class="rounded-xl border border-green-200 bg-green-50 p-4 text-center"
+              >
+                <p class="font-medium text-green-800">Application Approved</p>
+                <p class="text-sm text-green-700">
+                  You're going to this event!
+                </p>
+              </div>
             </div>
           {:else if event.userApplication.status === "rejected"}
             <div
@@ -358,6 +377,16 @@
           >
             Manage Event
           </Button>
+          {#if canAccessChat}
+            <Button
+              onclick={() => goto(`/events/${eventId}/chat`)}
+              variant="secondary"
+              class="w-full"
+            >
+              <MessageCircle size={16} class="mr-2" />
+              Event Chat
+            </Button>
+          {/if}
           <div
             class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center"
           >

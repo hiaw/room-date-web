@@ -77,6 +77,14 @@ export const createEvent = mutation({
       severity: "low",
     });
 
+    // Add event owner to chat participants
+    await ctx.db.insert("eventChatParticipants", {
+      eventId: eventId,
+      userId: userId as Id<"users">,
+      role: "owner",
+      joinedAt: Date.now(),
+    });
+
     return eventId;
   },
 });

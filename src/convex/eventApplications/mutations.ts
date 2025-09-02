@@ -93,7 +93,7 @@ export const respondToApplication = mutation({
       ownerResponse: args.ownerResponse?.trim(),
     });
 
-    // If approved, create a connection between users
+    // If approved, create a connection between users and add to event chat
     if (args.status === "approved") {
       await createConnection(
         ctx,
@@ -101,6 +101,25 @@ export const respondToApplication = mutation({
         application.applicantId,
         application.eventId,
       );
+
+      // Add approved user to event chat participants
+      const existingParticipant = await ctx.db
+        .query("eventChatParticipants")
+        .withIndex("by_event_user", (q) =>
+          q
+            .eq("eventId", application.eventId)
+            .eq("userId", application.applicantId),
+        )
+        .unique();
+
+      if (!existingParticipant) {
+        await ctx.db.insert("eventChatParticipants", {
+          eventId: application.eventId,
+          userId: application.applicantId,
+          role: "participant",
+          joinedAt: Date.now(),
+        });
+      }
     }
 
     return args.applicationId;
