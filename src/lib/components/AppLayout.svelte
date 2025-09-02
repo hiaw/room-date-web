@@ -65,12 +65,14 @@
 
   // Show onboarding modal when user needs it
   $effect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
     if (shouldShowOnboarding && !showOnboardingModal) {
       // Small delay to let the app settle
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         showOnboardingModal = true;
       }, 1000);
     }
+    return () => clearTimeout(timeoutId);
   });
 
   function isActiveRoute(path: string): boolean {
