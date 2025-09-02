@@ -122,7 +122,7 @@ export const respondToApplication = mutation({
 
         // Increment the denormalized participant count
         await ctx.db.patch(application.eventId, {
-          chatParticipantCount: (event.chatParticipantCount || 1) + 1,
+          chatParticipantCount: event.chatParticipantCount === undefined ? 2 : event.chatParticipantCount + 1,
         });
       }
     }
