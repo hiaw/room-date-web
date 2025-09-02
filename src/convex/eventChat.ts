@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, optionalAuth } from "./lib/authHelpers";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Send a message to an event chat
@@ -18,7 +19,7 @@ export const sendEventMessage = mutation({
     // Get user profile
     const profile = await ctx.db
       .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId as any))
+      .withIndex("by_user", (q) => q.eq("userId", userId as Id<"users">))
       .first();
 
     // Validate message content for non-system messages
@@ -30,7 +31,7 @@ export const sendEventMessage = mutation({
     const participant = await ctx.db
       .query("eventChatParticipants")
       .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as any),
+        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
       )
       .unique();
 
@@ -41,7 +42,7 @@ export const sendEventMessage = mutation({
     // Create the message
     const messageId = await ctx.db.insert("eventMessages", {
       eventId: args.eventId,
-      senderId: userId as any,
+      senderId: userId as Id<"users">,
       content: args.content.trim(),
       messageType: args.messageType || "text",
       senderDisplayName: profile?.displayName || "Unknown User",
@@ -81,7 +82,7 @@ export const getEventMessages = query({
     const participant = await ctx.db
       .query("eventChatParticipants")
       .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as any),
+        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
       )
       .unique();
 
@@ -121,7 +122,7 @@ export const getEventChatParticipants = query({
     const participant = await ctx.db
       .query("eventChatParticipants")
       .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as any),
+        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
       )
       .unique();
 
@@ -178,7 +179,7 @@ export const markEventMessagesSeen = mutation({
     const participant = await ctx.db
       .query("eventChatParticipants")
       .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as any),
+        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
       )
       .unique();
 
@@ -215,7 +216,7 @@ export const canAccessEventChat = query({
     const participant = await ctx.db
       .query("eventChatParticipants")
       .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as any),
+        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
       )
       .unique();
 
@@ -245,7 +246,7 @@ export const getEventChatInfo = query({
     const participant = await ctx.db
       .query("eventChatParticipants")
       .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as any),
+        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
       )
       .unique();
 

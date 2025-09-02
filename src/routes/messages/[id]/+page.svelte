@@ -9,11 +9,9 @@
   import Button from "$lib/components/ui/Button.svelte";
   import type { Id } from "../../../convex/_generated/dataModel";
   import type {
-    MessagePageState,
     MessageSubmitHandler,
     MessageKeyDownHandler,
     NavigationHandler,
-    MessageTimeFormatOptions,
   } from "$lib/types/domains/message-page";
 
   // Get connection ID from URL
@@ -28,7 +26,7 @@
 
   // State with proper typing
   let messageText = $state("");
-  let messagesContainer: HTMLDivElement;
+  let messagesContainer = $state<HTMLDivElement>();
   let isSubmitting = $state(false);
 
   // Queries
@@ -55,7 +53,9 @@
   $effect(() => {
     if (messages && messagesContainer) {
       setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       }, 50);
     }
   });
@@ -103,10 +103,7 @@
     goto("/connections");
   };
 
-  function formatTime(
-    timestamp: number,
-    options: MessageTimeFormatOptions = {},
-  ): string {
+  function formatTime(timestamp: number): string {
     const date = new Date(timestamp);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -159,21 +156,19 @@
         onclick={handleBackToConnections}
         class="p-2"
       >
-        {#snippet children()}
-          <svg
-            class="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        {/snippet}
+        <svg
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
       </Button>
 
       {#if loading}
@@ -221,11 +216,7 @@
         <p class="mb-4 text-gray-600">
           This conversation doesn't exist or you don't have access to it.
         </p>
-        <Button onclick={handleBackToConnections}>
-          {#snippet children()}
-            Back to Connections
-          {/snippet}
-        </Button>
+        <Button onclick={handleBackToConnections}>Back to Connections</Button>
       </div>
     </div>
   {:else}
@@ -296,7 +287,7 @@
                   {#if message.messageType === "image" && message.imageUrl}
                     <img
                       src={message.imageUrl}
-                      alt="Shared image"
+                      alt=""
                       class="h-auto max-w-full rounded-lg"
                     />
                     {#if message.content}
@@ -334,25 +325,23 @@
           disabled={!messageText.trim() || isSubmitting}
           class="flex-shrink-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 p-2 text-white hover:from-purple-600 hover:to-pink-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {#snippet children()}
-            {#if isSubmitting}
-              <LoadingSpinner size="sm" />
-            {:else}
-              <svg
-                class="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
-            {/if}
-          {/snippet}
+          {#if isSubmitting}
+            <LoadingSpinner size="sm" />
+          {:else}
+            <svg
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              />
+            </svg>
+          {/if}
         </Button>
       </div>
     </div>

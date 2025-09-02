@@ -168,5 +168,5 @@ export interface ListProps<T> {
     message: string;
     action?: ButtonProps;
   };
-  renderItem: (item: T, index: number) => any;
+  renderItem: (item: T, index: number) => unknown;
 }
