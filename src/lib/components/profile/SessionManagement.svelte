@@ -4,11 +4,12 @@
   import { Monitor, Smartphone, Tablet, X } from "lucide-svelte";
   import Button from "../ui/Button.svelte";
   import { generateDeviceFingerprint } from "$lib/utils/security.js";
+  import type { Id } from "../../../convex/_generated/dataModel.js";
 
   let convex = useConvexClient();
 
   // Fetch user's active sessions
-  let sessionsQuery = useQuery(api.auth.sessions.getUserSessions, {});
+  let sessionsQuery = useQuery(api["auth/sessions"].getUserSessions, {});
   let sessions = $derived(sessionsQuery?.data ?? []);
   let loading = $derived(sessionsQuery?.isLoading ?? true);
 
@@ -64,22 +65,21 @@
     return `${days}d ago`;
   }
 
-  // Revoke a specific session  
+  // Revoke a specific session
   async function revokeSession(sessionId: string) {
     try {
-      await convex.mutation(api.auth.sessions.revokeSession, { 
-        sessionId: sessionId as { __tableName: "authSessions" }
+      await convex.mutation(api["auth/sessions"].revokeSession, {
+        sessionId: sessionId as Id<"authSessions">,
       });
     } catch (error) {
       console.error("Failed to revoke session:", error);
     }
   }
-  }
 
   // Revoke all other sessions
   async function revokeAllOtherSessions() {
     try {
-      await convex.mutation(api.auth.sessions.revokeAllOtherSessions, {});
+      await convex.mutation(api["auth/sessions"].revokeAllOtherSessions, {});
     } catch (error) {
       console.error("Failed to revoke other sessions:", error);
     }
@@ -97,7 +97,7 @@
 
   {#if loading}
     <div class="animate-pulse space-y-4">
-      {#each Array(3) as _placeholder, i (i)}
+      {#each [0, 1, 2] as i (i)}
         <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
           <div class="h-4 w-1/3 rounded bg-gray-300"></div>
           <div class="mt-2 h-3 w-1/2 rounded bg-gray-300"></div>

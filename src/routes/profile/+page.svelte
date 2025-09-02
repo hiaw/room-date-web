@@ -73,7 +73,9 @@
 
     try {
       // Use the password reset flow for security
-      await convex.action(api.changePassword.requestPasswordReset, {});
+      await convex.action(api.changePassword.default, {
+        email: profile?.email || "unknown@example.com",
+      });
 
       hidePasswordChangeForm();
       alert(
@@ -223,7 +225,7 @@
           loading={passwordChangeLoading}
           error={passwordChangeError}
           onCancel={hidePasswordChangeForm}
-          userEmail={profile?.email || profile?.profile?.email}
+          userEmail={profile?.email || ""}
         />
       </div>
     {:else if loading}

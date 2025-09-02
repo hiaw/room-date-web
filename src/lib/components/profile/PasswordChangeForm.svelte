@@ -149,7 +149,7 @@
         <div class="mt-2 space-y-1">
           <div class="text-xs">
             <div class="flex space-x-1">
-              {#each Array(4) as _, i}
+              {#each [0, 1, 2, 3] as i (i)}
                 <div
                   class="h-1 flex-1 rounded"
                   class:bg-red-200={passwordValidation.errors.length > 3}

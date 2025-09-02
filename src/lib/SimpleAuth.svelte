@@ -16,13 +16,13 @@
 
   const convex = useConvexClient();
 
-  let isSignUp = false;
-  let showForgotPassword = false;
-  let authError = "";
-  let forgotPasswordError = "";
-  let forgotPasswordSuccess = false;
-  let passwordResetError = "";
-  let passwordResetSuccess = false;
+  let isSignUp = $state(false);
+  let showForgotPassword = $state(false);
+  let authError = $state("");
+  let forgotPasswordError = $state("");
+  let forgotPasswordSuccess = $state(false);
+  let passwordResetError = $state("");
+  let passwordResetSuccess = $state(false);
 
   async function handleAuthSubmit(
     email: string,
