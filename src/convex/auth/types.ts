@@ -22,6 +22,9 @@ export interface SecurityEventDetails {
   previousLocation?: string;
   timestamp?: number;
   riskScore?: number;
+  // Fields for pre-authentication event identification
+  email?: string; // For identifying users in pre-auth events
+  userId?: string; // Explicit user ID for pre-auth events
   [key: string]: unknown; // Allow additional custom details
 }
 

@@ -5,6 +5,7 @@ import type { SecurityActionResult, LoginSecurityResult } from "./types.js";
 
 /**
  * Monitor and respond to suspicious security events
+ * Handles both authenticated and pre-authentication security events
  */
 export const monitorSecurityEvent = mutation({
   args: {
@@ -20,17 +21,65 @@ export const monitorSecurityEvent = mutation({
     ),
     deviceFingerprint: v.optional(v.string()),
     userAgent: v.optional(v.string()),
-    details: v.optional(v.any()),
+    details: v.optional(
+      v.object({
+        attemptCount: v.optional(v.number()),
+        sessionCount: v.optional(v.number()),
+        email: v.optional(v.string()), // For pre-auth events
+        userId: v.optional(v.id("users")), // Explicit user ID for pre-auth events
+        ipAddress: v.optional(v.string()),
+        location: v.optional(v.string()),
+        timestamp: v.optional(v.number()),
+        riskScore: v.optional(v.number()),
+      }),
+    ),
   },
   handler: async (
     ctx,
-    { eventType, details },
+    { eventType, deviceFingerprint, userAgent, details },
   ): Promise<SecurityActionResult> => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId)
-      return { success: false, actionsTaken: { revokedSessions: false } };
+    // Try to get authenticated user first
+    const authenticatedUserId = await getAuthUserId(ctx);
 
-    console.log(`Security Monitor [${userId}]:`, eventType, details);
+    // For pre-authentication events, use the provided user ID or email to identify user
+    let targetUserId = authenticatedUserId;
+
+    if (!authenticatedUserId && details) {
+      // Handle pre-authentication events
+      if (details.userId) {
+        targetUserId = details.userId;
+      } else if (details.email) {
+        // Look up user by email for pre-auth events
+        const user = await ctx.db
+          .query("users")
+          .withIndex("email", (q) => q.eq("email", details.email))
+          .first();
+        if (user) {
+          targetUserId = user._id;
+        }
+      }
+    }
+
+    // Log the security event regardless of authentication status
+    console.log(
+      `Security Monitor [${targetUserId || "unauthenticated"}]:`,
+      eventType,
+      {
+        ...details,
+        deviceFingerprint,
+        userAgent,
+        timestamp: Date.now(),
+      },
+    );
+
+    // If we can't identify a user, we can still log but can't take user-specific actions
+    if (!targetUserId) {
+      return {
+        success: true,
+        actionsTaken: { revokedSessions: false },
+        message: "Security event logged for unidentified user",
+      };
+    }
 
     let shouldRevokeAllSessions = false;
 
@@ -55,18 +104,28 @@ export const monitorSecurityEvent = mutation({
         // Definite sign of compromise - revoke all sessions immediately
         shouldRevokeAllSessions = true;
         break;
+
+      case "account_lockout":
+        // Account lockout - revoke all sessions
+        shouldRevokeAllSessions = true;
+        break;
+
+      case "password_breach_detected":
+        // Potential compromise - revoke all sessions
+        shouldRevokeAllSessions = true;
+        break;
     }
 
     // Take protective actions
     if (shouldRevokeAllSessions) {
       console.log(
-        `Revoking all sessions for user ${userId} due to suspicious activity`,
+        `Revoking all sessions for user ${targetUserId} due to suspicious activity: ${eventType}`,
       );
 
       // Get all sessions for this user and revoke them
       const sessions = await ctx.db
         .query("authSessions")
-        .withIndex("userId", (q) => q.eq("userId", userId))
+        .withIndex("userId", (q) => q.eq("userId", targetUserId))
         .collect();
 
       await Promise.all(sessions.map((session) => ctx.db.delete(session._id)));
@@ -77,6 +136,9 @@ export const monitorSecurityEvent = mutation({
       actionsTaken: {
         revokedSessions: shouldRevokeAllSessions,
       },
+      message: shouldRevokeAllSessions
+        ? `Revoked ${shouldRevokeAllSessions ? "all" : "no"} sessions due to ${eventType}`
+        : `Security event ${eventType} logged and monitored`,
     };
   },
 });

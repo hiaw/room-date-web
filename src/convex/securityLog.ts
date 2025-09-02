@@ -22,6 +22,7 @@ export type SecuritySeverity = "low" | "medium" | "high" | "critical";
 
 /**
  * Log a security event for monitoring and audit purposes
+ * Enhanced to trigger security monitoring for suspicious patterns
  */
 export const logSecurityEvent = mutation({
   args: {
@@ -41,7 +42,7 @@ export const logSecurityEvent = mutation({
       v.literal("image_uploaded"),
       v.literal("spam_detected"),
     ),
-    identifier: v.optional(v.string()),
+    identifier: v.optional(v.string()), // Usually email for auth events
     metadata: v.optional(v.any()),
     severity: v.optional(
       v.union(
@@ -58,6 +59,7 @@ export const logSecurityEvent = mutation({
     // Determine severity if not provided
     const severity = args.severity || getDefaultSeverity(args.eventType);
 
+    // Log the security event
     await ctx.db.insert("securityEvents", {
       eventType: args.eventType,
       userId: userId || undefined,
@@ -66,8 +68,65 @@ export const logSecurityEvent = mutation({
       timestamp: Date.now(),
       severity,
     });
+
+    // For auth failures, check for patterns and trigger security monitoring
+    if (args.eventType === "auth_failure" && args.identifier) {
+      await checkAndTriggerSecurityMonitoring(
+        ctx,
+        args.identifier,
+        args.metadata,
+      );
+    }
   },
 });
+
+/**
+ * Check for suspicious patterns and trigger security monitoring
+ */
+async function checkAndTriggerSecurityMonitoring(
+  ctx: {
+    db: any;
+    runMutation: any;
+  },
+  email: string,
+  _metadata: any, // Prefixed with _ to indicate unused
+) {
+  // Get recent auth failures for this email/identifier
+  const recentFailures = await ctx.db
+    .query("securityEvents")
+    .filter((q: any) => q.eq(q.field("eventType"), "auth_failure"))
+    .filter((q: any) => q.eq(q.field("identifier"), email))
+    .filter(
+      (q: any) => q.gt(q.field("timestamp"), Date.now() - 15 * 60 * 1000), // Last 15 minutes
+    )
+    .collect();
+
+  const attemptCount = recentFailures.length;
+
+  // If we have multiple failed attempts, trigger security monitoring
+  if (attemptCount >= 3) {
+    try {
+      // Import the security monitoring function
+      const { monitorSecurityEvent } = await import("./auth/security.js");
+
+      await ctx.runMutation(monitorSecurityEvent, {
+        eventType: "multiple_failed_logins",
+        details: {
+          email: email,
+          attemptCount: attemptCount,
+          timestamp: Date.now(),
+          riskScore: Math.min(attemptCount * 20, 100), // Scale risk score
+        },
+      });
+
+      console.log(
+        `Triggered security monitoring for ${email} after ${attemptCount} failed attempts`,
+      );
+    } catch (error) {
+      console.error("Failed to trigger security monitoring:", error);
+    }
+  }
+}
 
 /**
  * Get recent security events for monitoring
