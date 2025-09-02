@@ -56,3 +56,13 @@ export function formatMessageTime(timestamp: number): string {
 
   return formatDate(timestamp);
 }
+
+export function formatDateForInput(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toISOString().split("T")[0];
+}
+
+export function formatTimeForInput(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toTimeString().slice(0, 5); // HH:MM format
+}

@@ -342,13 +342,25 @@
           {/if}
         </div>
       {:else}
-        <div
-          class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center"
-        >
-          <p class="font-medium text-blue-800">This is Your Event</p>
-          <p class="text-sm text-blue-700">
-            Manage applications from your rooms page
-          </p>
+        <div class="sticky bottom-4 space-y-3">
+          <Button
+            onclick={() => goto(`/events/${eventId}/manage`)}
+            class="w-full"
+          >
+            Manage Event
+          </Button>
+          <div
+            class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center"
+          >
+            <p class="font-medium text-blue-800">This is Your Event</p>
+            {#if event.applicationCount > 0}
+              <p class="text-sm text-blue-700">
+                {event.applicationCount} people have applied
+              </p>
+            {:else}
+              <p class="text-sm text-blue-700">No applications yet</p>
+            {/if}
+          </div>
         </div>
       {/if}
     </div>
