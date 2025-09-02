@@ -32,17 +32,18 @@
   let event = $derived(eventQuery?.data);
   let eventLoading = $derived(eventQuery?.isLoading ?? true);
 
+  // Get current user to check ownership
+  let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let currentUser = $derived(userProfileQuery?.data?.user);
+
   // Create convex client for mutations
   let convex = useConvexClient();
   let applying = $state(false);
   let bookmarking = $state(false);
 
-  // Check if current user is the event owner - simplified approach
+  // Check if current user is the event owner
   let isEventOwner = $derived(() => {
-    // If the user can see application management features, they're the owner
-    return (
-      event && !event.userApplication && event.applicationCount !== undefined
-    );
+    return event && currentUser && event.ownerId === currentUser._id;
   });
 
   function handleBack() {
