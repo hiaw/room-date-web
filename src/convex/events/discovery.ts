@@ -72,17 +72,9 @@ async function filterOutAppliedEvents(
  * Helper function to filter events by gender preferences
  */
 async function filterByGenderPreferences(
-  ctx: QueryCtx,
   events: Doc<"events">[],
-  userId: Id<"users"> | null,
+  userProfile: Doc<"userProfiles"> | null,
 ): Promise<Doc<"events">[]> {
-  if (!userId) return events;
-
-  const userProfile = await ctx.db
-    .query("userProfiles")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .first();
-
   if (!userProfile?.gender) return events;
 
   return events.filter((event) => {
@@ -112,6 +104,15 @@ export const discoverEvents = query({
     const userId = await getAuthUserId(ctx);
     const limit = args.limit || 20;
 
+    // Fetch user profile once if needed
+    let userProfile: Doc<"userProfiles"> | null = null;
+    if (userId) {
+      userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+    }
+
     // Start with active events
     const query = ctx.db
       .query("events")
@@ -126,7 +127,7 @@ export const discoverEvents = query({
 
     // Apply shared filtering logic
     events = await filterOutAppliedEvents(ctx, events, userId);
-    events = await filterByGenderPreferences(ctx, events, userId);
+    events = await filterByGenderPreferences(events, userProfile);
 
     // Apply filters
     if (args.city) {
@@ -152,21 +153,14 @@ export const discoverEvents = query({
     }
 
     // Age filtering (check if user's age fits event preferences)
-    if (userId && (args.minAge || args.maxAge)) {
-      const userProfile = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .first();
+    if (userId && (args.minAge || args.maxAge) && userProfile?.dateOfBirth) {
+      const userAge = calculateUserAge(userProfile.dateOfBirth);
 
-      if (userProfile?.dateOfBirth) {
-        const userAge = calculateUserAge(userProfile.dateOfBirth);
-
-        events = events.filter((event) => {
-          if (event.minAge && userAge < event.minAge) return false;
-          if (event.maxAge && userAge > event.maxAge) return false;
-          return true;
-        });
-      }
+      events = events.filter((event) => {
+        if (event.minAge && userAge < event.minAge) return false;
+        if (event.maxAge && userAge > event.maxAge) return false;
+        return true;
+      });
     }
 
     // Distance filtering
@@ -216,6 +210,15 @@ export const getEventsNearUser = query({
     const limit = args.limit || 20;
     const radiusInMiles = args.radiusMiles || 25;
 
+    // Fetch user profile once if needed
+    let userProfile: Doc<"userProfiles"> | null = null;
+    if (userId) {
+      userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+    }
+
     // Start with active events
     const query = ctx.db
       .query("events")
@@ -230,7 +233,7 @@ export const getEventsNearUser = query({
 
     // Apply shared filtering logic
     events = await filterOutAppliedEvents(ctx, events, userId);
-    events = await filterByGenderPreferences(ctx, events, userId);
+    events = await filterByGenderPreferences(events, userProfile);
 
     // Distance filtering
     events = events
