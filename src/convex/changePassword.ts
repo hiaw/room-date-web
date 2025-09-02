@@ -35,20 +35,23 @@ export default action({
         error instanceof Error ? error.message : "Unknown error",
       );
 
-      // More specific error message
-      if (error instanceof Error && error.message.includes("rate limit")) {
+      // Robust error handling: log details for debugging, provide generic message to client
+      if (error instanceof Error) {
+        // Log the detailed error for backend debugging
+        console.error("Password reset failed:", error.message);
+        console.error("Stack trace:", error.stack);
+
+        // Provide a generic, user-friendly error to the client
         throw new ConvexError(
-          "Email service rate limited. Please try again in a few minutes.",
-        );
-      } else if (error instanceof Error && error.message.includes("domain")) {
-        throw new ConvexError(
-          "Email configuration issue. Please contact support.",
-        );
-      } else {
-        throw new ConvexError(
-          `Failed to send password reset email: ${error instanceof Error ? error.message : "Unknown error"}`,
+          "Failed to send password reset email. Please try again later or contact support if the issue persists.",
         );
       }
+
+      // Fallback for non-Error objects
+      console.error("Password reset failed with non-Error object:", error);
+      throw new ConvexError(
+        "An unknown error occurred while sending the password reset email.",
+      );
     }
   },
 });
