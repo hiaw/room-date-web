@@ -53,6 +53,14 @@ export const { auth, signIn, signOut, store } = convexAuth({
           console.log("Sending password reset email to:", email);
           console.log("Reset URL:", url);
 
+          // Validate required environment variables
+          if (!process.env.RESEND_API_KEY) {
+            console.error("RESEND_API_KEY is not set in environment variables");
+            throw new Error(
+              "Email service is not configured. RESEND_API_KEY is missing.",
+            );
+          }
+
           const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
           const appName = process.env.APP_NAME || "Room Dates";
 
