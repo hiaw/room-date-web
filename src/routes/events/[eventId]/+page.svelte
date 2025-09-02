@@ -16,6 +16,7 @@
   } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
+  import ApplicationManagement from "$lib/components/events/ApplicationManagement.svelte";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eventId = $page.params.eventId as any;
@@ -154,6 +155,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Application Management (Event Owners Only) -->
+    {#if isEventOwner() && event}
+      <div class="mb-6">
+        <ApplicationManagement eventId={event._id} />
+      </div>
+    {/if}
   </div>
 
   {#if eventLoading}
