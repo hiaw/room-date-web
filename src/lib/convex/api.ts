@@ -7,13 +7,9 @@ export async function loadApi() {
   }
 
   try {
-    // Create a fake Promise to return the actual import result
-    // This bypasses TypeScript's deep type analysis
-    return await new Promise((resolve) => {
-      import("../../convex/_generated/api.js").then((module) => {
-        resolve(module.api);
-      });
-    });
+    // Use eval to avoid static type checking during bundling
+    const apiModule = await eval('import("../../convex/_generated/api.js")');
+    return apiModule.api;
   } catch (error) {
     console.error("Failed to load Convex API:", error);
     throw error;

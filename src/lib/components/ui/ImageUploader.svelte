@@ -5,7 +5,7 @@
   import { loadApi } from "$lib/convex/api.js";
 
   // Import API only on client side to avoid SSR issues
-  let api: typeof import("../../../convex/_generated/api.js").api | null = null;
+  let api: any = null;
 
   if (browser) {
     loadApi()

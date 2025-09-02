@@ -9,7 +9,7 @@
   const convex = useConvexClient();
 
   // Import API only on client side
-  let api: typeof import("../../convex/_generated/api.js").api | null = null;
+  let api: any = null;
 
   if (browser) {
     loadApi()

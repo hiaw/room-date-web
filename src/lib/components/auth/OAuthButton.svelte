@@ -1,6 +1,6 @@
 <script lang="ts">
   import { useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
+  import { loadApi } from "../../convex/api.js";
   import { authStore } from "../../stores/auth.js";
   import Button from "../ui/Button.svelte";
   import { browser } from "$app/environment";
@@ -14,6 +14,19 @@
 
   const convex = useConvexClient();
 
+  // Import API only on client side
+  let api: any = null;
+
+  if (browser) {
+    loadApi()
+      .then((loadedApi) => {
+        api = loadedApi;
+      })
+      .catch((error) => {
+        console.error("Failed to load Convex API in OAuthButton:", error);
+      });
+  }
+
   const providerConfig = {
     google: {
       name: "Google",
@@ -25,6 +38,12 @@
   const config = providerConfig[provider];
 
   async function handleOAuthSignIn() {
+    if (!api) {
+      console.warn("API not ready for OAuth sign-in");
+      authStore.setAuthError("API not ready");
+      return;
+    }
+
     try {
       authStore.setLoading(true);
 
