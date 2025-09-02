@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { SECURITY_THRESHOLDS, SecurityUtils } from "./lib/securityConstants.js";
 
@@ -85,19 +85,16 @@ export const logSecurityEvent = mutation({
  * Check for suspicious patterns and trigger security monitoring
  */
 async function checkAndTriggerSecurityMonitoring(
-  ctx: {
-    db: any;
-    runMutation: any;
-  },
+  ctx: MutationCtx,
   email: string,
-  _metadata: any, // Prefixed with _ to indicate unused
+  _metadata: unknown, // Prefixed with _ to indicate unused
 ) {
   // Get recent auth failures for this email/identifier
   const recentFailures = await ctx.db
     .query("securityEvents")
-    .filter((q: any) => q.eq(q.field("eventType"), "auth_failure"))
-    .filter((q: any) => q.eq(q.field("identifier"), email))
-    .filter((q: any) =>
+    .filter((q) => q.eq(q.field("eventType"), "auth_failure"))
+    .filter((q) => q.eq(q.field("identifier"), email))
+    .filter((q) =>
       q.gt(
         q.field("timestamp"),
         SecurityUtils.getTimeWindowStart("failed_login"),
@@ -113,7 +110,8 @@ async function checkAndTriggerSecurityMonitoring(
       // Import the security monitoring function
       const { monitorSecurityEvent } = await import("./auth/security.js");
 
-      await ctx.runMutation(monitorSecurityEvent, {
+      // Use type assertion to work around Convex type complexity
+      await ctx.runMutation(monitorSecurityEvent as any, {
         eventType: "multiple_failed_logins",
         details: {
           email: email,
