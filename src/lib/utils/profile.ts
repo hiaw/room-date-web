@@ -1,6 +1,7 @@
-export function getAgeFromBirthDate(birthDate: string): number | null {
+export function getAgeFromBirthDate(birthDate: string | number): number | null {
   if (!birthDate) return null;
-  const birth = new Date(birthDate);
+  const birth =
+    typeof birthDate === "string" ? new Date(birthDate) : new Date(birthDate);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();

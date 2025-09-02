@@ -8,6 +8,7 @@
   import Button from "$lib/components/ui/Button.svelte";
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
+  import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -18,8 +19,7 @@
 
   // Fetch current profile
   let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let profile = $derived(profileQuery?.data as any);
+  let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
   let loading = $derived(profileQuery?.isLoading ?? true);
 
   // Update profile mutation

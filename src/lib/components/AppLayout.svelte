@@ -7,6 +7,7 @@
   import { Search, Calendar, MessageCircle, User } from "lucide-svelte";
   import OfflineIndicator from "./ui/OfflineIndicator.svelte";
   import OnboardingModal from "./profile/OnboardingModal.svelte";
+  import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   interface Props {
     children: import("svelte").Snippet;
@@ -52,8 +53,7 @@
   let profileQuery = $derived(
     isAuthenticated ? useQuery(api.userProfiles.getUserProfile, {}) : null,
   );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let profile = $derived(profileQuery?.data as any);
+  let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
   let shouldShowOnboarding = $derived(
     isAuthenticated &&
       profile &&

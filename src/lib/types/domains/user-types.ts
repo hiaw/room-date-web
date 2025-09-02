@@ -16,6 +16,13 @@ export interface UserWithProfile extends Doc<"users"> {
 export type UserSettings = Doc<"userSettings">;
 export type UserSettingsId = Id<"userSettings">;
 
+// Profile Query Response Type
+export interface UserProfileResponse {
+  user: User;
+  profile: UserProfile | null;
+  settings: UserSettings | null;
+}
+
 // Auth Form Data Types
 export interface AuthFormData {
   email: string;

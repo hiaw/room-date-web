@@ -20,6 +20,7 @@
 
   import type { EventData } from "$lib/types/components";
   import type { LocationState } from "$lib/types/pages";
+  import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -31,8 +32,7 @@
   // Get user profile to check for saved location
   let convex = useConvexClient();
   let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let profile = $derived(profileQuery?.data as any);
+  let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
 
   // Location state
   let userLocation = $state<LocationState | null>(null);

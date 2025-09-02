@@ -12,6 +12,7 @@
   import ProfileActions from "$lib/components/profile/sections/ProfileActions.svelte";
   import ProfileEmpty from "$lib/components/profile/sections/ProfileEmpty.svelte";
   import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
+  import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -25,8 +26,9 @@
 
   // Reactive queries
   let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let profile = $derived(profileQueryResult.data as any);
+  let profile = $derived(
+    profileQueryResult.data as UserProfileResponse | undefined,
+  );
   let loading = $derived(profileQueryResult.isLoading);
 
   function handleEditProfile() {

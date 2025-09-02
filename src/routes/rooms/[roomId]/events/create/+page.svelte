@@ -13,9 +13,9 @@
   import EventDetailsForm from "$lib/components/events/EventDetailsForm.svelte";
   import EventTimingForm from "$lib/components/events/EventTimingForm.svelte";
   import EventGuestPreferences from "$lib/components/events/EventGuestPreferences.svelte";
+  import type { Id } from "../../../../../convex/_generated/dataModel";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const roomId = $page.params.roomId as any;
+  const roomId = $page.params.roomId as Id<"rooms">;
 
   // Redirect if not authenticated
   onMount(() => {

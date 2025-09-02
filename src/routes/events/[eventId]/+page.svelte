@@ -17,9 +17,9 @@
   import Button from "$lib/components/ui/Button.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import ApplicationManagement from "$lib/components/events/ApplicationManagement.svelte";
+  import type { Id } from "../../../convex/_generated/dataModel";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const eventId = $page.params.eventId as any;
+  const eventId = $page.params.eventId as Id<"events">;
 
   // Redirect if not authenticated
   onMount(() => {
