@@ -1,5 +1,6 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
+import { generatePasswordResetEmail } from "./lib/emailTemplates.js";
 import { Email } from "@convex-dev/auth/providers/Email";
 import Google from "@auth/core/providers/google";
 import type { MutationCtx } from "./_generated/server";
@@ -55,6 +56,13 @@ export const { auth, signIn, signOut, store } = convexAuth({
           const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
           const appName = process.env.APP_NAME || "Room Dates";
 
+          // Generate email content using templates
+          const emailContent = generatePasswordResetEmail({
+            appName,
+            email,
+            url,
+          });
+
           // Resend API call
           const response = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -65,53 +73,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
             body: JSON.stringify({
               from: fromEmail,
               to: email,
-              subject: `Reset your ${appName} password`,
-              html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="color: #1a202c; margin: 0;">${appName}</h1>
-                  </div>
-                  
-                  <h2 style="color: #2d3748; margin-bottom: 16px;">Reset Your Password</h2>
-                  
-                  <p style="color: #4a5568; line-height: 1.6; margin-bottom: 24px;">
-                    We received a request to reset the password for your ${appName} account associated with ${email}.
-                  </p>
-                  
-                  <div style="text-align: center; margin: 32px 0;">
-                    <a href="${url}" 
-                       style="display: inline-block; padding: 12px 24px; background-color: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Reset Password
-                    </a>
-                  </div>
-                  
-                  <p style="color: #718096; font-size: 14px; line-height: 1.6; margin-bottom: 8px;">
-                    If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
-                  </p>
-                  
-                  <p style="color: #718096; font-size: 14px; line-height: 1.6;">
-                    This link will expire in 24 hours for security reasons.
-                  </p>
-                  
-                  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
-                  
-                  <p style="color: #a0aec0; font-size: 12px; text-align: center;">
-                    This is an automated email from ${appName}. Please do not reply to this email.
-                  </p>
-                </div>
-              `,
-              text: `
-Reset your ${appName} password
-
-We received a request to reset the password for your ${appName} account associated with ${email}.
-
-Click the link below to reset your password:
-${url}
-
-If you didn't request this password reset, you can safely ignore this email.
-
-This link will expire in 24 hours for security reasons.
-              `.trim(),
+              ...emailContent,
             }),
           });
 
