@@ -13,6 +13,7 @@
     MessageKeyDownHandler,
     NavigationHandler,
   } from "$lib/types/domains/message-page";
+  import { ArrowLeft } from "lucide-svelte";
 
   // Get connection ID from URL
   const connectionId = $derived($page.params.id as Id<"connections">);
@@ -156,19 +157,7 @@
         onclick={handleBackToConnections}
         class="p-2"
       >
-        <svg
-          class="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
+        <ArrowLeft class="h-5 w-5" />
       </Button>
 
       {#if loading}
@@ -224,7 +213,6 @@
     <div
       bind:this={messagesContainer}
       class="flex-1 space-y-4 overflow-y-auto px-4 py-4"
-      style="height: calc(100vh - 140px);"
     >
       {#if messages.length === 0}
         <div
