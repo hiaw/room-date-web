@@ -51,6 +51,7 @@ export const updateUserProfile = mutation({
   args: {
     displayName: v.optional(v.string()),
     dateOfBirth: v.optional(v.number()),
+    gender: v.optional(v.string()),
     bio: v.optional(v.string()),
     profileImageUrl: v.optional(v.string()),
     profileImages: v.optional(v.array(v.string())),
@@ -58,6 +59,7 @@ export const updateUserProfile = mutation({
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
     locationSharing: v.optional(v.boolean()),
+    isProfileComplete: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -71,17 +73,20 @@ export const updateUserProfile = mutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    // Determine if profile is complete
-    const isProfileComplete = !!(
-      (args.displayName || existingProfile?.displayName) &&
-      (args.dateOfBirth || existingProfile?.dateOfBirth) &&
-      (args.bio || existingProfile?.bio)
-    );
+    // Determine if profile is complete (bio is optional)
+    const isProfileComplete =
+      args.isProfileComplete !== undefined
+        ? args.isProfileComplete
+        : !!(
+            (args.displayName || existingProfile?.displayName) &&
+            (args.dateOfBirth || existingProfile?.dateOfBirth)
+          );
 
     const profileData = {
       userId,
       displayName: args.displayName,
       dateOfBirth: args.dateOfBirth,
+      gender: args.gender,
       bio: args.bio,
       profileImageUrl: args.profileImageUrl,
       profileImages: args.profileImages,

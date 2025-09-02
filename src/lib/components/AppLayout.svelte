@@ -2,8 +2,12 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { authStore } from "$lib/stores/auth.js";
+  import { useQuery } from "convex-svelte";
+  import { api } from "../../convex/_generated/api.js";
   import { Search, Calendar, MessageCircle, User } from "lucide-svelte";
   import OfflineIndicator from "./ui/OfflineIndicator.svelte";
+  import OnboardingModal from "./profile/OnboardingModal.svelte";
+  import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   interface Props {
     children: import("svelte").Snippet;
@@ -45,6 +49,32 @@
   let currentPath = $derived($page.url.pathname);
   let isAuthenticated = $derived($authStore.isAuthenticated);
 
+  // Check if user profile is complete
+  let profileQuery = $derived(
+    isAuthenticated ? useQuery(api.userProfiles.getUserProfile, {}) : null,
+  );
+  let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
+  let shouldShowOnboarding = $derived(
+    isAuthenticated &&
+      profile &&
+      !profile?.profile?.isProfileComplete &&
+      currentPath !== "/profile/edit", // Don't show if already editing profile
+  );
+
+  let showOnboardingModal = $state(false);
+
+  // Show onboarding modal when user needs it
+  $effect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    if (shouldShowOnboarding && !showOnboardingModal) {
+      // Small delay to let the app settle
+      timeoutId = setTimeout(() => {
+        showOnboardingModal = true;
+      }, 1000);
+    }
+    return () => clearTimeout(timeoutId);
+  });
+
   function isActiveRoute(path: string): boolean {
     if (path === "/" && currentPath === "/") return true;
     if (path !== "/" && currentPath.startsWith(path)) return true;
@@ -53,6 +83,15 @@
 
   function handleNavigation(path: string) {
     goto(path);
+  }
+
+  function handleOnboardingComplete() {
+    showOnboardingModal = false;
+    // Note: convex-svelte queries automatically refetch when dependencies change
+  }
+
+  function handleOnboardingClose() {
+    showOnboardingModal = false;
   }
 
   let shouldShowBottomNav = $derived(isAuthenticated && currentPath !== "/");
@@ -68,6 +107,13 @@
   <main class="flex-1 {shouldShowBottomNav ? 'pb-20' : ''}">
     {@render children()}
   </main>
+
+  <!-- Onboarding Modal -->
+  <OnboardingModal
+    bind:open={showOnboardingModal}
+    onClose={handleOnboardingClose}
+    onComplete={handleOnboardingComplete}
+  />
 
   <!-- Bottom Navigation -->
   {#if shouldShowBottomNav}

@@ -8,6 +8,7 @@
   import Button from "$lib/components/ui/Button.svelte";
   import ImageUploader from "$lib/components/ui/ImageUploader.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
+  import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -18,8 +19,7 @@
 
   // Fetch current profile
   let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let profile = $derived(profileQuery?.data as any);
+  let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
   let loading = $derived(profileQuery?.isLoading ?? true);
 
   // Update profile mutation
@@ -29,6 +29,7 @@
   let displayName = $state("");
   let bio = $state("");
   let dateOfBirth = $state("");
+  let gender = $state("");
   let location = $state("");
   let profileImages = $state<string[]>([]);
   let saving = $state(false);
@@ -42,14 +43,15 @@
 
   // Initialize form when profile loads
   $effect(() => {
-    if (profile) {
-      displayName = profile.displayName || "";
-      bio = profile.bio || "";
-      dateOfBirth = profile.dateOfBirth
-        ? new Date(profile.dateOfBirth).toISOString().split("T")[0]
+    if (profile?.profile) {
+      displayName = profile.profile.displayName || "";
+      bio = profile.profile.bio || "";
+      dateOfBirth = profile.profile.dateOfBirth
+        ? new Date(profile.profile.dateOfBirth).toISOString().split("T")[0]
         : "";
-      location = profile.location || "";
-      profileImages = profile.profileImages || [];
+      gender = profile.profile.gender || "";
+      location = profile.profile.location || "";
+      profileImages = profile.profile.profileImages || [];
     }
   });
 
@@ -67,6 +69,7 @@
       const updateData: Record<string, unknown> = {
         displayName: displayName.trim(),
         bio: bio.trim() || undefined,
+        gender: gender || undefined,
         location: location.trim() || undefined,
         profileImages,
         profileImageUrl: profileImages[0] || undefined, // First image as primary
@@ -88,7 +91,7 @@
   }
 
   function handleBack() {
-    if (profile?.isProfileComplete) {
+    if (profile?.profile?.isProfileComplete) {
       goto("/profile");
     } else {
       goto("/");
@@ -225,6 +228,25 @@
                 Age: {calculateAge(dateOfBirth)} years old
               </p>
             {/if}
+          </div>
+
+          <div>
+            <label
+              for="gender"
+              class="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Gender
+            </label>
+            <select
+              id="gender"
+              bind:value={gender}
+              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
+            >
+              <option value="">Prefer not to say</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="non_binary">Non-binary</option>
+            </select>
           </div>
 
           <div>

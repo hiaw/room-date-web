@@ -50,6 +50,52 @@ async function enrichEventWithDetails(
 }
 
 /**
+ * Helper function to filter out events user has already applied to
+ */
+async function filterOutAppliedEvents(
+  ctx: QueryCtx,
+  events: Doc<"events">[],
+  userId: Id<"users"> | null,
+): Promise<Doc<"events">[]> {
+  if (!userId) return events;
+
+  const userApplications = await ctx.db
+    .query("eventApplications")
+    .withIndex("by_applicant", (q) => q.eq("applicantId", userId))
+    .collect();
+
+  const appliedEventIds = new Set(userApplications.map((app) => app.eventId));
+  return events.filter((event) => !appliedEventIds.has(event._id));
+}
+
+/**
+ * Helper function to filter events by gender preferences
+ */
+async function filterByGenderPreferences(
+  events: Doc<"events">[],
+  userProfile: Doc<"userProfiles"> | null,
+): Promise<Doc<"events">[]> {
+  if (!userProfile?.gender) return events;
+
+  return events.filter((event) => {
+    // If event has no gender preferences, allow all genders
+    if (
+      !event.guestGenderPreferences ||
+      event.guestGenderPreferences.length === 0
+    ) {
+      return true;
+    }
+
+    // Check if user's gender is in the event's preferred genders
+    // Also check for "any" preference
+    return (
+      event.guestGenderPreferences.includes(userProfile.gender!) ||
+      event.guestGenderPreferences.includes("any")
+    );
+  });
+}
+
+/**
  * Discover active events with filtering
  */
 export const discoverEvents = query({
@@ -57,6 +103,15 @@ export const discoverEvents = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     const limit = args.limit || 20;
+
+    // Fetch user profile once if needed
+    let userProfile: Doc<"userProfiles"> | null = null;
+    if (userId) {
+      userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+    }
 
     // Start with active events
     const query = ctx.db
@@ -69,6 +124,10 @@ export const discoverEvents = query({
     if (userId) {
       events = events.filter((event) => event.ownerId !== userId);
     }
+
+    // Apply shared filtering logic
+    events = await filterOutAppliedEvents(ctx, events, userId);
+    events = await filterByGenderPreferences(events, userProfile);
 
     // Apply filters
     if (args.city) {
@@ -94,21 +153,14 @@ export const discoverEvents = query({
     }
 
     // Age filtering (check if user's age fits event preferences)
-    if (userId && (args.minAge || args.maxAge)) {
-      const userProfile = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .first();
+    if (userId && (args.minAge || args.maxAge) && userProfile?.dateOfBirth) {
+      const userAge = calculateUserAge(userProfile.dateOfBirth);
 
-      if (userProfile?.dateOfBirth) {
-        const userAge = calculateUserAge(userProfile.dateOfBirth);
-
-        events = events.filter((event) => {
-          if (event.minAge && userAge < event.minAge) return false;
-          if (event.maxAge && userAge > event.maxAge) return false;
-          return true;
-        });
-      }
+      events = events.filter((event) => {
+        if (event.minAge && userAge < event.minAge) return false;
+        if (event.maxAge && userAge > event.maxAge) return false;
+        return true;
+      });
     }
 
     // Distance filtering
@@ -158,6 +210,15 @@ export const getEventsNearUser = query({
     const limit = args.limit || 20;
     const radiusInMiles = args.radiusMiles || 25;
 
+    // Fetch user profile once if needed
+    let userProfile: Doc<"userProfiles"> | null = null;
+    if (userId) {
+      userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+    }
+
     // Start with active events
     const query = ctx.db
       .query("events")
@@ -169,6 +230,10 @@ export const getEventsNearUser = query({
     if (userId) {
       events = events.filter((event) => event.ownerId !== userId);
     }
+
+    // Apply shared filtering logic
+    events = await filterOutAppliedEvents(ctx, events, userId);
+    events = await filterByGenderPreferences(events, userProfile);
 
     // Distance filtering
     events = events

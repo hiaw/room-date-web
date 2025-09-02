@@ -88,6 +88,48 @@ export const { auth, signIn, signOut, store } = convexAuth({
       const userData = buildUserDataFromProfile(args.profile);
 
       const userId = await ctx.db.insert("users", userData);
+
+      // Auto-create user profile and settings for new users
+      const DEFAULT_MAX_DISTANCE_MILES = 25;
+
+      const profilePromise = ctx.db.insert("userProfiles", {
+        userId,
+        displayName:
+          typeof args.profile?.name === "string"
+            ? args.profile.name
+            : undefined,
+        dateOfBirth: undefined,
+        bio: undefined,
+        profileImageUrl:
+          typeof args.profile?.image === "string"
+            ? args.profile.image
+            : undefined,
+        profileImages:
+          typeof args.profile?.image === "string"
+            ? [args.profile.image]
+            : undefined,
+        location: undefined,
+        latitude: undefined,
+        longitude: undefined,
+        locationSharing: false,
+        isProfileComplete: false,
+      });
+
+      const settingsPromise = ctx.db.insert("userSettings", {
+        userId,
+        pushNotifications: true,
+        emailNotifications: true,
+        messageNotifications: true,
+        applicationNotifications: true,
+        eventReminderNotifications: true,
+        ageRangePreference: undefined,
+        maxDistance: DEFAULT_MAX_DISTANCE_MILES,
+        genderPreferences: undefined,
+        theme: "system",
+      });
+
+      await Promise.all([profilePromise, settingsPromise]);
+
       return userId;
     },
   },

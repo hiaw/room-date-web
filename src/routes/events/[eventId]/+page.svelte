@@ -16,9 +16,10 @@
   } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
+  import ApplicationManagement from "$lib/components/events/ApplicationManagement.svelte";
+  import type { Id } from "../../../convex/_generated/dataModel";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const eventId = $page.params.eventId as any;
+  const eventId = $page.params.eventId as Id<"events">;
 
   // Redirect if not authenticated
   onMount(() => {
@@ -32,17 +33,18 @@
   let event = $derived(eventQuery?.data);
   let eventLoading = $derived(eventQuery?.isLoading ?? true);
 
+  // Get current user to check ownership
+  let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let currentUser = $derived(userProfileQuery?.data?.user);
+
   // Create convex client for mutations
   let convex = useConvexClient();
   let applying = $state(false);
   let bookmarking = $state(false);
 
-  // Check if current user is the event owner - simplified approach
+  // Check if current user is the event owner
   let isEventOwner = $derived(() => {
-    // If the user can see application management features, they're the owner
-    return (
-      event && !event.userApplication && event.applicationCount !== undefined
-    );
+    return event && currentUser && event.ownerId === currentUser._id;
   });
 
   function handleBack() {
@@ -153,6 +155,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Application Management (Event Owners Only) -->
+    {#if isEventOwner() && event}
+      <div class="mb-6">
+        <ApplicationManagement eventId={event._id} />
+      </div>
+    {/if}
   </div>
 
   {#if eventLoading}
@@ -342,13 +351,25 @@
           {/if}
         </div>
       {:else}
-        <div
-          class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center"
-        >
-          <p class="font-medium text-blue-800">This is Your Event</p>
-          <p class="text-sm text-blue-700">
-            Manage applications from your rooms page
-          </p>
+        <div class="sticky bottom-4 space-y-3">
+          <Button
+            onclick={() => goto(`/events/${eventId}/manage`)}
+            class="w-full"
+          >
+            Manage Event
+          </Button>
+          <div
+            class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center"
+          >
+            <p class="font-medium text-blue-800">This is Your Event</p>
+            {#if event.applicationCount > 0}
+              <p class="text-sm text-blue-700">
+                {event.applicationCount} people have applied
+              </p>
+            {:else}
+              <p class="text-sm text-blue-700">No applications yet</p>
+            {/if}
+          </div>
         </div>
       {/if}
     </div>

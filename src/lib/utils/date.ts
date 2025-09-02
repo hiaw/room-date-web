@@ -1,7 +1,12 @@
 // Date and time utilities
 
 export function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString();
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 export function formatDateTime(timestamp: number): string {
@@ -9,9 +14,10 @@ export function formatDateTime(timestamp: number): string {
 }
 
 export function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString([], {
-    hour: "2-digit",
+  return new Date(timestamp).toLocaleTimeString("en-US", {
+    hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   });
 }
 
@@ -49,4 +55,14 @@ export function formatMessageTime(timestamp: number): string {
   if (days < 7) return `${days}d ago`;
 
   return formatDate(timestamp);
+}
+
+export function formatDateForInput(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toISOString().split("T")[0];
+}
+
+export function formatTimeForInput(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toTimeString().slice(0, 5); // HH:MM format
 }

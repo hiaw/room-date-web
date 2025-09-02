@@ -12,6 +12,7 @@
   import ProfileActions from "$lib/components/profile/sections/ProfileActions.svelte";
   import ProfileEmpty from "$lib/components/profile/sections/ProfileEmpty.svelte";
   import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
+  import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -25,8 +26,9 @@
 
   // Reactive queries
   let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let profile = $derived(profileQueryResult.data as any);
+  let profile = $derived(
+    profileQueryResult.data as UserProfileResponse | undefined,
+  );
   let loading = $derived(profileQueryResult.isLoading);
 
   function handleEditProfile() {
@@ -47,9 +49,13 @@
   }
 
   let age = $derived(
-    profile?.dateOfBirth ? getAgeFromBirthDate(profile.dateOfBirth) : null,
+    profile?.profile?.dateOfBirth
+      ? getAgeFromBirthDate(profile.profile.dateOfBirth)
+      : null,
   );
-  let location = $derived(profile ? formatLocation(profile) : "");
+  let location = $derived(
+    profile?.profile ? formatLocation(profile.profile) : "",
+  );
 </script>
 
 <svelte:head>
@@ -158,24 +164,27 @@
       <div class="flex items-center justify-center py-16">
         <LoadingSpinner />
       </div>
-    {:else if !profile}
+    {:else if !profile?.profile}
       <ProfileEmpty onSetupProfile={handleEditProfile} />
     {:else}
       <!-- Profile Content -->
       <div class="mx-auto max-w-2xl space-y-6">
         <!-- Profile Header -->
         <ProfileHeader
-          {profile}
+          profile={profile?.profile}
           {age}
           {location}
           onEditProfile={handleEditProfile}
         />
 
         <!-- Profile Details -->
-        <ProfileDetails {profile} />
+        <ProfileDetails profile={profile?.profile} />
 
         <!-- Photos -->
-        <PhotoGallery {profile} onEditProfile={handleEditProfile} />
+        <PhotoGallery
+          profile={profile?.profile}
+          onEditProfile={handleEditProfile}
+        />
 
         <!-- Actions -->
         <ProfileActions

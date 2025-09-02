@@ -66,17 +66,6 @@ export const logSecurityEvent = mutation({
       timestamp: Date.now(),
       severity,
     });
-
-    // Also log to console for immediate visibility
-    console.log(
-      `Security Event [${severity.toUpperCase()}]: ${args.eventType}`,
-      {
-        userId,
-        identifier: args.identifier,
-        timestamp: new Date().toISOString(),
-        metadata: args.metadata,
-      },
-    );
   },
 });
 

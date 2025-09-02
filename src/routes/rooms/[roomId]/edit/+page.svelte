@@ -1,18 +1,29 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { useConvexClient } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
+  import { useConvexClient, useQuery } from "convex-svelte";
+  import { api } from "../../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { browser } from "$app/environment";
   import { ArrowLeft, Save } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import RoomImageSection from "$lib/components/rooms/RoomImageSection.svelte";
   import RoomDetailsForm from "$lib/components/rooms/RoomDetailsForm.svelte";
   import RoomLocationForm from "$lib/components/rooms/RoomLocationForm.svelte";
+  import type { Id } from "../../../../convex/_generated/dataModel";
 
   // Get convex client - only on client side
   let convex = browser ? useConvexClient() : null;
+
+  // Get room ID from URL
+  let roomId = $page.params.roomId as Id<"rooms">;
+
+  // Query to get room data
+  let roomQuery = $derived(
+    browser ? useQuery(api.rooms.getRoom, { roomId }) : null,
+  );
+  let room = $derived(roomQuery ? roomQuery.data : null);
 
   // Redirect if not authenticated
   onMount(() => {
@@ -29,17 +40,35 @@
   let stateLocation = $state("");
   let zipCode = $state("");
   let country = $state("United States");
-  let images: string[] = $state([]);
-  let saving = $state(false);
-  let locationLoading = $state(false);
   let latitude = $state<number | undefined>(undefined);
   let longitude = $state<number | undefined>(undefined);
+  let images: string[] = $state([]);
+  let saving = $state(false);
+  let loading = $state(true);
+  let locationLoading = $state(false);
+
+  // Load room data when available
+  $effect(() => {
+    if (room && loading) {
+      title = room.title || "";
+      description = room.description || "";
+      streetAddress = room.streetAddress || "";
+      city = room.city || "";
+      stateLocation = room.state || "";
+      zipCode = room.zipCode || "";
+      country = room.country || "United States";
+      latitude = room.latitude;
+      longitude = room.longitude;
+      images = room.images || [];
+      loading = false;
+    }
+  });
 
   async function handleSave(event: Event) {
     event.preventDefault();
 
-    if (!convex) {
-      alert("Room creation not available");
+    if (!convex || !room) {
+      alert("Room update not available");
       return;
     }
 
@@ -71,10 +100,10 @@
     saving = true;
 
     try {
+      // Try to get coordinates if we don't have them
       let finalLatitude = latitude;
       let finalLongitude = longitude;
 
-      // Try to geocode the address if we don't have coordinates
       if (!latitude || !longitude) {
         try {
           const fullAddress = `${streetAddress}, ${city}${stateLocation ? ", " + stateLocation : ""}${zipCode ? " " + zipCode : ""}, ${country}`;
@@ -89,13 +118,14 @@
           }
         } catch (error) {
           console.warn(
-            "Geocoding failed, creating room without coordinates:",
+            "Geocoding failed, updating room without new coordinates:",
             error,
           );
         }
       }
 
       const roomData = {
+        roomId,
         title: title.trim(),
         description: description.trim() || undefined,
         streetAddress: streetAddress.trim(),
@@ -110,11 +140,11 @@
         primaryImageUrl: images[0] || undefined,
       };
 
-      await convex.mutation(api.rooms.createRoom, roomData);
+      await convex.mutation(api.rooms.updateRoom, roomData);
       goto("/my-rooms");
     } catch (error) {
-      console.error("Failed to create room:", error);
-      alert("Failed to create room. Please try again.");
+      console.error("Failed to update room:", error);
+      alert("Failed to update room. Please try again.");
     } finally {
       saving = false;
     }
@@ -135,7 +165,6 @@
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          // Store coordinates
           latitude = position.coords.latitude;
           longitude = position.coords.longitude;
 
@@ -223,110 +252,125 @@
 </script>
 
 <svelte:head>
-  <title>Create Room - Room Dates</title>
+  <title>Edit Room - Room Dates</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
-  <!-- Header -->
+{#if loading || !room}
   <div
-    class="sticky top-0 z-40 border-b border-gray-100 bg-white/90 backdrop-blur-md"
+    class="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50"
   >
-    <div class="px-4 py-4">
-      <div class="flex items-center justify-between">
-        <button
-          onclick={handleBack}
-          class="rounded-xl bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-gray-200"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 class="text-xl font-bold text-gray-900">Create Room</h1>
-        <button
-          onclick={handleSave}
-          disabled={saving || !title.trim()}
-          class="flex items-center space-x-2 rounded-xl bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-        >
-          {#if saving}
-            <div
-              class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-            ></div>
-          {:else}
-            <Save size={16} />
-          {/if}
-          <span>Create</span>
-        </button>
-      </div>
+    <div class="text-center">
+      <div
+        class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent"
+      ></div>
+      <p class="text-gray-600">Loading room...</p>
     </div>
   </div>
-
-  <div class="mx-auto max-w-2xl px-4 py-6">
-    <form onsubmit={handleSave} class="space-y-6">
-      <!-- Room Photos -->
-      <RoomImageSection {images} onImagesChange={handleImagesChange} />
-
-      <!-- Room Details -->
-      <RoomDetailsForm
-        {title}
-        {description}
-        onTitleChange={handleTitleChange}
-        onDescriptionChange={handleDescriptionChange}
-      />
-
-      <!-- Location -->
-      <RoomLocationForm
-        {streetAddress}
-        {city}
-        {stateLocation}
-        {zipCode}
-        {country}
-        {locationLoading}
-        onStreetAddressChange={handleStreetAddressChange}
-        onCityChange={handleCityChange}
-        onStateLocationChange={handleStateLocationChange}
-        onZipCodeChange={handleZipCodeChange}
-        onCountryChange={handleCountryChange}
-        onGetCurrentLocation={getCurrentLocation}
-      />
-
-      <!-- Coordinates Display -->
-      {#if latitude && longitude}
-        <div class="rounded-lg border border-green-200 bg-green-50 p-4">
-          <h3 class="mb-2 text-sm font-medium text-green-800">
-            Location Coordinates
-          </h3>
-          <p class="text-sm text-green-700">
-            Latitude: {latitude.toFixed(6)}, Longitude: {longitude.toFixed(6)}
-          </p>
-          <p class="mt-1 text-xs text-green-600">
-            Your room will appear in location-based event discovery
-          </p>
+{:else}
+  <div
+    class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50"
+  >
+    <!-- Header -->
+    <div
+      class="sticky top-0 z-40 border-b border-gray-100 bg-white/90 backdrop-blur-md"
+    >
+      <div class="px-4 py-4">
+        <div class="flex items-center justify-between">
+          <button
+            onclick={handleBack}
+            class="rounded-xl bg-gray-100 p-2 text-gray-600 transition-colors hover:bg-gray-200"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 class="text-xl font-bold text-gray-900">Edit Room</h1>
+          <button
+            onclick={handleSave}
+            disabled={saving || !title.trim()}
+            class="flex items-center space-x-2 rounded-xl bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            {#if saving}
+              <div
+                class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+              ></div>
+            {:else}
+              <Save size={16} />
+            {/if}
+            <span>Update</span>
+          </button>
         </div>
-      {:else}
-        <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-          <h3 class="mb-2 text-sm font-medium text-yellow-800">
-            Location Coordinates Missing
-          </h3>
-          <p class="text-sm text-yellow-700">
-            Use "Get Current Location" or we'll try to get coordinates from your
-            address automatically.
-          </p>
-        </div>
-      {/if}
-
-      <!-- Submit Button (Mobile) -->
-      <div class="pt-6 lg:hidden">
-        <Button
-          onclick={() => handleSave(new Event("click"))}
-          disabled={saving || !title.trim()}
-          class="w-full"
-        >
-          {#if saving}
-            <div
-              class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-            ></div>
-          {/if}
-          Create Room
-        </Button>
       </div>
-    </form>
+    </div>
+
+    <div class="mx-auto max-w-2xl px-4 py-6">
+      <form onsubmit={handleSave} class="space-y-6">
+        <!-- Room Photos -->
+        <RoomImageSection {images} onImagesChange={handleImagesChange} />
+
+        <!-- Room Details -->
+        <RoomDetailsForm
+          {title}
+          {description}
+          onTitleChange={handleTitleChange}
+          onDescriptionChange={handleDescriptionChange}
+        />
+
+        <!-- Location -->
+        <RoomLocationForm
+          {streetAddress}
+          {city}
+          {stateLocation}
+          {zipCode}
+          {country}
+          {locationLoading}
+          onStreetAddressChange={handleStreetAddressChange}
+          onCityChange={handleCityChange}
+          onStateLocationChange={handleStateLocationChange}
+          onZipCodeChange={handleZipCodeChange}
+          onCountryChange={handleCountryChange}
+          onGetCurrentLocation={getCurrentLocation}
+        />
+
+        <!-- Coordinates Display -->
+        {#if latitude && longitude}
+          <div class="rounded-lg border border-green-200 bg-green-50 p-4">
+            <h3 class="mb-2 text-sm font-medium text-green-800">
+              Location Coordinates
+            </h3>
+            <p class="text-sm text-green-700">
+              Latitude: {latitude.toFixed(6)}, Longitude: {longitude.toFixed(6)}
+            </p>
+            <p class="mt-1 text-xs text-green-600">
+              This room will appear in location-based searches
+            </p>
+          </div>
+        {:else}
+          <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+            <h3 class="mb-2 text-sm font-medium text-yellow-800">
+              Location Coordinates Missing
+            </h3>
+            <p class="text-sm text-yellow-700">
+              Use "Get Current Location" or save with the address to get
+              coordinates for location-based event discovery.
+            </p>
+          </div>
+        {/if}
+
+        <!-- Submit Button (Mobile) -->
+        <div class="pt-6 lg:hidden">
+          <Button
+            onclick={() => handleSave(new Event("click"))}
+            disabled={saving || !title.trim()}
+            class="w-full"
+          >
+            {#if saving}
+              <div
+                class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+              ></div>
+            {/if}
+            Update Room
+          </Button>
+        </div>
+      </form>
+    </div>
   </div>
-</div>
+{/if}

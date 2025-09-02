@@ -6,6 +6,7 @@ export const userProfiles = defineTable({
   userId: v.id("users"),
   displayName: v.optional(v.string()),
   dateOfBirth: v.optional(v.number()), // timestamp
+  gender: v.optional(v.string()), // "male", "female", "non-binary", etc.
   bio: v.optional(v.string()),
   profileImageUrl: v.optional(v.string()),
   profileImages: v.optional(v.array(v.string())), // Multiple profile photos

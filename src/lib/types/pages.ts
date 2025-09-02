@@ -5,6 +5,7 @@
 export interface LocationState {
   latitude: number;
   longitude: number;
+  city?: string;
 }
 
 export interface AgeRange {
