@@ -122,12 +122,6 @@
                     <span>{event.applicationCount} interested</span>
                   </span>
                 {/if}
-                {#if event.applicationCount !== undefined}
-                  <span class="flex items-center space-x-1">
-                    <Users size={12} />
-                    <span>{event.applicationCount} interested</span>
-                  </span>
-                {/if}
               </div>
             </div>
 
