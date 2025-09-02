@@ -72,11 +72,7 @@ export const logSecurityEvent = mutation({
 
     // For auth failures, check for patterns and trigger security monitoring
     if (args.eventType === "auth_failure" && args.identifier) {
-      await checkAndTriggerSecurityMonitoring(
-        ctx,
-        args.identifier,
-        args.metadata,
-      );
+      await checkAndTriggerSecurityMonitoring(ctx, args.identifier);
     }
   },
 });
@@ -87,7 +83,6 @@ export const logSecurityEvent = mutation({
 async function checkAndTriggerSecurityMonitoring(
   ctx: MutationCtx,
   email: string,
-  _metadata: unknown, // Prefixed with _ to indicate unused
 ) {
   // Get recent auth failures for this email/identifier
   const recentFailures = await ctx.db
@@ -111,6 +106,7 @@ async function checkAndTriggerSecurityMonitoring(
       const { monitorSecurityEvent } = await import("./auth/security.js");
 
       // Use type assertion to work around Convex type complexity
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await ctx.runMutation(monitorSecurityEvent as any, {
         eventType: "multiple_failed_logins",
         details: {

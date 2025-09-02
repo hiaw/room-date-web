@@ -81,7 +81,9 @@ export const SecurityUtils = {
    * Check if an event type requires immediate session revocation
    */
   requiresImmediateRevocation: (eventType: string): boolean => {
-    return IMMEDIATE_REVOCATION_EVENTS.includes(eventType as any);
+    return IMMEDIATE_REVOCATION_EVENTS.includes(
+      eventType as (typeof IMMEDIATE_REVOCATION_EVENTS)[number],
+    );
   },
 
   /**

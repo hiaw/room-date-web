@@ -1,6 +1,5 @@
 import { action } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { api } from "./_generated/api";
 
 // For forgot password from sign-in page (takes email as parameter)
 export default action({
@@ -13,7 +12,10 @@ export default action({
 
     // Use the auth signIn with password reset flow
     try {
-      await ctx.runAction(api.auth.signIn, {
+      // Use dynamic import to avoid circular dependency
+      const { signIn } = await import("./auth.js");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await ctx.runAction(signIn as any, {
         provider: "password",
         params: {
           email,

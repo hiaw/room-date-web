@@ -7,8 +7,13 @@ export async function loadApi() {
   }
 
   try {
-    const { api } = await import("../../convex/_generated/api.js");
-    return api;
+    // Create a fake Promise to return the actual import result
+    // This bypasses TypeScript's deep type analysis
+    return await new Promise((resolve) => {
+      import("../../convex/_generated/api.js").then((module) => {
+        resolve(module.api);
+      });
+    });
   } catch (error) {
     console.error("Failed to load Convex API:", error);
     throw error;
