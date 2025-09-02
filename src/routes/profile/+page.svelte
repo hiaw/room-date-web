@@ -72,9 +72,16 @@
     passwordChangeError = null;
 
     try {
+      // Ensure we have the user's email
+      if (!profile?.user?.email) {
+        throw new Error(
+          "Unable to find your email address. Please try logging out and back in.",
+        );
+      }
+
       // Use the password reset flow for security
       await convex.action(api.changePassword.default, {
-        email: profile?.email || "unknown@example.com",
+        email: profile.user.email,
       });
 
       hidePasswordChangeForm();
@@ -225,7 +232,7 @@
           loading={passwordChangeLoading}
           error={passwordChangeError}
           onCancel={hidePasswordChangeForm}
-          userEmail={profile?.email || ""}
+          userEmail={profile?.user?.email || ""}
         />
       </div>
     {:else if loading}
