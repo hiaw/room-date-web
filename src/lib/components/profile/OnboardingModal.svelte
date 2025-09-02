@@ -25,6 +25,14 @@
   let locationSharing = $state(true);
   let gettingLocation = $state(false);
 
+  // Validation errors
+  let validationErrors = $state<{
+    displayName?: string;
+    dateOfBirth?: string;
+    location?: string;
+    save?: string;
+  }>({});
+
   // Calculate max date for date of birth (18 years ago)
   let maxDateOfBirth = $derived(() => {
     const today = new Date();
@@ -34,9 +42,21 @@
 
   async function handleNext() {
     if (step === 1) {
+      // Reset validation errors
+      validationErrors = {};
+
       // Validate basic info
-      if (!displayName.trim() || !dateOfBirth) {
-        alert("Please fill in all required fields");
+      let hasErrors = false;
+      if (!displayName.trim()) {
+        validationErrors.displayName = "Display name is required";
+        hasErrors = true;
+      }
+      if (!dateOfBirth) {
+        validationErrors.dateOfBirth = "Date of birth is required";
+        hasErrors = true;
+      }
+
+      if (hasErrors) {
         return;
       }
       step = 2;
@@ -61,11 +81,13 @@
 
   async function getCurrentLocation() {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by this browser");
+      validationErrors.location =
+        "Geolocation is not supported by this browser";
       return;
     }
 
     gettingLocation = true;
+    validationErrors.location = undefined; // Clear any previous error
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -103,7 +125,7 @@
             break;
         }
 
-        alert(errorMessage);
+        validationErrors.location = errorMessage;
         gettingLocation = false;
       },
       { timeout: 10000, enableHighAccuracy: true },
@@ -112,6 +134,8 @@
 
   async function handleSave() {
     saving = true;
+    validationErrors.save = undefined; // Clear any previous save error
+
     try {
       await convex.mutation(api.userProfiles.updateUserProfile, {
         displayName: displayName.trim(),
@@ -132,7 +156,7 @@
       onClose();
     } catch (error) {
       console.error("Failed to save profile:", error);
-      alert("Failed to save profile. Please try again.");
+      validationErrors.save = "Failed to save profile. Please try again.";
     } finally {
       saving = false;
     }
@@ -190,10 +214,15 @@
               bind:value={displayName}
               type="text"
               placeholder="How should others see your name?"
-              class="w-full rounded-lg border {!displayName.trim()
+              class="w-full rounded-lg border {validationErrors.displayName
                 ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500'} px-3 py-2 focus:ring-1 focus:outline-none"
             />
+            {#if validationErrors.displayName}
+              <p class="mt-1 text-sm text-red-600">
+                {validationErrors.displayName}
+              </p>
+            {/if}
           </div>
 
           <div>
@@ -208,11 +237,17 @@
               bind:value={dateOfBirth}
               type="date"
               max={maxDateOfBirth()}
-              class="w-full rounded-lg border {!dateOfBirth
+              class="w-full rounded-lg border {validationErrors.dateOfBirth
                 ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500'} px-3 py-2 focus:ring-1 focus:outline-none"
             />
-            <p class="mt-1 text-xs text-gray-500">Must be 18 or older</p>
+            {#if validationErrors.dateOfBirth}
+              <p class="mt-1 text-sm text-red-600">
+                {validationErrors.dateOfBirth}
+              </p>
+            {:else}
+              <p class="mt-1 text-xs text-gray-500">Must be 18 or older</p>
+            {/if}
           </div>
 
           <div>
@@ -270,6 +305,12 @@
                 <span>Use Current Location</span>
               {/if}
             </button>
+
+            {#if validationErrors.location}
+              <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p class="text-sm text-red-700">{validationErrors.location}</p>
+              </div>
+            {/if}
           {/if}
 
           <div class="flex items-center space-x-2">
@@ -322,6 +363,12 @@
               optimized for the best experience!
             </p>
           </div>
+
+          {#if validationErrors.save}
+            <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+              <p class="text-sm text-red-700">{validationErrors.save}</p>
+            </div>
+          {/if}
         </div>
       {/if}
 
