@@ -138,29 +138,49 @@ export const getEventChatParticipants = query({
       .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
       .collect();
 
-    // Enrich with user data
-    const enrichedParticipants = await Promise.all(
-      participants.map(async (p) => {
-        const user = await ctx.db.get(p.userId);
-        const userProfile = await ctx.db
-          .query("userProfiles")
-          .withIndex("by_user", (q) => q.eq("userId", p.userId))
-          .first();
-        return {
-          ...p,
-          user: user
-            ? {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-              }
-            : null,
-          profile: userProfile,
-        };
-      }),
-    );
+    // Extract user IDs for batch fetching
+    const userIds = participants.map((p) => p.userId);
 
-    return enrichedParticipants.filter((p) => p.user !== null);
+    // Batch fetch users and profiles to avoid N+1 queries
+    const users = await Promise.all(userIds.map((id) => ctx.db.get(id)));
+
+    // Batch fetch user profiles using filter with or condition
+    const userProfiles = await ctx.db
+      .query("userProfiles")
+      .filter((q) =>
+        q.or(...userIds.map((userId) => q.eq(q.field("userId"), userId))),
+      )
+      .collect();
+
+    // Create maps for efficient O(1) lookup
+    const usersById = new Map(
+      users
+        .filter((u): u is NonNullable<typeof u> => u !== null)
+        .map((u) => [u._id, u]),
+    );
+    const profilesByUserId = new Map(userProfiles.map((p) => [p.userId, p]));
+
+    // Enrich participants using the maps
+    const enrichedParticipants = participants.map((p) => {
+      const user = usersById.get(p.userId);
+      const userProfile = profilesByUserId.get(p.userId);
+      if (!user) {
+        return null;
+      }
+      return {
+        ...p,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+        },
+        profile: userProfile ?? null,
+      };
+    });
+
+    return enrichedParticipants.filter(
+      (p): p is NonNullable<typeof p> => p !== null,
+    );
   },
 });
 
