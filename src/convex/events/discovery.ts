@@ -111,6 +111,33 @@ export const discoverEvents = query({
       }
     }
 
+    // Gender filtering (check if user's gender matches event preferences)
+    if (userId) {
+      const userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+
+      if (userProfile?.gender) {
+        events = events.filter((event) => {
+          // If event has no gender preferences, allow all genders
+          if (
+            !event.guestGenderPreferences ||
+            event.guestGenderPreferences.length === 0
+          ) {
+            return true;
+          }
+
+          // Check if user's gender is in the event's preferred genders
+          // Also check for "any" preference
+          return (
+            event.guestGenderPreferences.includes(userProfile.gender!) ||
+            event.guestGenderPreferences.includes("any")
+          );
+        });
+      }
+    }
+
     // Distance filtering
     if (args.latitude && args.longitude) {
       const radiusInMiles = args.radiusInMiles || 25;
@@ -168,6 +195,33 @@ export const getEventsNearUser = query({
     // Filter out user's own events
     if (userId) {
       events = events.filter((event) => event.ownerId !== userId);
+    }
+
+    // Gender filtering (check if user's gender matches event preferences)
+    if (userId) {
+      const userProfile = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+
+      if (userProfile?.gender) {
+        events = events.filter((event) => {
+          // If event has no gender preferences, allow all genders
+          if (
+            !event.guestGenderPreferences ||
+            event.guestGenderPreferences.length === 0
+          ) {
+            return true;
+          }
+
+          // Check if user's gender is in the event's preferred genders
+          // Also check for "any" preference
+          return (
+            event.guestGenderPreferences.includes(userProfile.gender!) ||
+            event.guestGenderPreferences.includes("any")
+          );
+        });
+      }
     }
 
     // Distance filtering

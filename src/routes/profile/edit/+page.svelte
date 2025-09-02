@@ -29,6 +29,7 @@
   let displayName = $state("");
   let bio = $state("");
   let dateOfBirth = $state("");
+  let gender = $state("");
   let location = $state("");
   let profileImages = $state<string[]>([]);
   let saving = $state(false);
@@ -48,6 +49,7 @@
       dateOfBirth = profile.profile.dateOfBirth
         ? new Date(profile.profile.dateOfBirth).toISOString().split("T")[0]
         : "";
+      gender = profile.profile.gender || "";
       location = profile.profile.location || "";
       profileImages = profile.profile.profileImages || [];
     }
@@ -67,6 +69,7 @@
       const updateData: Record<string, unknown> = {
         displayName: displayName.trim(),
         bio: bio.trim() || undefined,
+        gender: gender || undefined,
         location: location.trim() || undefined,
         profileImages,
         profileImageUrl: profileImages[0] || undefined, // First image as primary
@@ -225,6 +228,25 @@
                 Age: {calculateAge(dateOfBirth)} years old
               </p>
             {/if}
+          </div>
+
+          <div>
+            <label
+              for="gender"
+              class="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Gender
+            </label>
+            <select
+              id="gender"
+              bind:value={gender}
+              class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
+            >
+              <option value="">Prefer not to say</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="non_binary">Non-binary</option>
+            </select>
           </div>
 
           <div>
