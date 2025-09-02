@@ -43,11 +43,6 @@
         status: "approved",
         ownerResponse: message,
       });
-
-      // Refresh applications
-      applicationsQuery = useQuery(api.eventApplications.getEventApplications, {
-        eventId,
-      });
     } catch (error) {
       console.error("Failed to approve application:", error);
       throw error;
@@ -67,11 +62,6 @@
         applicationId: applicationId as Id<"eventApplications">,
         status: "rejected",
         ownerResponse: message,
-      });
-
-      // Refresh applications
-      applicationsQuery = useQuery(api.eventApplications.getEventApplications, {
-        eventId,
       });
     } catch (error) {
       console.error("Failed to reject application:", error);
