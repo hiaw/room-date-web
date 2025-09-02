@@ -1,6 +1,7 @@
 <script lang="ts">
   import { PUBLIC_CONVEX_URL } from "$env/static/public";
   import { browser } from "$app/environment";
+  import { goto } from "$app/navigation";
   import { setupConvex, useConvexClient } from "convex-svelte";
   import { onMount } from "svelte";
   import { setupConvexAuth } from "$lib/convex-auth.js";
@@ -26,8 +27,8 @@
           // Clear potentially compromised auth data
           sessionStorage.removeItem("oauth_state");
           sessionStorage.removeItem("oauth_verifier");
-          // Redirect to home or show error
-          window.location.href = "/?error=oauth_csrf";
+          // Redirect to home with error using SvelteKit navigation
+          goto("/?error=oauth_csrf", { replaceState: true });
           return;
         }
         // State is valid, clean up

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { useConvexClient } from "convex-svelte";
   import { api } from "../convex/_generated/api.js";
+  import { goto } from "$app/navigation";
   import type { AuthTokens } from "./types/index.js";
   import { authStore } from "./stores/auth.js";
   import AuthForm from "./components/auth/AuthForm.svelte";
@@ -146,8 +147,8 @@
   function hidePasswordResetComplete() {
     passwordResetError = "";
     passwordResetSuccess = false;
-    // Navigate back to normal auth flow
-    window.location.href = "/";
+    // Navigate back to normal auth flow using SvelteKit navigation
+    goto("/", { replaceState: true });
   }
 
   async function handleForgotPassword(email: string) {
