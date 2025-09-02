@@ -1,11 +1,8 @@
 <script lang="ts">
   import { Plus } from "lucide-svelte";
+  import type { RoomsHeaderProps } from "$lib/types/components.js";
 
-  interface Props {
-    onCreateRoom: () => void;
-  }
-
-  let { onCreateRoom }: Props = $props();
+  let { onCreateRoom }: RoomsHeaderProps = $props();
 </script>
 
 <div

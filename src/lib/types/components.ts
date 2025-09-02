@@ -241,3 +241,40 @@ export interface EmptyStateProps {
     onClick: () => void;
   };
 }
+
+// Event Management Component Types
+export interface ApplicantCardProps {
+  application: import("../../convex/eventApplications/types").ApplicationWithDetails;
+  onApprove: (applicationId: string, message?: string) => Promise<void>;
+  onReject: (applicationId: string, message?: string) => Promise<void>;
+  loading?: boolean;
+}
+
+export interface ApplicationManagementProps {
+  eventId: import("../../convex/_generated/dataModel").Id<"events">;
+}
+
+// Room Component Types
+export interface RoomCardProps {
+  room: import("./domains/rooms").Room;
+  events: import("./domains/events").EventWithDetails[];
+  onEditRoom: (roomId: string) => void;
+  onCreateEvent: (roomId: string) => void;
+  onViewEvent: (eventId: string) => void;
+}
+
+export interface ApplicationCardProps {
+  application: import("./domains/events").EventApplicationWithDetails;
+  onViewEvent: (eventId: string) => void;
+}
+
+export interface RoomsHeaderProps {
+  onCreateRoom: () => void;
+}
+
+// Profile Component Types
+export interface OnboardingModalProps {
+  open: boolean;
+  onClose: () => void;
+  onComplete: () => void;
+}

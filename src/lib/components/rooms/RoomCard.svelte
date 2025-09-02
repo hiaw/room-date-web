@@ -8,18 +8,10 @@
     Settings,
   } from "lucide-svelte";
   import { goto } from "$app/navigation";
+  import type { RoomCardProps } from "$lib/types/components.js";
   import type { Room } from "$lib/types/domains/rooms.js";
-  import type { EventWithDetails } from "$lib/types/domains/events.js";
 
-  interface Props {
-    room: Room;
-    events: EventWithDetails[];
-    onEditRoom: (roomId: string) => void;
-    onCreateEvent: (roomId: string) => void;
-    onViewEvent: (eventId: string) => void;
-  }
-
-  let { room, events, onEditRoom, onCreateEvent, onViewEvent }: Props =
+  let { room, events, onEditRoom, onCreateEvent, onViewEvent }: RoomCardProps =
     $props();
 
   function getEventCountText(count: number): string {

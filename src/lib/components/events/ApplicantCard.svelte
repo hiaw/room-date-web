@@ -8,16 +8,14 @@
     Calendar,
   } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
-  import type { ApplicationWithDetails } from "../../../convex/eventApplications/types";
+  import type { ApplicantCardProps } from "$lib/types/components.js";
 
-  interface Props {
-    application: ApplicationWithDetails;
-    onApprove: (applicationId: string, message?: string) => Promise<void>;
-    onReject: (applicationId: string, message?: string) => Promise<void>;
-    loading?: boolean;
-  }
-
-  let { application, onApprove, onReject, loading = false }: Props = $props();
+  let {
+    application,
+    onApprove,
+    onReject,
+    loading = false,
+  }: ApplicantCardProps = $props();
 
   let showResponseForm = $state(false);
   let responseMessage = $state("");

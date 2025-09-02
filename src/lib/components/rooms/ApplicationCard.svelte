@@ -1,12 +1,7 @@
 <script lang="ts">
-  import type { EventApplicationWithDetails } from "$lib/types/domains/events.js";
+  import type { ApplicationCardProps } from "$lib/types/components.js";
 
-  interface Props {
-    application: EventApplicationWithDetails;
-    onViewEvent: (eventId: string) => void;
-  }
-
-  let { application, onViewEvent }: Props = $props();
+  let { application, onViewEvent }: ApplicationCardProps = $props();
 
   function formatApplicationDate(timestamp: number): string {
     return new Date(timestamp).toLocaleDateString("en-US", {

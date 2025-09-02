@@ -3,14 +3,13 @@
   import { api } from "../../../convex/_generated/api.js";
   import { MapPin, User, Calendar } from "lucide-svelte";
   import Button from "../ui/Button.svelte";
+  import type { OnboardingModalProps } from "$lib/types/components.js";
 
-  interface Props {
-    open: boolean;
-    onClose: () => void;
-    onComplete: () => void;
-  }
-
-  let { open = $bindable(), onClose, onComplete }: Props = $props();
+  let {
+    open = $bindable(),
+    onClose,
+    onComplete,
+  }: OnboardingModalProps = $props();
 
   let convex = useConvexClient();
   let step = $state(1);

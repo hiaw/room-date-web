@@ -4,13 +4,10 @@
   import ApplicantCard from "./ApplicantCard.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import { Users, Clock, CheckCircle, XCircle } from "lucide-svelte";
+  import type { ApplicationManagementProps } from "$lib/types/components.js";
   import type { Id } from "../../../convex/_generated/dataModel";
 
-  interface Props {
-    eventId: Id<"events">;
-  }
-
-  let { eventId }: Props = $props();
+  let { eventId }: ApplicationManagementProps = $props();
 
   // Fetch applications for this event
   let applicationsQuery = useQuery(api.eventApplications.getEventApplications, {
