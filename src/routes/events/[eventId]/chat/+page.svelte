@@ -50,6 +50,12 @@
     canAccess?.canAccess ? participantsQuery?.data || [] : [],
   );
 
+  // Get current user profile data (move from MessageBubble)
+  let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let currentUserData = $derived(userProfileQuery?.data);
+  let currentUser = $derived(currentUserData?.user);
+  let currentUserProfile = $derived(currentUserData?.profile);
+
   // UI state
   let messageInput = $state("");
   let sending = $state(false);
@@ -203,7 +209,11 @@
         </div>
       {:else}
         {#each messages as message (message._id)}
-          <MessageBubble {message} />
+          <MessageBubble
+            {message}
+            currentUserId={currentUser?._id}
+            {currentUserProfile}
+          />
         {/each}
       {/if}
     </div>

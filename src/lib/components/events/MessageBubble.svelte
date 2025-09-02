@@ -1,24 +1,21 @@
 <script lang="ts">
-  import { useQuery } from "convex-svelte";
-  import { api } from "../../../convex/_generated/api.js";
   import { formatDistanceToNow } from "date-fns";
-  import type { Doc } from "../../../convex/_generated/dataModel";
+  import type { Doc, Id } from "../../../convex/_generated/dataModel";
 
   // Use the actual event message type from Convex schema
   type EventMessage = Doc<"eventMessages">;
+  type UserProfile = Doc<"userProfiles">;
 
   interface Props {
     message: EventMessage;
+    currentUserId?: Id<"users">;
+    currentUserProfile?: UserProfile;
   }
 
-  let { message }: Props = $props();
+  let { message, currentUserId, currentUserProfile }: Props = $props();
 
-  // Get current user to determine if message is from self
-  let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
-  let currentUserData = $derived(userProfileQuery?.data);
-  let currentUser = $derived(currentUserData?.user);
-  let currentUserProfile = $derived(currentUserData?.profile);
-  let isMyMessage = $derived(currentUser?._id === message.senderId);
+  // Determine if message is from current user
+  let isMyMessage = $derived(currentUserId === message.senderId);
 
   function formatTime(timestamp: number): string {
     const date = new Date(timestamp);
