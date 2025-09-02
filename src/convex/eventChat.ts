@@ -2,6 +2,38 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, optionalAuth } from "./lib/authHelpers";
 import type { Id } from "./_generated/dataModel";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
+
+/**
+ * Helper function to verify user authentication and event chat participation
+ */
+async function verifyEventChatParticipation(
+  ctx: QueryCtx | MutationCtx,
+  eventId: Id<"events">,
+  useRequireAuth: boolean = true,
+) {
+  const userId = useRequireAuth
+    ? await requireAuth(ctx)
+    : await optionalAuth(ctx);
+  if (!userId) {
+    throw new Error("Must be authenticated to access event chat");
+  }
+
+  const participant = await ctx.db
+    .query("eventChatParticipants")
+    .withIndex("by_event_user", (q) =>
+      q.eq("eventId", eventId).eq("userId", userId as Id<"users">),
+    )
+    .unique();
+
+  if (!participant) {
+    throw new Error(
+      "You must be an approved participant to access this event chat",
+    );
+  }
+
+  return { userId, participant };
+}
 
 /**
  * Send a message to an event chat
@@ -13,8 +45,10 @@ export const sendEventMessage = mutation({
     messageType: v.optional(v.union(v.literal("text"), v.literal("system"))),
   },
   handler: async (ctx, args) => {
-    // Check if user is authenticated
-    const userId = await requireAuth(ctx);
+    const { userId, participant } = await verifyEventChatParticipation(
+      ctx,
+      args.eventId,
+    );
 
     // Get user profile
     const profile = await ctx.db
@@ -25,18 +59,6 @@ export const sendEventMessage = mutation({
     // Validate message content for non-system messages
     if (!args.content.trim() && args.messageType !== "system") {
       throw new Error("Message content cannot be empty");
-    }
-
-    // Check if user is a participant in the event chat
-    const participant = await ctx.db
-      .query("eventChatParticipants")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
-      )
-      .unique();
-
-    if (!participant) {
-      throw new Error("You must be an approved participant to send messages");
     }
 
     // Create the message
@@ -72,23 +94,7 @@ export const getEventMessages = query({
     ),
   },
   handler: async (ctx, args) => {
-    // Check if user is authenticated
-    const userId = await optionalAuth(ctx);
-    if (!userId) {
-      throw new Error("Must be authenticated to view messages");
-    }
-
-    // Check if user is a participant in the event chat
-    const participant = await ctx.db
-      .query("eventChatParticipants")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
-      )
-      .unique();
-
-    if (!participant) {
-      throw new Error("You must be an approved participant to view messages");
-    }
+    await verifyEventChatParticipation(ctx, args.eventId, false);
 
     // Get messages with pagination
     const result = await ctx.db
@@ -112,25 +118,7 @@ export const getEventChatParticipants = query({
     eventId: v.id("events"),
   },
   handler: async (ctx, args) => {
-    // Check if user is authenticated
-    const userId = await optionalAuth(ctx);
-    if (!userId) {
-      throw new Error("Must be authenticated to view participants");
-    }
-
-    // Check if user is a participant in the event chat
-    const participant = await ctx.db
-      .query("eventChatParticipants")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
-      )
-      .unique();
-
-    if (!participant) {
-      throw new Error(
-        "You must be an approved participant to view participants",
-      );
-    }
+    await verifyEventChatParticipation(ctx, args.eventId, false);
 
     // Get all participants
     const participants = await ctx.db
@@ -192,22 +180,10 @@ export const markEventMessagesSeen = mutation({
     eventId: v.id("events"),
   },
   handler: async (ctx, args) => {
-    // Check if user is authenticated
-    const userId = await requireAuth(ctx);
-
-    // Check if user is a participant in the event chat
-    const participant = await ctx.db
-      .query("eventChatParticipants")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
-      )
-      .unique();
-
-    if (!participant) {
-      throw new Error(
-        "You must be an approved participant to mark messages as seen",
-      );
-    }
+    const { participant } = await verifyEventChatParticipation(
+      ctx,
+      args.eventId,
+    );
 
     // Update participant's last seen timestamp
     await ctx.db.patch(participant._id, {
@@ -256,23 +232,11 @@ export const getEventChatInfo = query({
     eventId: v.id("events"),
   },
   handler: async (ctx, args) => {
-    // Check if user is authenticated
-    const userId = await optionalAuth(ctx);
-    if (!userId) {
-      throw new Error("Must be authenticated to view event chat info");
-    }
-
-    // Check if user is a participant in the event chat
-    const participant = await ctx.db
-      .query("eventChatParticipants")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", userId as Id<"users">),
-      )
-      .unique();
-
-    if (!participant) {
-      throw new Error("You must be an approved participant to view event info");
-    }
+    const { participant } = await verifyEventChatParticipation(
+      ctx,
+      args.eventId,
+      false,
+    );
 
     // Get event details
     const event = await ctx.db.get(args.eventId);
