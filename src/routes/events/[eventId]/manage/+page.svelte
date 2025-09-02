@@ -11,6 +11,7 @@
   import EventDetailsForm from "$lib/components/events/EventDetailsForm.svelte";
   import EventTimingForm from "$lib/components/events/EventTimingForm.svelte";
   import EventGuestPreferences from "$lib/components/events/EventGuestPreferences.svelte";
+  import type { Id } from "../../../../convex/_generated/dataModel";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -19,11 +20,11 @@
     }
   });
 
-  let eventId = $derived($page.params.eventId);
+  let eventId = $derived($page.params.eventId as Id<"events">);
   let convex = useConvexClient();
 
-  // Fetch event data
-  let eventQuery = useQuery(api.events.getEvent, { eventId });
+  // Fetch event data - using reactive statement to ensure it updates when eventId changes
+  let eventQuery = $derived(useQuery(api.events.getEvent, { eventId }));
   let event = $derived(eventQuery?.data);
   let loading = $derived(eventQuery?.isLoading ?? true);
 

@@ -1,12 +1,5 @@
 <script lang="ts">
-  import {
-    User,
-    Clock,
-    Check,
-    X,
-    MessageCircle,
-    Calendar,
-  } from "lucide-svelte";
+  import { User, Clock, Check, X, MessageCircle } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import type { ApplicantCardProps } from "$lib/types/components.js";
 
