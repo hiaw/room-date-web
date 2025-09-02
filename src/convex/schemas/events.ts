@@ -39,6 +39,8 @@ export const events = defineTable({
   // Media support for events
   eventImages: v.optional(v.array(v.string())),
   primaryEventImageUrl: v.optional(v.string()),
+  // Denormalized counts for performance
+  chatParticipantCount: v.optional(v.number()), // Number of users in event chat
   isActive: v.boolean(),
 })
   .index("by_room", ["roomId"])

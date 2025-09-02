@@ -119,6 +119,11 @@ export const respondToApplication = mutation({
           role: "participant",
           joinedAt: Date.now(),
         });
+
+        // Increment the denormalized participant count
+        await ctx.db.patch(application.eventId, {
+          chatParticipantCount: (event.chatParticipantCount || 1) + 1,
+        });
       }
     }
 

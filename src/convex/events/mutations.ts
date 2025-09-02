@@ -59,6 +59,7 @@ export const createEvent = mutation({
       maxAge: args.maxAge,
       eventImages: args.eventImages || [],
       primaryEventImageUrl: args.primaryEventImageUrl,
+      chatParticipantCount: 1, // Initialize with owner count
       isActive: true,
     });
 

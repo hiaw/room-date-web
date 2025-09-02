@@ -280,12 +280,8 @@ export const getEventChatInfo = query({
       throw new Error("Event not found");
     }
 
-    // Get participant count
-    const participantCount = await ctx.db
-      .query("eventChatParticipants")
-      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-      .collect()
-      .then((participants) => participants.length);
+    // Get participant count efficiently from denormalized field
+    const participantCount = event.chatParticipantCount || 0;
 
     // Get room info
     const room = event.roomId ? await ctx.db.get(event.roomId) : null;
@@ -299,5 +295,50 @@ export const getEventChatInfo = query({
       participantCount,
       currentUserRole: participant.role,
     };
+  },
+});
+
+/**
+ * Remove a participant from event chat (for admin/cleanup purposes)
+ */
+export const removeEventChatParticipant = mutation({
+  args: {
+    eventId: v.id("events"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await requireAuth(ctx);
+
+    // Only event owners can remove participants
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    if (event.ownerId !== (currentUserId as Id<"users">)) {
+      throw new Error("Only event owner can remove participants");
+    }
+
+    // Find and remove the participant
+    const participant = await ctx.db
+      .query("eventChatParticipants")
+      .withIndex("by_event_user", (q) =>
+        q.eq("eventId", args.eventId).eq("userId", args.userId),
+      )
+      .unique();
+
+    if (participant) {
+      await ctx.db.delete(participant._id);
+
+      // Decrement the denormalized participant count
+      await ctx.db.patch(args.eventId, {
+        chatParticipantCount: Math.max(
+          (event.chatParticipantCount || 1) - 1,
+          0,
+        ),
+      });
+    }
+
+    return { success: true };
   },
 });
