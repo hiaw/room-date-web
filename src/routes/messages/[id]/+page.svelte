@@ -61,17 +61,34 @@
     }
   });
 
-  // Mark messages as read when component mounts or messages change
-  onMount(() => {
-    if (connectionId) {
-      convex.mutation(api.connections.markMessagesAsRead, { connectionId });
-    }
-  });
+  // More efficient message read tracking
+  let markAsReadTimeout: number | undefined;
 
-  $effect(() => {
-    if (messages.length > 0) {
-      convex.mutation(api.connections.markMessagesAsRead, { connectionId });
+  function markMessagesAsRead() {
+    if (markAsReadTimeout) {
+      clearTimeout(markAsReadTimeout);
     }
+    markAsReadTimeout = setTimeout(() => {
+      if (connectionId) {
+        convex.mutation(api.connections.markMessagesAsRead, { connectionId });
+      }
+    }, 1000); // Debounce for 1 second
+  }
+
+  // Mark messages as read on mount
+  onMount(() => {
+    markMessagesAsRead();
+
+    // Mark as read when window gains focus
+    const handleFocus = () => markMessagesAsRead();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      if (markAsReadTimeout) {
+        clearTimeout(markAsReadTimeout);
+      }
+    };
   });
 
   // Event handlers with proper typing
@@ -86,6 +103,8 @@
         messageType: "text",
       });
       messageText = "";
+      // Mark messages as read when user sends a message
+      markMessagesAsRead();
     } catch (error) {
       console.error("Failed to send message:", error);
     } finally {

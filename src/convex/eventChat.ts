@@ -297,7 +297,7 @@ export const removeEventChatParticipant = mutation({
       // Decrement the denormalized participant count
       await ctx.db.patch(args.eventId, {
         chatParticipantCount: Math.max(
-          (event.chatParticipantCount || 1) - 1,
+          (event.chatParticipantCount ?? 0) - 1,
           0,
         ),
       });
