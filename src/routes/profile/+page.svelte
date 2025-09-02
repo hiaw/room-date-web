@@ -24,7 +24,7 @@
 
   // State
   let showSettings = $state(false);
-  let showPasswordChange = $state(false);
+  let showPasswordResetRequest = $state(false);
 
   // Reactive queries
   let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
@@ -36,9 +36,9 @@
   // Convex client for actions
   const convex = useConvexClient();
 
-  // Password change state
-  let passwordChangeLoading = $state(false);
-  let passwordChangeError = $state<string | null>(null);
+  // Password reset request state
+  let passwordResetRequestLoading = $state(false);
+  let passwordResetRequestError = $state<string | null>(null);
 
   function handleEditProfile() {
     goto("/profile/edit");
@@ -57,19 +57,19 @@
     }
   }
 
-  function showPasswordChangeForm() {
-    showPasswordChange = true;
+  function showPasswordResetRequestForm() {
+    showPasswordResetRequest = true;
     showSettings = false;
   }
 
-  function hidePasswordChangeForm() {
-    showPasswordChange = false;
-    passwordChangeError = null;
+  function hidePasswordResetRequestForm() {
+    showPasswordResetRequest = false;
+    passwordResetRequestError = null;
   }
 
-  async function handlePasswordChange() {
-    passwordChangeLoading = true;
-    passwordChangeError = null;
+  async function handlePasswordResetRequest() {
+    passwordResetRequestLoading = true;
+    passwordResetRequestError = null;
 
     try {
       // Ensure we have the user's email
@@ -84,17 +84,17 @@
         email: profile.user.email,
       });
 
-      hidePasswordChangeForm();
+      hidePasswordResetRequestForm();
       alert(
         "Password reset email sent! Please check your email to complete the password change.",
       ); // Replace with toast notification
     } catch (error) {
-      passwordChangeError =
+      passwordResetRequestError =
         error instanceof Error
           ? error.message
           : "Failed to request password reset";
     } finally {
-      passwordChangeLoading = false;
+      passwordResetRequestLoading = false;
     }
   }
 
@@ -154,7 +154,7 @@
     >
       <div class="space-y-3">
         <button
-          onclick={showPasswordChangeForm}
+          onclick={showPasswordResetRequestForm}
           class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
         >
           <Lock size={18} />
@@ -217,7 +217,7 @@
 
   <!-- Content -->
   <div class="px-4 py-6">
-    {#if showPasswordChange}
+    {#if showPasswordResetRequest}
       <!-- Password Reset Form -->
       <div class="mx-auto max-w-md space-y-6">
         <div class="text-center">
@@ -228,10 +228,10 @@
         </div>
 
         <PasswordResetForm
-          onSubmit={handlePasswordChange}
-          loading={passwordChangeLoading}
-          error={passwordChangeError}
-          onCancel={hidePasswordChangeForm}
+          onSubmit={handlePasswordResetRequest}
+          loading={passwordResetRequestLoading}
+          error={passwordResetRequestError}
+          onCancel={hidePasswordResetRequestForm}
           userEmail={profile?.user?.email || ""}
         />
       </div>
