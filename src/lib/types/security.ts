@@ -76,7 +76,7 @@ export interface SecurityValidationResult {
   requiresReauth: boolean;
   reason?: string;
   action?: "allow" | "deny" | "require_reauth" | "require_mfa";
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Security Configuration

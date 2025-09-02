@@ -9,7 +9,7 @@
   let convex = useConvexClient();
 
   // Fetch user's active sessions
-  let sessionsQuery = useQuery(api["auth/sessions"].getUserSessions, {});
+  let sessionsQuery = useQuery(api.sessions.getUserSessions, {});
   let sessions = $derived(sessionsQuery?.data ?? []);
   let loading = $derived(sessionsQuery?.isLoading ?? true);
 
@@ -68,7 +68,7 @@
   // Revoke a specific session
   async function revokeSession(sessionId: string) {
     try {
-      await convex.mutation(api["auth/sessions"].revokeSession, {
+      await convex.mutation(api.sessions.revokeSession, {
         sessionId: sessionId as Id<"authSessions">,
       });
     } catch (error) {
@@ -79,7 +79,7 @@
   // Revoke all other sessions
   async function revokeAllOtherSessions() {
     try {
-      await convex.mutation(api["auth/sessions"].revokeAllOtherSessions, {});
+      await convex.mutation(api.sessions.revokeAllOtherSessions, {});
     } catch (error) {
       console.error("Failed to revoke other sessions:", error);
     }

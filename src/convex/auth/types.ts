@@ -22,7 +22,7 @@ export interface SecurityEventDetails {
   previousLocation?: string;
   timestamp?: number;
   riskScore?: number;
-  [key: string]: any; // Allow additional custom details
+  [key: string]: unknown; // Allow additional custom details
 }
 
 // Security Monitoring Arguments
