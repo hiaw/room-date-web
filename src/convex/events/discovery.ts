@@ -70,6 +70,19 @@ export const discoverEvents = query({
       events = events.filter((event) => event.ownerId !== userId);
     }
 
+    // Filter out events user has already applied to
+    if (userId) {
+      const userApplications = await ctx.db
+        .query("eventApplications")
+        .withIndex("by_applicant", (q) => q.eq("applicantId", userId))
+        .collect();
+
+      const appliedEventIds = new Set(
+        userApplications.map((app) => app.eventId),
+      );
+      events = events.filter((event) => !appliedEventIds.has(event._id));
+    }
+
     // Apply filters
     if (args.city) {
       events = events.filter((event) => event.roomCity === args.city);
@@ -195,6 +208,19 @@ export const getEventsNearUser = query({
     // Filter out user's own events
     if (userId) {
       events = events.filter((event) => event.ownerId !== userId);
+    }
+
+    // Filter out events user has already applied to
+    if (userId) {
+      const userApplications = await ctx.db
+        .query("eventApplications")
+        .withIndex("by_applicant", (q) => q.eq("applicantId", userId))
+        .collect();
+
+      const appliedEventIds = new Set(
+        userApplications.map((app) => app.eventId),
+      );
+      events = events.filter((event) => !appliedEventIds.has(event._id));
     }
 
     // Gender filtering (check if user's gender matches event preferences)
