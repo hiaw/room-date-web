@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { EventStatistics } from "../../../types/events.js";
+  import type { EventStats } from "../../../types/events.js";
 
   interface Props {
-    statistics: EventStatistics;
+    statistics: EventStats;
   }
 
   let { statistics }: Props = $props();

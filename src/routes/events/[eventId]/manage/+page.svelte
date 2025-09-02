@@ -10,10 +10,11 @@
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import EventOverview from "$lib/components/events/manage/EventOverview.svelte";
   import EventActions from "$lib/components/events/manage/EventActions.svelte";
+  import EventStatistics from "$lib/components/events/manage/EventStatistics.svelte";
   import type {
     EventDetails,
     EventManagementActions,
-    EventStatistics,
+    EventStats,
   } from "$lib/types/events.js";
 
   // Redirect if not authenticated
@@ -76,7 +77,7 @@
   });
 
   // Create statistics object
-  let statistics: EventStatistics = $derived({
+  let statistics: EventStats = $derived({
     applicationCount: event?.applicationCount || 0,
     pendingApplicationCount: event?.pendingApplicationCount || 0,
   });

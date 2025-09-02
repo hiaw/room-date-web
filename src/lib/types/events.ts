@@ -37,7 +37,7 @@ export interface EventManagementActions {
   onDeleteEvent: () => void;
 }
 
-export interface EventStatistics {
+export interface EventStats {
   applicationCount: number;
   pendingApplicationCount: number;
 }
