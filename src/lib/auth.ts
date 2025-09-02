@@ -6,24 +6,24 @@ const REFRESH_TOKEN_STORAGE_KEY = "convex-refresh-token";
 
 export const getStoredToken = (): string | null => {
   if (!browser) return null;
-  return sessionStorage.getItem(JWT_STORAGE_KEY);
+  return localStorage.getItem(JWT_STORAGE_KEY);
 };
 
 export const setTokens = (tokens: AuthTokens | null) => {
   if (!browser) return;
 
   if (tokens) {
-    sessionStorage.setItem(JWT_STORAGE_KEY, tokens.token);
-    sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, tokens.refreshToken);
+    localStorage.setItem(JWT_STORAGE_KEY, tokens.token);
+    localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, tokens.refreshToken);
   } else {
-    sessionStorage.removeItem(JWT_STORAGE_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(JWT_STORAGE_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
   }
 };
 
 export const getRefreshToken = (): string | null => {
   if (!browser) return null;
-  return sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+  return localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
 };
 
 export const clearTokens = () => {
