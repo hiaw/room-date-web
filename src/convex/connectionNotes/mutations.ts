@@ -65,6 +65,16 @@ export const deleteConnectionNote = mutation({
       throw new Error("Not authenticated");
     }
 
+    // Verify user is part of this connection
+    const connection = await ctx.db.get(connectionId);
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    if (connection.user1Id !== userId && connection.user2Id !== userId) {
+      throw new Error("Access denied to this connection");
+    }
+
     // Find and delete the note
     const note = await ctx.db
       .query("connectionNotes")

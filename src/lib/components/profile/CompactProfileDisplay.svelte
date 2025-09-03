@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Edit3 } from "lucide-svelte";
   import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
+  import { getUserInitials } from "$lib/utils/userDisplay.js";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   interface Props {
@@ -18,15 +19,6 @@
   let location = $derived(
     profile?.profile ? formatLocation(profile.profile) : "",
   );
-
-  function getUserInitials(name: string): string {
-    return name
-      .split(" ")
-      .map((word) => word.charAt(0))
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
 </script>
 
 {#if profile?.profile}
