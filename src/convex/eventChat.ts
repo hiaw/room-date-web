@@ -133,12 +133,19 @@ export const getEventChatParticipants = query({
     const users = await Promise.all(userIds.map((id) => ctx.db.get(id)));
 
     // Batch fetch user profiles using filter with or condition
-    const userProfiles = await ctx.db
-      .query("userProfiles")
-      .filter((q) =>
-        q.or(...userIds.map((userId) => q.eq(q.field("userId"), userId))),
-      )
-      .collect();
+    const MAX_OR_CLAUSES = 64; // Convex limit for `or` clauses
+    const userProfilePromises = [];
+    for (let i = 0; i < userIds.length; i += MAX_OR_CLAUSES) {
+      const chunk = userIds.slice(i, i + MAX_OR_CLAUSES);
+      const promise = ctx.db
+        .query("userProfiles")
+        .filter((q) =>
+          q.or(...chunk.map((userId) => q.eq(q.field("userId"), userId))),
+        )
+        .collect();
+      userProfilePromises.push(promise);
+    }
+    const userProfiles = (await Promise.all(userProfilePromises)).flat();
 
     // Create maps for efficient O(1) lookup
     const usersById = new Map(
