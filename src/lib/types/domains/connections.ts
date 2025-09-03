@@ -45,9 +45,9 @@ export interface ConnectionNoteEditorProps {
 
 // Connection Note Save Data
 export interface ConnectionNoteData {
-  nickname?: string;
-  notes?: string;
-  tags?: string[];
+  nickname: string; // Empty string clears the nickname
+  notes: string; // Empty string clears the notes
+  tags: string[]; // Empty array clears the tags
 }
 
 // Component Props Interfaces

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { X, Save } from "lucide-svelte";
   import type { Id } from "../../../convex/_generated/dataModel";
+  import type { ConnectionNoteData } from "$lib/types/domains/connections.js";
 
   interface Props {
     connectionId: Id<"connections">;
@@ -9,11 +10,7 @@
     currentTags?: string[];
     otherUserName: string;
     isOpen: boolean;
-    onSave: (data: {
-      nickname?: string;
-      notes?: string;
-      tags?: string[];
-    }) => Promise<void>;
+    onSave: (data: ConnectionNoteData) => Promise<void>;
     onClose: () => void;
   }
 
@@ -63,9 +60,9 @@
     saving = true;
     try {
       await onSave({
-        nickname: nickname.trim() || undefined,
-        notes: notes.trim() || undefined,
-        tags: tags.length > 0 ? tags : undefined,
+        nickname: nickname.trim(),
+        notes: notes.trim(),
+        tags: tags,
       });
       onClose();
     } catch (error) {
