@@ -1,8 +1,9 @@
 import { R2 } from "@convex-dev/r2";
 import { components } from "./_generated/api.js";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mutation } from "./_generated/server.js";
+import { mutation, type MutationCtx } from "./_generated/server.js";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel.js";
 
 export const r2 = new R2(components.r2);
 
@@ -81,6 +82,48 @@ export const getImageUrl = mutation({
   },
 });
 
+// Helper function to verify if user owns an image key
+async function verifyImageOwnership(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  key: string,
+): Promise<boolean> {
+  // Check if image belongs to user's profile
+  const userProfile = await ctx.db
+    .query("userProfiles")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .first();
+
+  if (userProfile) {
+    if (userProfile.profileImageUrl === key) return true;
+    if (userProfile.profileImages?.includes(key)) return true;
+  }
+
+  // Check if image belongs to user's rooms
+  const userRooms = await ctx.db
+    .query("rooms")
+    .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+    .collect();
+
+  for (const room of userRooms) {
+    if (room.primaryImageUrl === key) return true;
+    if (room.images?.includes(key)) return true;
+  }
+
+  // Check if image belongs to user's events
+  const userEvents = await ctx.db
+    .query("events")
+    .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+    .collect();
+
+  for (const event of userEvents) {
+    if (event.primaryEventImageUrl === key) return true;
+    if (event.eventImages?.includes(key)) return true;
+  }
+
+  return false;
+}
+
 // Helper function to delete images from R2
 export const deleteImage = mutation({
   args: { key: v.string() },
@@ -90,8 +133,11 @@ export const deleteImage = mutation({
       throw new Error("Must be authenticated to delete images");
     }
 
-    // TODO: Add additional validation here to ensure user owns the image
-    // You might want to check if the key belongs to the user's rooms/events/profile
+    // Verify that the user owns this image
+    const isOwner = await verifyImageOwnership(ctx, userId, key);
+    if (!isOwner) {
+      throw new Error("Unauthorized: You can only delete images that you own");
+    }
 
     return await r2.deleteObject(ctx, key);
   },
@@ -106,7 +152,17 @@ export const deleteImages = mutation({
       throw new Error("Must be authenticated to delete images");
     }
 
-    // Delete all images in parallel
+    // Verify that the user owns all images before deleting any
+    for (const key of keys) {
+      const isOwner = await verifyImageOwnership(ctx, userId, key);
+      if (!isOwner) {
+        throw new Error(
+          `Unauthorized: You can only delete images that you own (key: ${key})`,
+        );
+      }
+    }
+
+    // Delete all images in parallel only after verifying ownership of all
     const deletePromises = keys.map((key) => r2.deleteObject(ctx, key));
     return await Promise.all(deletePromises);
   },
