@@ -72,6 +72,22 @@
           throw new Error(`Upload failed: ${response.statusText}`);
         }
 
+        // Track the image upload in the database
+        await convex.mutation(api.imageStorage.trackImageUpload, {
+          key: uploadResult.key,
+          entityType:
+            folder === "profiles"
+              ? "user_profile"
+              : folder === "rooms"
+                ? "room"
+                : folder === "events"
+                  ? "event"
+                  : "user_profile", // Default fallback
+          originalFileName: compressedFile.name,
+          sizeBytes: compressedFile.size,
+          mimeType: compressedFile.type,
+        });
+
         // Return the organized R2 key
         return uploadResult.key;
       });
