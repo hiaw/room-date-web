@@ -1,24 +1,9 @@
 <script lang="ts">
   import { X, Crown } from "lucide-svelte";
-
-  interface Participant {
-    _id: string;
-    userId: string;
-    role: "owner" | "participant";
-    joinedAt: number;
-    user: {
-      _id: string;
-      name?: string;
-      email?: string;
-    } | null;
-    profile: {
-      displayName?: string;
-      profileImageUrl?: string;
-    } | null;
-  }
+  import type { EventParticipant } from "../../types/domains/events";
 
   interface Props {
-    participants: Participant[];
+    participants: EventParticipant[];
     eventTitle?: string;
     onClose: () => void;
   }
@@ -34,7 +19,7 @@
       .slice(0, 2);
   }
 
-  function getDisplayName(participant: Participant): string {
+  function getDisplayName(participant: EventParticipant): string {
     return (
       participant.profile?.displayName ||
       participant.user?.name ||
