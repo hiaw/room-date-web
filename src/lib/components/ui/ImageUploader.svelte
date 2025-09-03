@@ -151,7 +151,6 @@
       await convex.mutation(api.imageStorage.deleteImage, {
         key: imageKey,
       });
-      console.log(`Deleted image: ${imageKey}`);
     } catch (error) {
       console.error("Failed to delete image from R2:", error);
       // Could show a warning toast here, but don't revert UI change

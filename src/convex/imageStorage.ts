@@ -19,16 +19,10 @@ export const { generateUploadUrl, syncMetadata } = r2.clientApi({
     // - Check user's upload quota
     // - Validate file type (done on client side as well)
     // - Check user permissions
-    console.log(`Image upload authorized for user ID: ${userId}`);
   },
 
-  onUpload: async (ctx, _bucket, key) => {
+  onUpload: async (_ctx, _bucket, _key) => {
     // This runs after successful upload
-    const userId = await getAuthUserId(ctx);
-    console.log(
-      `Image uploaded successfully - User ID: ${userId}, Key: ${key}`,
-    );
-
     // You can add additional logic here:
     // - Update user's storage quota
     // - Create database records linking images to users/rooms/events
@@ -57,7 +51,6 @@ export const uploadToFolder = mutation({
 
     // Generate upload URL
     const uploadResult = await r2.generateUploadUrl(key);
-    console.log("Upload result:", uploadResult);
 
     // Extract URL from the result object
     const uploadUrl =
