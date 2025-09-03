@@ -8,8 +8,8 @@ export const userProfiles = defineTable({
   dateOfBirth: v.optional(v.number()), // timestamp
   gender: v.optional(v.string()), // "male", "female", "non-binary", etc.
   bio: v.optional(v.string()),
-  profileImageUrl: v.optional(v.string()),
-  profileImages: v.optional(v.array(v.string())), // Multiple profile photos
+  profileImageUrl: v.optional(v.string()), // R2 key for primary profile image
+  profileImages: v.optional(v.array(v.string())), // R2 keys for multiple profile photos
   location: v.optional(v.string()),
   isProfileComplete: v.boolean(),
   // Geolocation for "users near me" features

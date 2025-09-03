@@ -17,8 +17,8 @@ export const rooms = defineTable({
   longitude: v.optional(v.number()),
   locationVerified: v.boolean(),
   // Media support
-  images: v.optional(v.array(v.string())), // Room photo URLs
-  primaryImageUrl: v.optional(v.string()),
+  images: v.optional(v.array(v.string())), // R2 keys for room photos
+  primaryImageUrl: v.optional(v.string()), // Primary R2 key
   isActive: v.boolean(),
 })
   .index("by_owner", ["ownerId"])

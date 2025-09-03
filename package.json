@@ -49,6 +49,7 @@
   "dependencies": {
     "@auth/core": "0.40.0",
     "@convex-dev/auth": "0.0.88",
+    "@convex-dev/r2": "^0.7.1",
     "@playwright/test": "^1.55.0",
     "convex": "^1.26.2",
     "convex-svelte": "^0.0.11",

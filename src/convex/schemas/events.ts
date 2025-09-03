@@ -37,8 +37,8 @@ export const events = defineTable({
     v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
   ),
   // Media support for events
-  eventImages: v.optional(v.array(v.string())),
-  primaryEventImageUrl: v.optional(v.string()),
+  eventImages: v.optional(v.array(v.string())), // R2 keys for event images
+  primaryEventImageUrl: v.optional(v.string()), // Primary R2 key
   // Denormalized counts for performance
   chatParticipantCount: v.optional(v.number()), // Number of users in event chat
   isActive: v.boolean(),

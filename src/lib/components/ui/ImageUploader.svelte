@@ -1,8 +1,9 @@
 <script lang="ts">
   import { Upload, X, Camera } from "lucide-svelte";
   import { api } from "../../../convex/_generated/api.js";
-  import { useConvexClient } from "convex-svelte";
+  // import { useUploadFile } from "@convex-dev/r2/svelte"; // Disabled until R2 is configured
   import { browser } from "$app/environment";
+  import R2Image from "./R2Image.svelte";
 
   interface Props {
     images?: string[];
@@ -26,7 +27,8 @@
     disabled = false,
   }: Props = $props();
 
-  const convex = useConvexClient();
+  // Use R2 upload hook instead of Convex files
+  // const uploadFile = useUploadFile(api.imageStorage); // Disabled until R2 is configured
   let uploading = $state(false);
   let fileInput = $state<HTMLInputElement>();
   let uploadError = $state<string | null>(null);
@@ -49,36 +51,21 @@
         // Compress image before upload
         const compressedFile = await compressImage(file);
 
-        // Get upload URL from Convex
-        const uploadUrl = await convex.mutation(
-          api!.files.generateUploadUrl,
-          {},
-        );
+        // TODO: Replace with R2 upload when configured
+        // const key = await uploadFile(compressedFile);
+        // For now, return a placeholder key
+        const key = `placeholder-${Date.now()}-${file.name}`;
 
-        // Upload to Convex storage
-        const result = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": compressedFile.type },
-          body: compressedFile,
-        });
-
-        if (!result.ok) throw new Error("Upload failed");
-
-        const { storageId } = await result.json();
-
-        // Get the file URL
-        const fileUrl = await convex.mutation(api!.files.getFileUrl, {
-          storageId,
-        });
-
-        return fileUrl;
+        // Return the R2 key instead of a URL
+        // URLs will be generated on-demand when images are displayed
+        return key;
       });
 
-      const uploadedUrls = await Promise.all(uploadPromises);
-      const validUrls = uploadedUrls.filter(
-        (url): url is string => url !== null,
+      const uploadedKeys = await Promise.all(uploadPromises);
+      const validKeys = uploadedKeys.filter(
+        (key): key is string => key !== null,
       );
-      onImagesChange([...images, ...validUrls]);
+      onImagesChange([...images, ...validKeys]);
     } catch (error) {
       console.error("Upload error:", error);
       uploadError =
@@ -164,10 +151,11 @@
     <!-- Image Grid -->
     {#if images.length > 0}
       <div class="grid grid-cols-3 gap-4">
-        {#each images as image, index (index)}
+        {#each images as imageKey, index (index)}
           <div class="group relative aspect-square">
-            <img
-              src={image}
+            <!-- Use R2Image component to display images with generated URLs -->
+            <R2Image
+              {imageKey}
               alt="Uploaded image {index + 1}"
               class="h-full w-full rounded-xl border-2 border-gray-200 object-cover"
             />
