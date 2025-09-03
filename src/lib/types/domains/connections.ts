@@ -33,7 +33,6 @@ export interface ConnectionWithNote extends ConnectionWithDetails {
 
 // Connection Note Editor Props
 export interface ConnectionNoteEditorProps {
-  connectionId: Id<"connections">;
   currentNickname?: string;
   currentNotes?: string;
   currentTags?: string[];

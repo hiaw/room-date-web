@@ -1,10 +1,8 @@
 <script lang="ts">
   import { X, Save } from "lucide-svelte";
-  import type { Id } from "../../../convex/_generated/dataModel";
   import type { ConnectionNoteData } from "$lib/types/domains/connections.js";
 
   interface Props {
-    connectionId: Id<"connections">;
     currentNickname?: string;
     currentNotes?: string;
     currentTags?: string[];
@@ -15,7 +13,6 @@
   }
 
   let {
-    connectionId, // eslint-disable-line @typescript-eslint/no-unused-vars
     currentNickname = "",
     currentNotes = "",
     currentTags = [],

@@ -111,7 +111,6 @@
 <!-- Note Editor Modal -->
 {#if editingConnectionData}
   <ConnectionNoteEditor
-    connectionId={editingConnectionData._id}
     currentNickname={editingConnectionData.note?.nickname}
     currentNotes={editingConnectionData.note?.notes}
     currentTags={editingConnectionData.note?.tags}
