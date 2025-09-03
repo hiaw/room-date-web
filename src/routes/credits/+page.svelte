@@ -1,5 +1,73 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { page } from "$app/stores";
+  import { useConvexClient } from "convex-svelte";
+  import { api } from "../../convex/_generated/api.js";
   import CreditDashboard from "$lib/components/CreditDashboard.svelte";
+
+  let processingPayment = false;
+  let paymentMessage = "";
+  let paymentStatus: "success" | "error" | "" = "";
+
+  // Create Convex client for mutations
+  const convex = useConvexClient();
+
+  onMount(async () => {
+    // Check URL parameters for payment success/cancel
+    const urlParams = new URLSearchParams($page.url.searchParams);
+    const success = urlParams.get("success");
+    const cancelled = urlParams.get("cancelled");
+    const sessionId = urlParams.get("session_id");
+
+    if (success === "true" && sessionId) {
+      await handlePaymentSuccess(sessionId);
+    } else if (cancelled === "true") {
+      paymentStatus = "error";
+      paymentMessage = "Payment was cancelled. You can try again anytime.";
+    }
+  });
+
+  async function handlePaymentSuccess(sessionId: string) {
+    processingPayment = true;
+    paymentMessage = "Processing your payment...";
+
+    try {
+      // For now, let's manually grant 10 credits for the test payment
+      // In production, we'd retrieve the session from Stripe to get the actual amount
+      const credits = 10; // This should come from the Stripe session
+      const amount = 4400; // $44.00 in cents
+
+      // Create payment transaction
+      const paymentId = await convex.mutation(
+        api.payments.createPaymentTransaction,
+        {
+          providerTransactionId: sessionId,
+          amount: amount,
+          currency: "usd",
+          creditsToGrant: credits,
+          stripePaymentIntentId: sessionId, // Using session ID for now
+          stripeCustomerId: "",
+        },
+      );
+
+      // Complete the payment and grant credits
+      const result = await convex.mutation(api.payments.completePayment, {
+        paymentTransactionId: paymentId,
+      });
+
+      paymentStatus = "success";
+      paymentMessage = `Success! ${result.creditsGranted} credits have been added to your account.`;
+
+      // Clear URL parameters after processing
+      window.history.replaceState({}, document.title, "/credits");
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      paymentStatus = "error";
+      paymentMessage = `Payment processing failed: ${error instanceof Error ? error.message : "Unknown error"}`;
+    } finally {
+      processingPayment = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -18,6 +86,30 @@
       credits when you join!
     </p>
   </div>
+
+  <!-- Payment Status Messages -->
+  {#if processingPayment}
+    <div class="mb-6 rounded-lg bg-blue-50 p-4">
+      <div class="flex items-center">
+        <div
+          class="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"
+        ></div>
+        <p class="text-blue-700">{paymentMessage}</p>
+      </div>
+    </div>
+  {:else if paymentMessage}
+    <div
+      class="mb-6 rounded-lg p-4 {paymentStatus === 'success'
+        ? 'bg-green-50'
+        : 'bg-red-50'}"
+    >
+      <p
+        class={paymentStatus === "success" ? "text-green-700" : "text-red-700"}
+      >
+        {paymentMessage}
+      </p>
+    </div>
+  {/if}
 
   <CreditDashboard />
 </div>

@@ -509,3 +509,19 @@ await expect(page.getByText("Persisted Data")).toBeVisible();
 ## Tech Stack
 
 - Svelte 5 + SvelteKit + TypeScript + Tailwind + Convex + Vitest + Playwright
+
+## Development Environment
+
+### Environment Variables
+
+- **NEVER modify `SITE_URL`** - This is always set to the correct running port
+- The dev server may run on different ports (5174, 5175, etc.) but `SITE_URL` is managed automatically
+- Other environment variables are set via `npx convex env set VARIABLE_NAME value`
+- Use `.env.example` as reference but never commit actual `.env` files
+
+### Convex Integration Patterns
+
+- Use `useConvexClient()` for mutations: `const convex = useConvexClient(); await convex.mutation(api.func, args)`
+- Use `useQuery()` for queries: `let data = useQuery(api.func, args)`
+- **Never use `createMutation()`** - this is not available in the current setup
+- Follow existing patterns in other components for consistency
