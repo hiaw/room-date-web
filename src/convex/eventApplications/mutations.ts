@@ -143,10 +143,9 @@ export const respondToApplication = mutation({
 
       if (countIncrement > 0) {
         // Increment the denormalized participant count
-        const currentEvent = await ctx.db.get(application.eventId);
         await ctx.db.patch(application.eventId, {
           chatParticipantCount:
-            (currentEvent?.chatParticipantCount ?? 0) + countIncrement,
+            (event.chatParticipantCount ?? 0) + countIncrement,
         });
       }
     }
