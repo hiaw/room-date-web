@@ -1,11 +1,77 @@
-import { mutation, query } from "../_generated/server";
+import { mutation, query, action } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 import Stripe from "stripe";
 
-// Create payment intent for Stripe checkout
-export const createPaymentIntent = mutation({
+// Create Stripe Checkout Session (ACTION - allows external API calls)
+export const createCheckoutSession = action({
+  args: {
+    credits: v.number(),
+    amount: v.number(), // Amount in cents
+    currency: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to create checkout session");
+    }
+
+    // Validate environment variables
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      throw new Error(
+        "Stripe is not configured. Please add STRIPE_SECRET_KEY to environment variables.",
+      );
+    }
+
+    try {
+      // Initialize Stripe with secret key
+      const stripe = new Stripe(stripeSecretKey);
+
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: args.currency,
+              product_data: {
+                name: `${args.credits} Credits`,
+                description: `Purchase ${args.credits} credits for Room Dates`,
+              },
+              unit_amount: args.amount,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${process.env.SITE_URL || "http://localhost:5174"}/credits?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.SITE_URL || "http://localhost:5174"}/credits?cancelled=true`,
+        metadata: {
+          userId: userId,
+          credits: args.credits.toString(),
+          type: "credit_purchase",
+        },
+      });
+
+      // Return checkout session data
+      return {
+        success: true,
+        sessionId: session.id,
+        url: session.url,
+      };
+    } catch (error) {
+      console.error("Stripe error:", error);
+      throw new Error(
+        `Checkout session creation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  },
+});
+
+// Create payment intent for Stripe checkout (ACTION - allows external API calls) - DEPRECATED
+export const createPaymentIntent = action({
   args: {
     credits: v.number(),
     amount: v.number(), // Amount in cents
@@ -43,27 +109,11 @@ export const createPaymentIntent = mutation({
         },
       });
 
-      // Create our internal payment record
-      const paymentTransactionId = await ctx.db.insert("paymentTransactions", {
-        userId: userId as Id<"users">,
-        provider: "stripe",
-        providerTransactionId: paymentIntent.id,
-        amount: args.amount,
-        currency: args.currency,
-        creditsGranted: args.credits,
-        status: "pending",
-        metadata: {
-          stripePaymentIntentId: paymentIntent.id,
-        },
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-
+      // Return payment intent data - we'll create the payment record later via webhook or frontend
       return {
         success: true,
         paymentIntentId: paymentIntent.id,
         clientSecret: paymentIntent.client_secret,
-        paymentTransactionId,
       };
     } catch (error) {
       console.error("Stripe error:", error);
@@ -201,6 +251,99 @@ export const completePayment = mutation({
       type: "purchase",
       amount: payment.creditsGranted,
       paymentTransactionId: args.paymentTransactionId,
+      description: `Purchased ${payment.creditsGranted} credits for $${(payment.amount / 100).toFixed(2)}`,
+      timestamp: Date.now(),
+    });
+
+    return { success: true, creditsGranted: payment.creditsGranted };
+  },
+});
+
+// Complete payment by payment intent ID (called from frontend after successful payment)
+export const completePaymentByIntentId = mutation({
+  args: {
+    paymentIntentId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated");
+    }
+
+    // Find the payment transaction by payment intent ID
+    const payment = await ctx.db
+      .query("paymentTransactions")
+      .filter((q) =>
+        q.eq(q.field("metadata.stripePaymentIntentId"), args.paymentIntentId),
+      )
+      .first();
+
+    if (!payment) {
+      // Create the payment record if it doesn't exist
+      // This handles the case where the payment was successful but we haven't recorded it yet
+      await ctx.db.insert("paymentTransactions", {
+        userId: userId as Id<"users">,
+        provider: "stripe",
+        providerTransactionId: args.paymentIntentId,
+        amount: 0, // Will be updated when we have more info
+        currency: "usd",
+        creditsGranted: 0, // Will be updated when we have more info
+        status: "completed",
+        metadata: {
+          stripePaymentIntentId: args.paymentIntentId,
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      return {
+        success: true,
+        message: "Payment recorded, credits will be granted via webhook",
+      };
+    }
+
+    if (payment.status === "completed") {
+      return { success: true, message: "Payment already processed" };
+    }
+
+    // Complete the payment using the completePayment function
+    await ctx.db.patch(payment._id, {
+      status: "completed",
+      updatedAt: Date.now(),
+    });
+
+    // Get or create user's credit record
+    let creditRecord = await ctx.db
+      .query("connectionCredits")
+      .withIndex("by_user", (q) => q.eq("userId", payment.userId))
+      .unique();
+
+    if (!creditRecord) {
+      // Create initial credit record
+      await ctx.db.insert("connectionCredits", {
+        userId: payment.userId,
+        availableCredits: payment.creditsGranted,
+        heldCredits: 0,
+        totalPurchased: payment.creditsGranted,
+        totalUsed: 0,
+        lastUpdated: Date.now(),
+      });
+    } else {
+      // Update existing record
+      await ctx.db.patch(creditRecord._id, {
+        availableCredits:
+          creditRecord.availableCredits + payment.creditsGranted,
+        totalPurchased: creditRecord.totalPurchased + payment.creditsGranted,
+        lastUpdated: Date.now(),
+      });
+    }
+
+    // Record credit transaction
+    await ctx.db.insert("creditTransactions", {
+      userId: payment.userId,
+      type: "purchase",
+      amount: payment.creditsGranted,
+      paymentTransactionId: payment._id,
       description: `Purchased ${payment.creditsGranted} credits for $${(payment.amount / 100).toFixed(2)}`,
       timestamp: Date.now(),
     });

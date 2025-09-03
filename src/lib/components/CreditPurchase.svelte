@@ -58,11 +58,11 @@
     loading = true;
 
     try {
-      console.log("🚀 Creating payment intent...");
+      console.log("🚀 Creating checkout session...");
 
-      // Create payment intent with our backend
-      const paymentIntent = await convex.mutation(
-        api.payments.createPaymentIntent,
+      // Create checkout session with our backend
+      const checkoutSession = await convex.action(
+        api.payments.createCheckoutSession,
         {
           credits: selectedPkg.credits,
           amount: selectedPkg.price * 100, // Convert to cents
@@ -70,20 +70,15 @@
         },
       );
 
-      console.log("✅ Payment intent created:", paymentIntent);
+      console.log("✅ Checkout session created:", checkoutSession);
 
-      if (paymentIntent.success && paymentIntent.clientSecret) {
-        console.log(
-          "🎯 Setting up checkout with client secret:",
-          paymentIntent.clientSecret,
-        );
-        clientSecret = paymentIntent.clientSecret;
-        paymentIntentId = paymentIntent.paymentIntentId;
-        showCheckout = true;
-        console.log("✨ showCheckout is now:", showCheckout);
+      if (checkoutSession.success && checkoutSession.url) {
+        console.log("🚀 Redirecting to Stripe Checkout:", checkoutSession.url);
+        // Redirect to Stripe Checkout
+        window.location.href = checkoutSession.url;
       } else {
-        console.log("❌ Payment intent failed:", paymentIntent);
-        throw new Error("Failed to create payment intent");
+        console.log("❌ Checkout session failed:", checkoutSession);
+        throw new Error("Failed to create checkout session");
       }
     } catch (error) {
       console.error("💥 Payment error:", error);
@@ -103,11 +98,33 @@
 
   function handlePaymentSuccess() {
     showCheckout = false;
-    alert(
-      "🎉 Payment successful! Your credits will be added to your account shortly.",
-    );
-    // Refresh the page to show updated credits
-    window.location.reload();
+
+    // Complete the payment on the backend
+    if (paymentIntentId) {
+      convex
+        .mutation(api.payments.completePaymentByIntentId, {
+          paymentIntentId: paymentIntentId,
+        })
+        .then(() => {
+          alert(
+            "🎉 Payment successful! Your credits have been added to your account.",
+          );
+          // Refresh the page to show updated credits
+          window.location.reload();
+        })
+        .catch((error) => {
+          console.error("Failed to complete payment:", error);
+          alert(
+            "⚠️ Payment was successful but there was an issue adding credits. Please contact support.",
+          );
+        });
+    } else {
+      alert(
+        "🎉 Payment successful! Your credits will be added to your account shortly.",
+      );
+      // Refresh the page to show updated credits
+      window.location.reload();
+    }
   }
 
   function handlePaymentError(error: string) {
