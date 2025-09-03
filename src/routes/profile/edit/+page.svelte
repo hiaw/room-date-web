@@ -170,6 +170,7 @@
             onImagesChange={(newImages) => (profileImages = newImages)}
             label="Add Profile Photos"
             folder="profiles"
+            entityType="user_profile"
           />
         </div>
 

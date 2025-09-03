@@ -16,7 +16,8 @@
     label?: string;
     accept?: string;
     disabled?: boolean;
-    folder?: string; // New prop for organizing uploads by folder
+    folder?: string; // R2 folder for organizing uploads
+    entityType: "user_profile" | "room" | "event"; // Database entity type
     entityId?: Id<"rooms"> | Id<"events">; // ID of the room/event this image belongs to
   }
 
@@ -29,7 +30,8 @@
     label = "Upload Images",
     accept = "image/*",
     disabled = false,
-    folder = "general", // Default folder
+    folder = "general", // Default R2 folder
+    entityType, // Required entity type
     entityId, // Optional entity ID for rooms/events
   }: Props = $props();
 
@@ -77,15 +79,6 @@
         }
 
         // Track the image upload in the database
-        const entityType =
-          folder === "profiles"
-            ? "user_profile"
-            : folder === "rooms"
-              ? "room"
-              : folder === "events"
-                ? "event"
-                : "user_profile"; // Default fallback
-
         await convex.mutation(api.imageStorage.trackImageUpload, {
           key: uploadResult.key,
           entityType,

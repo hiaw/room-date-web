@@ -21,5 +21,6 @@
     {onImagesChange}
     label="Add Event Photos"
     folder="events"
+    entityType="event"
   />
 </div>

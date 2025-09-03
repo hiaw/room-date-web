@@ -21,5 +21,6 @@
     {onImagesChange}
     label="Add Room Photos"
     folder="rooms"
+    entityType="room"
   />
 </div>
