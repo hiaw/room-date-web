@@ -82,7 +82,7 @@ export const getImageUrl = mutation({
   },
 });
 
-// Helper function to verify if user owns an image key (efficient single query)
+// Helper function to verify if user owns an image key (scalable version using images table)
 async function verifyImageOwnership(
   ctx: MutationCtx,
   userId: Id<"users">,
@@ -94,55 +94,8 @@ async function verifyImageOwnership(
     .withIndex("by_key", (q) => q.eq("key", key))
     .first();
 
-  // If no record exists, fall back to legacy verification for backwards compatibility
-  if (!imageRecord) {
-    return await legacyVerifyImageOwnership(ctx, userId, key);
-  }
-
-  // Check if the user owns this image
-  return imageRecord.ownerId === userId;
-}
-
-// Legacy verification function for images uploaded before the images table
-async function legacyVerifyImageOwnership(
-  ctx: MutationCtx,
-  userId: Id<"users">,
-  key: string,
-): Promise<boolean> {
-  // Check if image belongs to user's profile
-  const userProfile = await ctx.db
-    .query("userProfiles")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .first();
-
-  if (userProfile) {
-    if (userProfile.profileImageUrl === key) return true;
-    if (userProfile.profileImages?.includes(key)) return true;
-  }
-
-  // Check if image belongs to user's rooms
-  const userRooms = await ctx.db
-    .query("rooms")
-    .withIndex("by_owner", (q) => q.eq("ownerId", userId))
-    .collect();
-
-  for (const room of userRooms) {
-    if (room.primaryImageUrl === key) return true;
-    if (room.images?.includes(key)) return true;
-  }
-
-  // Check if image belongs to user's events
-  const userEvents = await ctx.db
-    .query("events")
-    .withIndex("by_owner", (q) => q.eq("ownerId", userId))
-    .collect();
-
-  for (const event of userEvents) {
-    if (event.primaryEventImageUrl === key) return true;
-    if (event.eventImages?.includes(key)) return true;
-  }
-
-  return false;
+  // Check if image exists and is owned by the user
+  return imageRecord?.ownerId === userId;
 }
 
 // Helper function to track uploaded image in the images table
