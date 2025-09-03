@@ -84,10 +84,10 @@
           Profile
         </a>
         <a
-          href="/connections"
+          href="/messages"
           class="text-purple-600 transition-colors hover:text-purple-700"
         >
-          Connections
+          Messages
         </a>
       </div>
     </div>

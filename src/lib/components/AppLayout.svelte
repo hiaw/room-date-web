@@ -31,8 +31,8 @@
       authRequired: true,
     },
     {
-      id: "connections",
-      path: "/connections",
+      id: "messages",
+      path: "/messages",
       icon: MessageCircle,
       label: "Messages",
       authRequired: true,
