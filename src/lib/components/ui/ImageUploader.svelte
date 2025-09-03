@@ -5,6 +5,8 @@
   import { browser } from "$app/environment";
   import R2Image from "./R2Image.svelte";
 
+  import type { Id } from "../../../convex/_generated/dataModel.js";
+
   interface Props {
     images?: string[];
     maxImages?: number;
@@ -15,6 +17,7 @@
     accept?: string;
     disabled?: boolean;
     folder?: string; // New prop for organizing uploads by folder
+    entityId?: Id<"rooms"> | Id<"events">; // ID of the room/event this image belongs to
   }
 
   let {
@@ -27,6 +30,7 @@
     accept = "image/*",
     disabled = false,
     folder = "general", // Default folder
+    entityId, // Optional entity ID for rooms/events
   }: Props = $props();
 
   // Use Convex client for custom upload with folder support
@@ -73,16 +77,19 @@
         }
 
         // Track the image upload in the database
+        const entityType =
+          folder === "profiles"
+            ? "user_profile"
+            : folder === "rooms"
+              ? "room"
+              : folder === "events"
+                ? "event"
+                : "user_profile"; // Default fallback
+
         await convex.mutation(api.imageStorage.trackImageUpload, {
           key: uploadResult.key,
-          entityType:
-            folder === "profiles"
-              ? "user_profile"
-              : folder === "rooms"
-                ? "room"
-                : folder === "events"
-                  ? "event"
-                  : "user_profile", // Default fallback
+          entityType,
+          entityId: entityType !== "user_profile" ? entityId : undefined,
           originalFileName: compressedFile.name,
           sizeBytes: compressedFile.size,
           mimeType: compressedFile.type,
