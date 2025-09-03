@@ -137,7 +137,7 @@
               <div class="mb-2 text-sm font-medium text-blue-800">
                 Active Holds
               </div>
-              {#each holds as hold}
+              {#each holds as hold (hold._id)}
                 <div class="text-xs text-blue-700">
                   {hold.creditsHeld - hold.creditsUsed} credits held for event
                 </div>
@@ -165,7 +165,7 @@
         <div class="py-8 text-center text-gray-600">No transactions yet</div>
       {:else}
         <div class="space-y-3">
-          {#each transactions as transaction}
+          {#each transactions as transaction (transaction._id)}
             <div
               class="flex items-center justify-between border-b border-gray-100 py-3 last:border-b-0"
             >

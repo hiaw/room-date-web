@@ -218,14 +218,14 @@ export const completePayment = mutation({
     });
 
     // Get or create user's credit record
-    let creditRecord = await ctx.db
+    const creditRecord = await ctx.db
       .query("connectionCredits")
       .withIndex("by_user", (q) => q.eq("userId", payment.userId))
       .unique();
 
     if (!creditRecord) {
       // Create initial credit record
-      const creditId = await ctx.db.insert("connectionCredits", {
+      await ctx.db.insert("connectionCredits", {
         userId: payment.userId,
         availableCredits: payment.creditsGranted,
         heldCredits: 0,
@@ -233,8 +233,6 @@ export const completePayment = mutation({
         totalUsed: 0,
         lastUpdated: Date.now(),
       });
-
-      creditRecord = await ctx.db.get(creditId);
     } else {
       // Update existing record
       await ctx.db.patch(creditRecord._id, {
@@ -313,7 +311,7 @@ export const completePaymentByIntentId = mutation({
     });
 
     // Get or create user's credit record
-    let creditRecord = await ctx.db
+    const creditRecord = await ctx.db
       .query("connectionCredits")
       .withIndex("by_user", (q) => q.eq("userId", payment.userId))
       .unique();

@@ -178,7 +178,7 @@
 
     <!-- Credit Packages -->
     <div class="grid gap-4 md:grid-cols-3">
-      {#each creditPackages as pkg}
+      {#each creditPackages as pkg (pkg.id)}
         <label class="relative cursor-pointer">
           <input
             type="radio"

@@ -10,8 +10,10 @@
 
   let { clientSecret, onSuccess, onError, onCancel }: Props = $props();
 
-  let stripe = $state<any>(null);
-  let elements = $state<any>(null);
+  let stripe = $state<import("@stripe/stripe-js").Stripe | null>(null);
+  let elements = $state<import("@stripe/stripe-js").StripeElements | null>(
+    null,
+  );
   let paymentElement: HTMLDivElement;
   let loading = $state(false);
   let errorMessage = $state("");

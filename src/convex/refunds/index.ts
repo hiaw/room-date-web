@@ -174,7 +174,7 @@ export const reviewRefundRequest = mutation({
     // If approved, restore the credit
     if (args.decision === "approved") {
       // Get user's credit record
-      let creditRecord = await ctx.db
+      const creditRecord = await ctx.db
         .query("connectionCredits")
         .withIndex("by_user", (q) => q.eq("userId", request.userId))
         .unique();
