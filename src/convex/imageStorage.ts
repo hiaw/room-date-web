@@ -8,7 +8,7 @@ export const r2 = new R2(components.r2);
 
 // Client API functions for R2 operations
 export const { generateUploadUrl, syncMetadata } = r2.clientApi({
-  checkUpload: async (ctx, _bucket) => {
+  checkUpload: async (ctx) => {
     // Validate that user is authenticated
     const userId = await getAuthUserId(ctx);
     if (!userId) {
@@ -21,7 +21,7 @@ export const { generateUploadUrl, syncMetadata } = r2.clientApi({
     // - Check user permissions
   },
 
-  onUpload: async (_ctx, _bucket, _key) => {
+  onUpload: async () => {
     // This runs after successful upload
     // You can add additional logic here:
     // - Update user's storage quota
