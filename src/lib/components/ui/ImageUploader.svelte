@@ -3,6 +3,9 @@
   import { api } from "../../../convex/_generated/api.js";
   import { useConvexClient } from "convex-svelte";
   import { browser } from "$app/environment";
+  import R2Image from "./R2Image.svelte";
+
+  import type { Id } from "../../../convex/_generated/dataModel.js";
 
   interface Props {
     images?: string[];
@@ -13,6 +16,9 @@
     label?: string;
     accept?: string;
     disabled?: boolean;
+    folder?: string; // R2 folder for organizing uploads
+    entityType: "user_profile" | "room" | "event"; // Database entity type
+    entityId?: Id<"rooms"> | Id<"events">; // ID of the room/event this image belongs to
   }
 
   let {
@@ -24,8 +30,12 @@
     label = "Upload Images",
     accept = "image/*",
     disabled = false,
+    folder = "general", // Default R2 folder
+    entityType, // Required entity type
+    entityId, // Optional entity ID for rooms/events
   }: Props = $props();
 
+  // Use Convex client for custom upload with folder support
   const convex = useConvexClient();
   let uploading = $state(false);
   let fileInput = $state<HTMLInputElement>();
@@ -49,36 +59,44 @@
         // Compress image before upload
         const compressedFile = await compressImage(file);
 
-        // Get upload URL from Convex
-        const uploadUrl = await convex.mutation(
-          api!.files.generateUploadUrl,
-          {},
+        // Get organized upload URL with folder
+        const uploadResult = await convex.mutation(
+          api.imageStorage.uploadToFolder,
+          {
+            folder,
+            fileName: compressedFile.name,
+          },
         );
 
-        // Upload to Convex storage
-        const result = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": compressedFile.type },
+        // Upload file to R2
+        const response = await fetch(uploadResult.uploadUrl, {
+          method: "PUT",
           body: compressedFile,
         });
 
-        if (!result.ok) throw new Error("Upload failed");
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
 
-        const { storageId } = await result.json();
-
-        // Get the file URL
-        const fileUrl = await convex.mutation(api!.files.getFileUrl, {
-          storageId,
+        // Track the image upload in the database
+        await convex.mutation(api.imageStorage.trackImageUpload, {
+          key: uploadResult.key,
+          entityType,
+          entityId: entityType !== "user_profile" ? entityId : undefined,
+          originalFileName: compressedFile.name,
+          sizeBytes: compressedFile.size,
+          mimeType: compressedFile.type,
         });
 
-        return fileUrl;
+        // Return the organized R2 key
+        return uploadResult.key;
       });
 
-      const uploadedUrls = await Promise.all(uploadPromises);
-      const validUrls = uploadedUrls.filter(
-        (url): url is string => url !== null,
+      const uploadedKeys = await Promise.all(uploadPromises);
+      const validKeys = uploadedKeys.filter(
+        (key): key is string => key !== null,
       );
-      onImagesChange([...images, ...validUrls]);
+      onImagesChange([...images, ...validKeys]);
     } catch (error) {
       console.error("Upload error:", error);
       uploadError =
@@ -136,10 +154,23 @@
     });
   }
 
-  function removeImage(index: number) {
+  async function removeImage(index: number) {
+    const imageKey = images[index];
+
+    // Remove from UI immediately for better UX
     const newImages = [...images];
     newImages.splice(index, 1);
     onImagesChange(newImages);
+
+    // Delete from R2 bucket in background
+    try {
+      await convex.mutation(api.imageStorage.deleteImage, {
+        key: imageKey,
+      });
+    } catch (error) {
+      console.error("Failed to delete image from R2:", error);
+      // Could show a warning toast here, but don't revert UI change
+    }
   }
 
   function openFileDialog() {
@@ -164,10 +195,11 @@
     <!-- Image Grid -->
     {#if images.length > 0}
       <div class="grid grid-cols-3 gap-4">
-        {#each images as image, index (index)}
+        {#each images as imageKey, index (index)}
           <div class="group relative aspect-square">
-            <img
-              src={image}
+            <!-- Use R2Image component to display images with generated URLs -->
+            <R2Image
+              {imageKey}
               alt="Uploaded image {index + 1}"
               class="h-full w-full rounded-xl border-2 border-gray-200 object-cover"
             />
