@@ -7,7 +7,9 @@
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import CompactProfileDisplay from "$lib/components/profile/CompactProfileDisplay.svelte";
   import PasswordResetForm from "$lib/components/profile/PasswordResetForm.svelte";
-  import { MessageCircle, Settings, Users, ChevronRight } from "lucide-svelte";
+  import NotificationPreferences from "$lib/components/profile/NotificationPreferences.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import { Users, ChevronRight, Save, Palette, Shield } from "lucide-svelte";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
@@ -33,6 +35,38 @@
   // Password reset request state
   let passwordResetRequestLoading = $state(false);
   let passwordResetRequestError = $state<string | null>(null);
+
+  // Privacy settings state
+  let locationSharing = $state(true);
+  let displayName = $state("");
+  let bio = $state("");
+
+  // Notification settings state
+  let pushNotifications = $state(true);
+  let emailNotifications = $state(true);
+  let messageNotifications = $state(true);
+  let applicationNotifications = $state(true);
+  let eventReminderNotifications = $state(true);
+
+  let savingSettings = $state(false);
+
+  // Initialize form when profile and settings load
+  $effect(() => {
+    if (profile?.profile) {
+      locationSharing = profile.profile.locationSharing ?? true;
+      displayName = profile.profile.displayName ?? "";
+      bio = profile.profile.bio ?? "";
+    }
+    if (profile?.settings) {
+      pushNotifications = profile.settings.pushNotifications ?? true;
+      emailNotifications = profile.settings.emailNotifications ?? true;
+      messageNotifications = profile.settings.messageNotifications ?? true;
+      applicationNotifications =
+        profile.settings.applicationNotifications ?? true;
+      eventReminderNotifications =
+        profile.settings.eventReminderNotifications ?? true;
+    }
+  });
 
   function handleEditProfile() {
     goto("/profile/edit");
@@ -87,29 +121,79 @@
     }
   }
 
-  const profileSections = [
+  async function handleSavePrivacySettings() {
+    savingSettings = true;
+
+    try {
+      await convex.mutation(api.userProfiles.updateUserProfile, {
+        locationSharing,
+        displayName: displayName || undefined,
+        bio: bio || undefined,
+      });
+
+      alert("Privacy settings saved successfully!");
+    } catch (error) {
+      console.error("Failed to update privacy settings:", error);
+      alert("Failed to update privacy settings. Please try again.");
+    } finally {
+      savingSettings = false;
+    }
+  }
+
+  async function handleSaveNotificationSettings() {
+    savingSettings = true;
+
+    try {
+      await convex.mutation(api.userProfiles.updateUserSettings, {
+        pushNotifications,
+        emailNotifications,
+        messageNotifications,
+        applicationNotifications,
+        eventReminderNotifications,
+      });
+
+      alert("Notification preferences saved successfully!");
+    } catch (error) {
+      console.error("Failed to update notification preferences:", error);
+      alert("Failed to update notification preferences. Please try again.");
+    } finally {
+      savingSettings = false;
+    }
+  }
+
+  const settingsItems = [
     {
-      title: "My Connections",
-      description: "Manage connections with personal notes and tags",
-      icon: Users,
-      href: "/connections",
-      priority: "high",
+      id: "preferences",
+      title: "App Preferences",
+      description: "Discovery, theme, and other preferences",
+      icon: Palette,
+      href: "/profile/preferences",
     },
     {
-      title: "Settings",
-      description: "Account, privacy, and notification preferences",
-      icon: Settings,
-      href: "/settings",
-      priority: "high",
+      id: "privacy",
+      title: "Privacy Settings",
+      description: "Data and visibility preferences",
+      icon: Shield,
+      href: "/settings/privacy",
     },
   ];
 
-  const quickActions = [
+  const infoItems = [
     {
-      title: "Messages",
-      description: "View your conversations",
-      icon: MessageCircle,
-      href: "/messages",
+      title: "About Room Dates",
+      href: "/about",
+    },
+    {
+      title: "Help & Support",
+      href: "/help",
+    },
+    {
+      title: "Privacy Policy",
+      href: "/privacy",
+    },
+    {
+      title: "Terms of Service",
+      href: "/terms",
     },
   ];
 </script>
@@ -167,75 +251,88 @@
         <!-- 1. Profile Section -->
         <CompactProfileDisplay {profile} onEditProfile={handleEditProfile} />
 
-        <!-- 2. Quick Actions -->
+        <!-- 2. My Connections -->
         <div
           class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
         >
-          <h3 class="mb-4 text-lg font-semibold text-gray-900">
-            Quick Actions
-          </h3>
+          <a
+            href="/connections"
+            class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+          >
+            <div class="flex items-center space-x-3">
+              <div
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
+              >
+                <Users size={20} class="text-purple-600" />
+              </div>
+              <div>
+                <div class="font-medium text-gray-900">My Connections</div>
+                <div class="text-sm text-gray-600">
+                  Manage connections with personal notes and tags
+                </div>
+              </div>
+            </div>
+            <ChevronRight size={20} class="text-gray-400" />
+          </a>
+        </div>
+
+        <!-- 4. App Preferences -->
+        <div class="space-y-1">
+          {#each settingsItems as item (item.id)}
+            {@const IconComponent = item.icon}
+            {#if item.href}
+              <a
+                href={item.href}
+                class="flex w-full items-start space-x-4 rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+              >
+                <div
+                  class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-100"
+                >
+                  <IconComponent size={20} class="text-purple-600" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <h4 class="font-medium text-gray-900">{item.title}</h4>
+                  <p class="text-sm text-gray-600">{item.description}</p>
+                </div>
+                <div class="flex items-center">
+                  <svg
+                    class="h-5 w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </div>
+              </a>
+            {/if}
+          {/each}
+        </div>
+
+        <!-- Information -->
+        <div
+          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+        >
+          <h3 class="mb-4 text-lg font-semibold text-gray-900">Information</h3>
 
           <div class="space-y-1">
-            {#each quickActions as action (action.title)}
-              {@const IconComponent = action.icon}
+            {#each infoItems as item (item.title)}
               <a
-                href={action.href}
-                class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+                href={item.href}
+                class="block w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
               >
-                <div class="flex items-center space-x-3">
-                  <div
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
-                  >
-                    <IconComponent size={20} class="text-purple-600" />
-                  </div>
-                  <div>
-                    <div class="font-medium text-gray-900">{action.title}</div>
-                    <div class="text-sm text-gray-600">
-                      {action.description}
-                    </div>
-                  </div>
-                </div>
-                <ChevronRight size={20} class="text-gray-400" />
+                {item.title}
               </a>
             {/each}
           </div>
         </div>
 
-        <!-- 3. Profile Management -->
-        <div
-          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-        >
-          <h3 class="mb-4 text-lg font-semibold text-gray-900">
-            Profile & Settings
-          </h3>
-
-          <div class="space-y-1">
-            {#each profileSections as section (section.title)}
-              {@const IconComponent = section.icon}
-              <a
-                href={section.href}
-                class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
-              >
-                <div class="flex items-center space-x-3">
-                  <div
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
-                  >
-                    <IconComponent size={20} class="text-purple-600" />
-                  </div>
-                  <div>
-                    <div class="font-medium text-gray-900">{section.title}</div>
-                    <div class="text-sm text-gray-600">
-                      {section.description}
-                    </div>
-                  </div>
-                </div>
-                <ChevronRight size={20} class="text-gray-400" />
-              </a>
-            {/each}
-          </div>
-        </div>
-
-        <!-- 4. Account Actions -->
+        <!-- 5. Account Actions -->
         <div
           class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
         >
