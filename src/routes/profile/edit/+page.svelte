@@ -80,10 +80,6 @@
         updateData.dateOfBirth = new Date(dateOfBirth).getTime();
       }
 
-      if (!api) {
-        throw new Error("API not available");
-      }
-
       await convex.mutation(api.userProfiles.updateUserProfile, updateData);
       goto("/profile");
     } catch (error) {

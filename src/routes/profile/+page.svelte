@@ -80,10 +80,6 @@
       }
 
       // Use the password reset flow for security
-      if (!api) {
-        throw new Error("API not available");
-      }
-
       await convex.action(api.changePassword.default, {
         email: profile.user.email,
       });

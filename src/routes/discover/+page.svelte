@@ -88,11 +88,6 @@
   });
 
   async function handleSaveLocation() {
-    if (!api) {
-      console.error("API not available");
-      return;
-    }
-
     try {
       const location = await getCurrentLocation();
 

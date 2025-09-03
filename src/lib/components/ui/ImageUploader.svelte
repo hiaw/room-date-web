@@ -36,13 +36,6 @@
     const files = target.files;
     if (!files || files.length === 0) return;
 
-    // Check if API is loaded
-    if (!api) {
-      uploadError = "Upload service not ready. Please try again.";
-      setTimeout(() => (uploadError = null), 5000);
-      return;
-    }
-
     const remainingSlots = maxImages - images.length;
     const filesToUpload = Array.from(files).slice(0, remainingSlots);
 
