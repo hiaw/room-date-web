@@ -27,14 +27,14 @@
       </button>
 
       <button
-        onclick={() => goto("/profile/privacy")}
+        onclick={() => goto("/settings/privacy")}
         class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
       >
         Privacy Settings
       </button>
 
       <button
-        onclick={() => goto("/profile/notifications")}
+        onclick={() => goto("/settings/notifications")}
         class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
       >
         Notification Preferences

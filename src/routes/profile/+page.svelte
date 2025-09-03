@@ -6,9 +6,8 @@
   import { goto } from "$app/navigation";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import CompactProfileDisplay from "$lib/components/profile/CompactProfileDisplay.svelte";
-  import ProfileSettings from "$lib/components/profile/ProfileSettings.svelte";
-  import ConnectionsWithNotes from "$lib/components/profile/ConnectionsWithNotes.svelte";
   import PasswordResetForm from "$lib/components/profile/PasswordResetForm.svelte";
+  import { MessageCircle, Settings, Users, ChevronRight } from "lucide-svelte";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
@@ -87,6 +86,32 @@
       passwordResetRequestLoading = false;
     }
   }
+
+  const profileSections = [
+    {
+      title: "My Connections",
+      description: "Manage connections with personal notes and tags",
+      icon: Users,
+      href: "/connections",
+      priority: "high",
+    },
+    {
+      title: "Settings",
+      description: "Account, privacy, and notification preferences",
+      icon: Settings,
+      href: "/settings",
+      priority: "high",
+    },
+  ];
+
+  const quickActions = [
+    {
+      title: "Messages",
+      description: "View your conversations",
+      icon: MessageCircle,
+      href: "/messages",
+    },
+  ];
 </script>
 
 <svelte:head>
@@ -105,7 +130,7 @@
         <div>
           <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
           <p class="text-sm text-gray-600">
-            Your profile, settings, and connections
+            Your profile and personal settings
           </p>
         </div>
       </div>
@@ -142,14 +167,96 @@
         <!-- 1. Profile Section -->
         <CompactProfileDisplay {profile} onEditProfile={handleEditProfile} />
 
-        <!-- 2. Settings Section -->
-        <ProfileSettings
-          onPasswordReset={showPasswordResetRequestForm}
-          onSignOut={handleSignOut}
-        />
+        <!-- 2. Quick Actions -->
+        <div
+          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+        >
+          <h3 class="mb-4 text-lg font-semibold text-gray-900">
+            Quick Actions
+          </h3>
 
-        <!-- 3. My Connections Section -->
-        <ConnectionsWithNotes />
+          <div class="space-y-1">
+            {#each quickActions as action (action.title)}
+              {@const IconComponent = action.icon}
+              <a
+                href={action.href}
+                class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+              >
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
+                  >
+                    <IconComponent size={20} class="text-purple-600" />
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">{action.title}</div>
+                    <div class="text-sm text-gray-600">
+                      {action.description}
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight size={20} class="text-gray-400" />
+              </a>
+            {/each}
+          </div>
+        </div>
+
+        <!-- 3. Profile Management -->
+        <div
+          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+        >
+          <h3 class="mb-4 text-lg font-semibold text-gray-900">
+            Profile & Settings
+          </h3>
+
+          <div class="space-y-1">
+            {#each profileSections as section (section.title)}
+              {@const IconComponent = section.icon}
+              <a
+                href={section.href}
+                class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+              >
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
+                  >
+                    <IconComponent size={20} class="text-purple-600" />
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">{section.title}</div>
+                    <div class="text-sm text-gray-600">
+                      {section.description}
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight size={20} class="text-gray-400" />
+              </a>
+            {/each}
+          </div>
+        </div>
+
+        <!-- 4. Account Actions -->
+        <div
+          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+        >
+          <div class="space-y-2">
+            <button
+              onclick={showPasswordResetRequestForm}
+              class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              Reset Password
+            </button>
+
+            <div class="border-t border-gray-100 pt-2">
+              <button
+                onclick={handleSignOut}
+                class="w-full rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     {/if}
   </div>
