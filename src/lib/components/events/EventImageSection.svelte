@@ -20,5 +20,6 @@
     maxImages={6}
     {onImagesChange}
     label="Add Event Photos"
+    folder="events"
   />
 </div>

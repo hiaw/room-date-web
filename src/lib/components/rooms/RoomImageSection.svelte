@@ -20,5 +20,6 @@
     maxImages={8}
     {onImagesChange}
     label="Add Room Photos"
+    folder="rooms"
   />
 </div>
