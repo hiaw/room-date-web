@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
   import { goto } from "$app/navigation";
   import { useConvexClient } from "convex-svelte";
   import { api } from "../../convex/_generated/api.js";
