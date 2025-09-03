@@ -2,6 +2,77 @@ import { mutation, query } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
+import Stripe from "stripe";
+
+// Create payment intent for Stripe checkout
+export const createPaymentIntent = mutation({
+  args: {
+    credits: v.number(),
+    amount: v.number(), // Amount in cents
+    currency: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to create payment intent");
+    }
+
+    // Validate environment variables
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      throw new Error(
+        "Stripe is not configured. Please add STRIPE_SECRET_KEY to environment variables.",
+      );
+    }
+
+    try {
+      // Initialize Stripe with secret key
+      const stripe = new Stripe(stripeSecretKey);
+
+      // Create Stripe PaymentIntent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: args.amount,
+        currency: args.currency,
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          userId: userId,
+          credits: args.credits.toString(),
+          type: "credit_purchase",
+        },
+      });
+
+      // Create our internal payment record
+      const paymentTransactionId = await ctx.db.insert("paymentTransactions", {
+        userId: userId as Id<"users">,
+        provider: "stripe",
+        providerTransactionId: paymentIntent.id,
+        amount: args.amount,
+        currency: args.currency,
+        creditsGranted: args.credits,
+        status: "pending",
+        metadata: {
+          stripePaymentIntentId: paymentIntent.id,
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      return {
+        success: true,
+        paymentIntentId: paymentIntent.id,
+        clientSecret: paymentIntent.client_secret,
+        paymentTransactionId,
+      };
+    } catch (error) {
+      console.error("Stripe error:", error);
+      throw new Error(
+        `Payment setup failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  },
+});
 
 // Get user's payment history
 export const getPaymentHistory = query({

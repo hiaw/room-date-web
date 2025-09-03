@@ -51,6 +51,7 @@
     "@convex-dev/auth": "0.0.88",
     "@convex-dev/r2": "^0.7.1",
     "@playwright/test": "^1.55.0",
+    "@stripe/stripe-js": "^7.9.0",
     "convex": "^1.26.2",
     "convex-svelte": "^0.0.11",
     "date-fns": "^4.1.0",
