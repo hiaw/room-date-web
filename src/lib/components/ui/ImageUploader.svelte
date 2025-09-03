@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Upload, X, Camera } from "lucide-svelte";
   import { api } from "../../../convex/_generated/api.js";
-  import { useUploadFile } from "@convex-dev/r2/svelte";
+  import { useConvexClient } from "convex-svelte";
   import { browser } from "$app/environment";
   import R2Image from "./R2Image.svelte";
 
@@ -29,8 +29,8 @@
     folder = "general", // Default folder
   }: Props = $props();
 
-  // Use R2 upload hook (default key generation for now)
-  const uploadFile = useUploadFile(api.imageStorage);
+  // Use Convex client for custom upload with folder support
+  const convex = useConvexClient();
   let uploading = $state(false);
   let fileInput = $state<HTMLInputElement>();
   let uploadError = $state<string | null>(null);
@@ -53,12 +53,27 @@
         // Compress image before upload
         const compressedFile = await compressImage(file);
 
-        // Upload to R2 and get the key
-        const key = await uploadFile(compressedFile);
+        // Get organized upload URL with folder
+        const uploadResult = await convex.mutation(
+          api.imageStorage.uploadToFolder,
+          {
+            folder,
+            fileName: compressedFile.name,
+          },
+        );
 
-        // Return the R2 key instead of a URL
-        // URLs will be generated on-demand when images are displayed
-        return key;
+        // Upload file to R2
+        const response = await fetch(uploadResult.uploadUrl, {
+          method: "PUT",
+          body: compressedFile,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        // Return the organized R2 key
+        return uploadResult.key;
       });
 
       const uploadedKeys = await Promise.all(uploadPromises);
@@ -123,10 +138,24 @@
     });
   }
 
-  function removeImage(index: number) {
+  async function removeImage(index: number) {
+    const imageKey = images[index];
+
+    // Remove from UI immediately for better UX
     const newImages = [...images];
     newImages.splice(index, 1);
     onImagesChange(newImages);
+
+    // Delete from R2 bucket in background
+    try {
+      await convex.mutation(api.imageStorage.deleteImage, {
+        key: imageKey,
+      });
+      console.log(`Deleted image: ${imageKey}`);
+    } catch (error) {
+      console.error("Failed to delete image from R2:", error);
+      // Could show a warning toast here, but don't revert UI change
+    }
   }
 
   function openFileDialog() {

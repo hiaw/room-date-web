@@ -37,6 +37,39 @@ export const { generateUploadUrl, syncMetadata } = r2.clientApi({
   },
 });
 
+// Custom upload function with folder organization
+export const uploadToFolder = mutation({
+  args: {
+    folder: v.string(),
+    fileName: v.string(),
+  },
+  handler: async (ctx, { folder, fileName }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to upload images");
+    }
+
+    // Generate organized key with folder structure
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 15);
+    const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const key = `${folder}/${timestamp}-${randomId}-${cleanFileName}`;
+
+    // Generate upload URL
+    const uploadResult = await r2.generateUploadUrl(key);
+    console.log("Upload result:", uploadResult);
+
+    // Extract URL from the result object
+    const uploadUrl =
+      typeof uploadResult === "string" ? uploadResult : uploadResult.url;
+
+    return {
+      uploadUrl,
+      key,
+    };
+  },
+});
+
 // Helper function to generate short-lived image URLs
 export const getImageUrl = mutation({
   args: { key: v.string(), expiresInSeconds: v.optional(v.number()) },
