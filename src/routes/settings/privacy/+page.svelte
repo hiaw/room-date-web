@@ -94,7 +94,8 @@
           </div>
         </div>
         <Button
-          onclick={() => handleSave(new Event("click"))}
+          type="submit"
+          form="privacy-form"
           disabled={saving}
           class="bg-purple-600 text-white hover:bg-purple-700"
         >
@@ -116,7 +117,11 @@
         <LoadingSpinner />
       </div>
     {:else}
-      <form onsubmit={handleSave} class="mx-auto max-w-2xl space-y-6">
+      <form
+        id="privacy-form"
+        onsubmit={handleSave}
+        class="mx-auto max-w-2xl space-y-6"
+      >
         <!-- Profile Information -->
         <div
           class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"

@@ -60,7 +60,7 @@
       <!-- Tags -->
       {#if connection.note?.tags && connection.note.tags.length > 0}
         <div class="mb-2 flex flex-wrap gap-1">
-          {#each connection.note.tags.slice(0, 3) as tag, i (tag + i)}
+          {#each connection.note.tags.slice(0, 3) as tag (tag)}
             <span
               class="rounded-full bg-purple-100 px-2 py-1 text-xs text-purple-700"
             >
