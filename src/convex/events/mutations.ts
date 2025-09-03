@@ -30,6 +30,20 @@ export const createEvent = mutation({
       throw new Error("Cannot create events in inactive room");
     }
 
+    // Check if user has sufficient credits for the event
+    const maxGuestsCount = args.maxGuests ?? 1; // Default to 1 if not specified
+    const creditRecord = await ctx.db
+      .query("connectionCredits")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!creditRecord || creditRecord.availableCredits < maxGuestsCount) {
+      const availableCredits = creditRecord?.availableCredits ?? 0;
+      throw new Error(
+        `Insufficient connection credits. You need ${maxGuestsCount} credits but only have ${availableCredits}. Purchase more credits to create this event.`,
+      );
+    }
+
     // Validate timing
     if (!args.isFlexibleTiming) {
       validateEventTiming(args.startTime, args.endTime);
@@ -53,7 +67,7 @@ export const createEvent = mutation({
       endTime: args.endTime,
       isFlexibleTiming: args.isFlexibleTiming,
       suggestedTimeSlots: args.suggestedTimeSlots,
-      maxGuests: args.maxGuests,
+      maxGuests: maxGuestsCount,
       guestGenderPreferences: args.guestGenderPreferences,
       minAge: args.minAge,
       maxAge: args.maxAge,
@@ -61,6 +75,35 @@ export const createEvent = mutation({
       primaryEventImageUrl: args.primaryEventImageUrl,
       chatParticipantCount: 1, // Initialize with owner count
       isActive: true,
+    });
+
+    // Hold credits for this event
+    await ctx.db.insert("creditHolds", {
+      userId: userId as Id<"users">,
+      eventId: eventId,
+      creditsHeld: maxGuestsCount,
+      maxGuests: maxGuestsCount,
+      creditsUsed: 0,
+      status: "active",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Update user's credit balance
+    await ctx.db.patch(creditRecord._id, {
+      availableCredits: creditRecord.availableCredits - maxGuestsCount,
+      heldCredits: creditRecord.heldCredits + maxGuestsCount,
+      lastUpdated: Date.now(),
+    });
+
+    // Record credit hold transaction
+    await ctx.db.insert("creditTransactions", {
+      userId: userId as Id<"users">,
+      type: "hold",
+      amount: -maxGuestsCount,
+      relatedEventId: eventId,
+      description: `Credits held for event "${args.title}" (${maxGuestsCount} credits)`,
+      timestamp: Date.now(),
     });
 
     // Log security event
@@ -71,6 +114,8 @@ export const createEvent = mutation({
         eventId,
         roomId: args.roomId,
         title: args.title,
+        maxGuests: maxGuestsCount,
+        creditsHeld: maxGuestsCount,
         isFlexibleTiming: args.isFlexibleTiming,
         hasTimeSlots: !!args.suggestedTimeSlots?.length,
       },
@@ -148,7 +193,7 @@ export const updateEvent = mutation({
 });
 
 /**
- * Delete an event (mark as inactive)
+ * Delete an event (mark as inactive and release held credits)
  */
 export const deleteEvent = mutation({
   args: {
@@ -171,6 +216,55 @@ export const deleteEvent = mutation({
 
     // Mark event as inactive
     await ctx.db.patch(args.eventId, { isActive: false });
+
+    // Release held credits
+    const hold = await ctx.db
+      .query("creditHolds")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), userId),
+          q.eq(q.field("status"), "active"),
+        ),
+      )
+      .unique();
+
+    if (hold) {
+      const creditsToRelease = hold.creditsHeld - hold.creditsUsed;
+
+      if (creditsToRelease > 0) {
+        // Get user's credit record
+        const creditRecord = await ctx.db
+          .query("connectionCredits")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .unique();
+
+        if (creditRecord) {
+          // Release unused credits back to available
+          await ctx.db.patch(creditRecord._id, {
+            availableCredits: creditRecord.availableCredits + creditsToRelease,
+            heldCredits: creditRecord.heldCredits - creditsToRelease,
+            lastUpdated: Date.now(),
+          });
+
+          // Record transaction
+          await ctx.db.insert("creditTransactions", {
+            userId: userId as Id<"users">,
+            type: "release",
+            amount: creditsToRelease,
+            relatedEventId: args.eventId,
+            description: `Credits released from deleted event (${creditsToRelease} credits)`,
+            timestamp: Date.now(),
+          });
+        }
+      }
+
+      // Mark hold as released
+      await ctx.db.patch(hold._id, {
+        status: "released",
+        updatedAt: Date.now(),
+      });
+    }
 
     // Cancel all pending applications
     const pendingApplications = await ctx.db
