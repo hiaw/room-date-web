@@ -18,7 +18,7 @@
   }
 
   let {
-    connectionId,
+    connectionId, // eslint-disable-line @typescript-eslint/no-unused-vars
     currentNickname = "",
     currentNotes = "",
     currentTags = [],
@@ -167,7 +167,7 @@
 
             {#if tags.length > 0}
               <div class="flex flex-wrap gap-2">
-                {#each tags as tag}
+                {#each tags as tag, i (tag + i)}
                   <span
                     class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-xs text-purple-700"
                   >
