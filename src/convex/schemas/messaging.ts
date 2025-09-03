@@ -92,10 +92,25 @@ export const eventChatParticipants = defineTable({
   .index("by_event_user", ["eventId", "userId"])
   .index("by_event_role", ["eventId", "role"]);
 
+// Connection Notes - personal notes and nicknames for connections
+export const connectionNotes = defineTable({
+  connectionId: v.id("connections"),
+  userId: v.id("users"), // who created the note (owner of the note)
+  nickname: v.optional(v.string()), // custom nickname for the other person
+  notes: v.optional(v.string()), // personal notes about the connection
+  tags: v.optional(v.array(v.string())), // optional tags like "work", "hobby", "friend"
+  lastUpdated: v.number(), // timestamp of last update
+})
+  .index("by_connection", ["connectionId"])
+  .index("by_user", ["userId"])
+  .index("by_connection_user", ["connectionId", "userId"]) // unique per connection per user
+  .index("by_user_updated", ["userId", "lastUpdated"]); // for sorting by recency
+
 export const messagingSchemas = {
   connections,
   messages,
   messageReadStatus,
   eventMessages,
   eventChatParticipants,
+  connectionNotes,
 };
