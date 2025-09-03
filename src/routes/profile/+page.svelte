@@ -5,11 +5,13 @@
   import { isAuthenticated, authStore } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
-  import CompactProfileDisplay from "$lib/components/profile/CompactProfileDisplay.svelte";
   import PasswordResetForm from "$lib/components/profile/PasswordResetForm.svelte";
-  import NotificationPreferences from "$lib/components/profile/NotificationPreferences.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import { Users, ChevronRight, Save, Palette, Shield } from "lucide-svelte";
+  import ProfileSection from "$lib/components/profile/ProfileSection.svelte";
+  import SocialSection from "$lib/components/profile/SocialSection.svelte";
+  import SettingsSection from "$lib/components/profile/SettingsSection.svelte";
+  import SupportSection from "$lib/components/profile/SupportSection.svelte";
+  import AccountSection from "$lib/components/profile/AccountSection.svelte";
+  import { Palette, Shield } from "lucide-svelte";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
@@ -35,38 +37,6 @@
   // Password reset request state
   let passwordResetRequestLoading = $state(false);
   let passwordResetRequestError = $state<string | null>(null);
-
-  // Privacy settings state
-  let locationSharing = $state(true);
-  let displayName = $state("");
-  let bio = $state("");
-
-  // Notification settings state
-  let pushNotifications = $state(true);
-  let emailNotifications = $state(true);
-  let messageNotifications = $state(true);
-  let applicationNotifications = $state(true);
-  let eventReminderNotifications = $state(true);
-
-  let savingSettings = $state(false);
-
-  // Initialize form when profile and settings load
-  $effect(() => {
-    if (profile?.profile) {
-      locationSharing = profile.profile.locationSharing ?? true;
-      displayName = profile.profile.displayName ?? "";
-      bio = profile.profile.bio ?? "";
-    }
-    if (profile?.settings) {
-      pushNotifications = profile.settings.pushNotifications ?? true;
-      emailNotifications = profile.settings.emailNotifications ?? true;
-      messageNotifications = profile.settings.messageNotifications ?? true;
-      applicationNotifications =
-        profile.settings.applicationNotifications ?? true;
-      eventReminderNotifications =
-        profile.settings.eventReminderNotifications ?? true;
-    }
-  });
 
   function handleEditProfile() {
     goto("/profile/edit");
@@ -118,46 +88,6 @@
           : "Failed to request password reset";
     } finally {
       passwordResetRequestLoading = false;
-    }
-  }
-
-  async function handleSavePrivacySettings() {
-    savingSettings = true;
-
-    try {
-      await convex.mutation(api.userProfiles.updateUserProfile, {
-        locationSharing,
-        displayName: displayName || undefined,
-        bio: bio || undefined,
-      });
-
-      alert("Privacy settings saved successfully!");
-    } catch (error) {
-      console.error("Failed to update privacy settings:", error);
-      alert("Failed to update privacy settings. Please try again.");
-    } finally {
-      savingSettings = false;
-    }
-  }
-
-  async function handleSaveNotificationSettings() {
-    savingSettings = true;
-
-    try {
-      await convex.mutation(api.userProfiles.updateUserSettings, {
-        pushNotifications,
-        emailNotifications,
-        messageNotifications,
-        applicationNotifications,
-        eventReminderNotifications,
-      });
-
-      alert("Notification preferences saved successfully!");
-    } catch (error) {
-      console.error("Failed to update notification preferences:", error);
-      alert("Failed to update notification preferences. Please try again.");
-    } finally {
-      savingSettings = false;
     }
   }
 
@@ -248,166 +178,14 @@
     {:else}
       <!-- Main Profile Content -->
       <div class="mx-auto max-w-2xl space-y-8">
-        <!-- Profile Section -->
-        <div class="space-y-4">
-          <h2 class="text-xl font-semibold text-gray-900">Profile</h2>
-
-          <!-- Profile Card -->
-          <div
-            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-          >
-            <button
-              onclick={handleEditProfile}
-              class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
-            >
-              <div class="flex items-center space-x-3">
-                <div class="relative">
-                  {#if profile?.profile?.profileImageUrl}
-                    <img
-                      src={profile.profile.profileImageUrl}
-                      alt="Profile"
-                      class="h-10 w-10 rounded-full object-cover"
-                    />
-                  {:else}
-                    <div
-                      class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
-                    >
-                      <Users size={20} class="text-purple-600" />
-                    </div>
-                  {/if}
-                </div>
-                <div>
-                  <div class="font-medium text-gray-900">
-                    {profile?.profile?.displayName ||
-                      profile?.user?.name ||
-                      "Your Profile"}
-                  </div>
-                  <div class="text-sm text-gray-600">
-                    Edit profile, photo, and basic information
-                  </div>
-                </div>
-              </div>
-              <ChevronRight size={20} class="text-gray-400" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Social Section -->
-        <div class="space-y-4">
-          <h2 class="text-xl font-semibold text-gray-900">Social</h2>
-
-          <!-- My Connections -->
-          <div
-            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-          >
-            <a
-              href="/connections"
-              class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
-            >
-              <div class="flex items-center space-x-3">
-                <div
-                  class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
-                >
-                  <Users size={20} class="text-purple-600" />
-                </div>
-                <div>
-                  <div class="font-medium text-gray-900">My Connections</div>
-                  <div class="text-sm text-gray-600">
-                    Manage connections with personal notes and tags
-                  </div>
-                </div>
-              </div>
-              <ChevronRight size={20} class="text-gray-400" />
-            </a>
-          </div>
-        </div>
-
-        <!-- Settings Section -->
-        <div class="space-y-4">
-          <h2 class="text-xl font-semibold text-gray-900">Settings</h2>
-
-          <!-- App Preferences -->
-          <div
-            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-          >
-            <div class="space-y-1">
-              {#each settingsItems as item (item.id)}
-                {@const IconComponent = item.icon}
-                {#if item.href}
-                  <a
-                    href={item.href}
-                    class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
-                  >
-                    <div class="flex items-center space-x-3">
-                      <div
-                        class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
-                      >
-                        <IconComponent size={20} class="text-purple-600" />
-                      </div>
-                      <div>
-                        <div class="font-medium text-gray-900">
-                          {item.title}
-                        </div>
-                        <div class="text-sm text-gray-600">
-                          {item.description}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={20} class="text-gray-400" />
-                  </a>
-                {/if}
-              {/each}
-            </div>
-          </div>
-        </div>
-
-        <!-- Support Section -->
-        <div class="space-y-4">
-          <h2 class="text-xl font-semibold text-gray-900">Support</h2>
-
-          <div
-            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-          >
-            <div class="space-y-1">
-              {#each infoItems as item (item.title)}
-                <a
-                  href={item.href}
-                  class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-gray-50"
-                >
-                  <div class="font-medium text-gray-700">{item.title}</div>
-                  <ChevronRight size={16} class="text-gray-400" />
-                </a>
-              {/each}
-            </div>
-          </div>
-        </div>
-
-        <!-- Account Section -->
-        <div class="space-y-4">
-          <h2 class="text-xl font-semibold text-gray-900">Account</h2>
-
-          <div
-            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-          >
-            <div class="space-y-1">
-              <button
-                onclick={showPasswordResetRequestForm}
-                class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-gray-50"
-              >
-                <div class="font-medium text-gray-700">Reset Password</div>
-                <ChevronRight size={16} class="text-gray-400" />
-              </button>
-
-              <button
-                onclick={handleSignOut}
-                class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-red-50"
-              >
-                <div class="font-medium text-red-600">Sign Out</div>
-                <ChevronRight size={16} class="text-red-400" />
-              </button>
-            </div>
-          </div>
-        </div>
+        <ProfileSection {profile} onEditProfile={handleEditProfile} />
+        <SocialSection />
+        <SettingsSection {settingsItems} />
+        <SupportSection {infoItems} />
+        <AccountSection
+          onPasswordReset={showPasswordResetRequestForm}
+          onSignOut={handleSignOut}
+        />
       </div>
     {/if}
   </div>
