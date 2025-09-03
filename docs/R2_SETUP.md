@@ -6,7 +6,6 @@ You need to set the following environment variables in your Convex deployment:
 
 ```bash
 # Set these in your Convex dashboard or via CLI
-npx convex env set R2_TOKEN your_r2_token_here
 npx convex env set R2_ACCESS_KEY_ID your_access_key_id_here
 npx convex env set R2_SECRET_ACCESS_KEY your_secret_access_key_here
 npx convex env set R2_ENDPOINT your_r2_endpoint_here
@@ -47,7 +46,6 @@ Add this CORS policy to your bucket:
 
 After creating the token, you'll see:
 
-- **Token Value** → Use as `R2_TOKEN`
 - **Access Key ID** → Use as `R2_ACCESS_KEY_ID`
 - **Secret Access Key** → Use as `R2_SECRET_ACCESS_KEY`
 - **Endpoint** → Use as `R2_ENDPOINT` (should look like `https://accountid.r2.cloudflarestorage.com`)

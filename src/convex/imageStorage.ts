@@ -4,6 +4,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, type MutationCtx } from "./_generated/server.js";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel.js";
+import { randomUUID } from "node:crypto";
 
 export const r2 = new R2(components.r2);
 
@@ -46,7 +47,7 @@ export const uploadToFolder = mutation({
 
     // Generate organized key with folder structure
     const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 15);
+    const randomId = randomUUID();
     const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
     const key = `${folder}/${timestamp}-${randomId}-${cleanFileName}`;
 

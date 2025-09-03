@@ -52,6 +52,11 @@
     // Only load if we have an imageKey
     if (imageKey) {
       loadImageUrlWithRefresh();
+    } else {
+      // Handle case where imageKey is falsy to prevent infinite loading
+      loading = false;
+      imageUrl = null;
+      error = null;
     }
 
     // Cleanup function to clear timeout when component unmounts or imageKey changes
