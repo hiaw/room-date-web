@@ -93,7 +93,7 @@ export const respondToApplication = mutation({
       ownerResponse: args.ownerResponse?.trim(),
     });
 
-    // If approved, create a connection between users
+    // If approved, create a connection between users and add to event chat
     if (args.status === "approved") {
       await createConnection(
         ctx,
@@ -101,6 +101,53 @@ export const respondToApplication = mutation({
         application.applicantId,
         application.eventId,
       );
+
+      // Ensure owner is a participant (for old events)
+      const ownerParticipant = await ctx.db
+        .query("eventChatParticipants")
+        .withIndex("by_event_user", (q) =>
+          q.eq("eventId", application.eventId).eq("userId", event.ownerId),
+        )
+        .unique();
+
+      let countIncrement = 0;
+      if (!ownerParticipant) {
+        await ctx.db.insert("eventChatParticipants", {
+          eventId: application.eventId,
+          userId: event.ownerId,
+          role: "owner",
+          joinedAt: event._creationTime,
+        });
+        countIncrement++;
+      }
+
+      // Add approved user to event chat participants
+      const existingParticipant = await ctx.db
+        .query("eventChatParticipants")
+        .withIndex("by_event_user", (q) =>
+          q
+            .eq("eventId", application.eventId)
+            .eq("userId", application.applicantId),
+        )
+        .unique();
+
+      if (!existingParticipant) {
+        await ctx.db.insert("eventChatParticipants", {
+          eventId: application.eventId,
+          userId: application.applicantId,
+          role: "participant",
+          joinedAt: Date.now(),
+        });
+        countIncrement++;
+      }
+
+      if (countIncrement > 0) {
+        // Increment the denormalized participant count
+        await ctx.db.patch(application.eventId, {
+          chatParticipantCount:
+            (event.chatParticipantCount ?? 0) + countIncrement,
+        });
+      }
     }
 
     return args.applicationId;

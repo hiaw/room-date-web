@@ -29,9 +29,9 @@
   // Reactive queries
   let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
   let profile = $derived(
-    profileQueryResult.data as UserProfileResponse | undefined,
+    profileQueryResult?.data as UserProfileResponse | undefined,
   );
-  let loading = $derived(profileQueryResult.isLoading);
+  let loading = $derived(profileQueryResult?.isLoading ?? true);
 
   // Convex client for actions
   const convex = useConvexClient();

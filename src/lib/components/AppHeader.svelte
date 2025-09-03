@@ -1,32 +1,13 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
   import { goto } from "$app/navigation";
   import { useConvexClient } from "convex-svelte";
+  import { api } from "../../convex/_generated/api.js";
   import { authStore, userDisplayName } from "../stores/auth.js";
   import Button from "./ui/Button.svelte";
-  import { loadApi } from "../convex/api.js";
 
   const convex = useConvexClient();
 
-  // Import API only on client side
-  let api: typeof import("../../convex/_generated/api.js").api | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in AppHeader:", error);
-      });
-  }
-
   async function handleSignOut() {
-    if (!api) {
-      console.warn("API not ready for sign out");
-      return;
-    }
-
     try {
       // First clear local auth state immediately
       authStore.signOut();

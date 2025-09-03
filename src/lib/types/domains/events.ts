@@ -146,3 +146,20 @@ export interface SearchFilters {
   userLatitude?: number; // for distance calculations
   userLongitude?: number;
 }
+
+// Event Chat Participant Types
+export interface EventParticipant {
+  _id: string;
+  userId: string;
+  role: "owner" | "participant";
+  joinedAt: number;
+  user: {
+    _id: string;
+    name?: string;
+    email?: string;
+  } | null;
+  profile: {
+    displayName?: string;
+    profileImageUrl?: string;
+  } | null;
+}

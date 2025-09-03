@@ -25,13 +25,13 @@
     {},
   );
 
-  let rooms = $derived(roomsQueryResult.data ?? []);
-  let events = $derived(eventsQueryResult.data ?? []);
-  let applications = $derived(applicationsQueryResult.data ?? []);
+  let rooms = $derived(roomsQueryResult?.data ?? []);
+  let events = $derived(eventsQueryResult?.data ?? []);
+  let applications = $derived(applicationsQueryResult?.data ?? []);
   let loading = $derived(
-    roomsQueryResult.isLoading ||
-      eventsQueryResult.isLoading ||
-      applicationsQueryResult.isLoading,
+    (roomsQueryResult?.isLoading ?? true) ||
+      (eventsQueryResult?.isLoading ?? true) ||
+      (applicationsQueryResult?.isLoading ?? true),
   );
 
   // Group events by room

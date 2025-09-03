@@ -60,8 +60,42 @@ export const messageReadStatus = defineTable({
   .index("by_user", ["userId"])
   .index("by_user_read", ["userId", "readAt"]);
 
+// Event Messages - public messages within event chat rooms
+export const eventMessages = defineTable({
+  eventId: v.id("events"),
+  senderId: v.id("users"),
+  content: v.string(),
+  messageType: v.union(
+    v.literal("text"),
+    v.literal("system"), // For system messages like "User joined the event"
+  ),
+  // Denormalized sender info for better performance
+  senderDisplayName: v.string(),
+  senderProfileImageUrl: v.optional(v.string()),
+})
+  .index("by_event", ["eventId"])
+  .index("by_sender", ["senderId"]);
+
+// Event Chat Participants - tracks who can participate in event chats
+export const eventChatParticipants = defineTable({
+  eventId: v.id("events"),
+  userId: v.id("users"),
+  role: v.union(
+    v.literal("owner"), // Event owner
+    v.literal("participant"), // Approved event participant
+  ),
+  joinedAt: v.number(),
+  lastSeenAt: v.optional(v.number()), // For tracking read status
+})
+  .index("by_event", ["eventId"])
+  .index("by_user", ["userId"])
+  .index("by_event_user", ["eventId", "userId"])
+  .index("by_event_role", ["eventId", "role"]);
+
 export const messagingSchemas = {
   connections,
   messages,
   messageReadStatus,
+  eventMessages,
+  eventChatParticipants,
 };

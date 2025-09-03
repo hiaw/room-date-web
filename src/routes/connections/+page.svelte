@@ -27,10 +27,11 @@
     {},
   );
 
-  let connections = $derived(connectionsQueryResult.data ?? []);
-  let conversations = $derived(conversationsQueryResult.data ?? []);
+  let connections = $derived(connectionsQueryResult?.data ?? []);
+  let conversations = $derived(conversationsQueryResult?.data ?? []);
   let loading = $derived(
-    connectionsQueryResult.isLoading || conversationsQueryResult.isLoading,
+    (connectionsQueryResult?.isLoading ?? true) ||
+      (conversationsQueryResult?.isLoading ?? true),
   );
 
   let filteredConversations = $derived(
@@ -45,6 +46,8 @@
       );
     }),
   );
+
+  // Event handlers
 
   let filteredConnections = $derived(
     connections.filter((connection) => {

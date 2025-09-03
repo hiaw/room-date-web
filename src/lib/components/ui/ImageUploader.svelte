@@ -1,21 +1,8 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
   import { Upload, X, Camera } from "lucide-svelte";
+  import { api } from "../../../convex/_generated/api.js";
   import { useConvexClient } from "convex-svelte";
-  import { loadApi } from "$lib/convex/api.js";
-
-  // Import API only on client side to avoid SSR issues
-  let api: typeof import("../../../convex/_generated/api.js").api | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in ImageUploader:", error);
-      });
-  }
+  import { browser } from "$app/environment";
 
   interface Props {
     images?: string[];
@@ -48,13 +35,6 @@
     const target = event.target as HTMLInputElement;
     const files = target.files;
     if (!files || files.length === 0) return;
-
-    // Check if API is loaded
-    if (!api) {
-      uploadError = "Upload service not ready. Please try again.";
-      setTimeout(() => (uploadError = null), 5000);
-      return;
-    }
 
     const remainingSlots = maxImages - images.length;
     const filesToUpload = Array.from(files).slice(0, remainingSlots);

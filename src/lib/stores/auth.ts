@@ -25,13 +25,16 @@ function createAuthStore() {
     checkExistingAuth() {
       const token = getStoredToken();
       if (token) {
-        // Validate device fingerprint for security
+        // Validate device fingerprint for security (non-blocking for now)
         if (!validateDeviceFingerprint()) {
           logSecurityEvent("device_mismatch", {
             reason: "fingerprint_changed",
           });
           // For now, just log - don't force logout to avoid UX disruption
-          // In future versions, consider requiring re-authentication
+          // The user can still proceed with their session
+          console.warn(
+            "Device fingerprint mismatch detected - this is normal for development",
+          );
         }
 
         update((state) => ({

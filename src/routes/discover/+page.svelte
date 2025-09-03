@@ -121,7 +121,7 @@
 
   // Reactive query - recreate the query when params change
   let eventsQueryResult = $derived(
-    userLocation
+    userLocation && api
       ? useQuery(api.events.getEventsNearUser, {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,

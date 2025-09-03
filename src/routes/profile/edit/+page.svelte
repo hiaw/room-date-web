@@ -18,7 +18,7 @@
   });
 
   // Fetch current profile
-  let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
+  let profileQuery = $derived(useQuery(api.userProfiles.getUserProfile, {}));
   let profile = $derived(profileQuery?.data as UserProfileResponse | undefined);
   let loading = $derived(profileQuery?.isLoading ?? true);
 

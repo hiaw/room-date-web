@@ -27,7 +27,10 @@
 
     // Don't process OAuth callback if user just signed out
     if (urlParams.get("signedOut") === "true") {
-      authStore.signOut();
+      console.log("User signed out, cleaning up");
+      authStore.setLoading(false);
+      // Clean up URL
+      await safeReplaceState("/");
       return;
     }
 

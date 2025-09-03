@@ -59,6 +59,7 @@ export const createEvent = mutation({
       maxAge: args.maxAge,
       eventImages: args.eventImages || [],
       primaryEventImageUrl: args.primaryEventImageUrl,
+      chatParticipantCount: 1, // Initialize with owner count
       isActive: true,
     });
 
@@ -75,6 +76,14 @@ export const createEvent = mutation({
       },
       timestamp: Date.now(),
       severity: "low",
+    });
+
+    // Add event owner to chat participants
+    await ctx.db.insert("eventChatParticipants", {
+      eventId: eventId,
+      userId: userId as Id<"users">,
+      role: "owner",
+      joinedAt: Date.now(),
     });
 
     return eventId;
