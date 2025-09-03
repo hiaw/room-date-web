@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Upload, X, Camera } from "lucide-svelte";
   import { api } from "../../../convex/_generated/api.js";
-  // import { useUploadFile } from "@convex-dev/r2/svelte"; // Disabled until R2 is configured
+  import { useUploadFile } from "@convex-dev/r2/svelte";
   import { browser } from "$app/environment";
   import R2Image from "./R2Image.svelte";
 
@@ -14,6 +14,7 @@
     label?: string;
     accept?: string;
     disabled?: boolean;
+    folder?: string; // New prop for organizing uploads by folder
   }
 
   let {
@@ -25,10 +26,11 @@
     label = "Upload Images",
     accept = "image/*",
     disabled = false,
+    folder = "general", // Default folder
   }: Props = $props();
 
-  // Use R2 upload hook instead of Convex files
-  // const uploadFile = useUploadFile(api.imageStorage); // Disabled until R2 is configured
+  // Use R2 upload hook (default key generation for now)
+  const uploadFile = useUploadFile(api.imageStorage);
   let uploading = $state(false);
   let fileInput = $state<HTMLInputElement>();
   let uploadError = $state<string | null>(null);
@@ -51,10 +53,8 @@
         // Compress image before upload
         const compressedFile = await compressImage(file);
 
-        // TODO: Replace with R2 upload when configured
-        // const key = await uploadFile(compressedFile);
-        // For now, return a placeholder key
-        const key = `placeholder-${Date.now()}-${file.name}`;
+        // Upload to R2 and get the key
+        const key = await uploadFile(compressedFile);
 
         // Return the R2 key instead of a URL
         // URLs will be generated on-demand when images are displayed

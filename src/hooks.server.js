@@ -7,8 +7,8 @@ export async function handle({ event, resolve }) {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'", // Keep for Svelte compatibility - consider moving to nonces in production
     "style-src 'self' 'unsafe-inline'", // Keep for Tailwind/Svelte compatibility
-    "connect-src 'self' https://*.convex.cloud https://*.convex.site wss://*.convex.cloud wss://*.convex.site https://api.opencagedata.com", // Convex connections and geocoding API
-    "img-src 'self' data: https: blob: https://*.convex.cloud", // Images
+    "connect-src 'self' https://*.convex.cloud https://*.convex.site wss://*.convex.cloud wss://*.convex.site https://api.opencagedata.com https://*.r2.cloudflarestorage.com", // Convex connections, geocoding API, and R2 storage
+    "img-src 'self' data: https: blob: https://*.convex.cloud https://*.r2.cloudflarestorage.com", // Images from Convex and R2
     "font-src 'self' data:", // Fonts
     "object-src 'none'", // Disallow plugins
     "base-uri 'self'", // Restrict base URI

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Plus } from "lucide-svelte";
-
+  import R2Image from "../../ui/R2Image.svelte";
   import type { UserProfile } from "../../../types";
 
   interface Props {
@@ -36,14 +36,15 @@
       </div>
 
       <div class="grid grid-cols-3 gap-4">
-        {#each profile.profileImages.slice(0, 6) as photoUrl, index (index)}
+        {#each profile.profileImages.slice(0, 6) as imageKey, index (index)}
           <button
             class="group relative aspect-square overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 transition-all duration-300 hover:scale-105 hover:border-pink-300 hover:shadow-lg"
           >
-            <img
-              src={photoUrl}
+            <R2Image
+              {imageKey}
               alt="Profile photo {index + 1}"
               class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+              expiresInSeconds={3600}
             />
           </button>
         {/each}

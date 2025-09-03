@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Calendar, MapPin, Camera } from "lucide-svelte";
-
+  import R2Image from "../../ui/R2Image.svelte";
   import type { UserProfile } from "../../../types";
 
   interface Props {
@@ -20,10 +20,11 @@
     <!-- Profile Photo -->
     <div class="relative mb-6">
       {#if profile?.profileImageUrl}
-        <img
-          src={profile.profileImageUrl}
+        <R2Image
+          imageKey={profile.profileImageUrl}
           alt="Profile"
           class="mx-auto h-24 w-24 rounded-full border-4 border-white object-cover shadow-lg"
+          expiresInSeconds={3600}
         />
       {:else}
         <div

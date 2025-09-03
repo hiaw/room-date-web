@@ -169,6 +169,7 @@
             maxImages={6}
             onImagesChange={(newImages) => (profileImages = newImages)}
             label="Add Profile Photos"
+            folder="profiles"
           />
         </div>
 

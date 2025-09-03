@@ -1,27 +1,87 @@
-// R2 Image Storage Module
-//
-// This module is ready for Cloudflare R2 integration but requires environment variables to be set up first.
-//
-// To enable R2 storage:
-// 1. Follow the instructions in R2_SETUP.md to get R2 credentials
-// 2. Set the environment variables in your Convex deployment
-// 3. Uncomment the R2 component in convex.config.ts
-// 4. Uncomment the implementation in this file
-//
-// For now, this serves as a placeholder to prevent build errors.
-
+import { R2 } from "@convex-dev/r2";
+import { components } from "./_generated/api.js";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation } from "./_generated/server.js";
 import { v } from "convex/values";
 
-// Placeholder function - will be replaced with R2 implementation
+export const r2 = new R2(components.r2);
+
+// Client API functions for R2 operations
+export const { generateUploadUrl, syncMetadata } = r2.clientApi({
+  checkUpload: async (ctx, _bucket) => {
+    // Validate that user is authenticated
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to upload images");
+    }
+
+    // Additional validation can be added here:
+    // - Check user's upload quota
+    // - Validate file type (done on client side as well)
+    // - Check user permissions
+    console.log(`Image upload authorized for user ID: ${userId}`);
+  },
+
+  onUpload: async (ctx, _bucket, key) => {
+    // This runs after successful upload
+    const userId = await getAuthUserId(ctx);
+    console.log(
+      `Image uploaded successfully - User ID: ${userId}, Key: ${key}`,
+    );
+
+    // You can add additional logic here:
+    // - Update user's storage quota
+    // - Create database records linking images to users/rooms/events
+    // - Send notifications
+    // - Analytics tracking
+  },
+});
+
+// Helper function to generate short-lived image URLs
 export const getImageUrl = mutation({
   args: { key: v.string(), expiresInSeconds: v.optional(v.number()) },
-  handler: async (_ctx, { key, expiresInSeconds = 900 }) => {
-    // Temporary implementation - just return the key as-is
-    // This will be replaced with actual R2 URL generation
-    console.log(
-      `Placeholder: would generate R2 URL for key ${key} with ${expiresInSeconds}s expiration`,
-    );
-    return key;
+  handler: async (ctx, { key, expiresInSeconds = 900 }) => {
+    // Validate user is authenticated to view images
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to view images");
+    }
+
+    // Default expiration is 15 minutes (900 seconds)
+    // You can customize this per use case:
+    // - Profile images: longer expiration (1 hour = 3600)
+    // - Sensitive room images: shorter expiration (5 minutes = 300)
+    return await r2.getUrl(key, { expiresIn: expiresInSeconds });
+  },
+});
+
+// Helper function to delete images from R2
+export const deleteImage = mutation({
+  args: { key: v.string() },
+  handler: async (ctx, { key }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to delete images");
+    }
+
+    // TODO: Add additional validation here to ensure user owns the image
+    // You might want to check if the key belongs to the user's rooms/events/profile
+
+    return await r2.deleteObject(ctx, key);
+  },
+});
+
+// Helper function to delete multiple images from R2
+export const deleteImages = mutation({
+  args: { keys: v.array(v.string()) },
+  handler: async (ctx, { keys }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to delete images");
+    }
+
+    // Delete all images in parallel
+    const deletePromises = keys.map((key) => r2.deleteObject(ctx, key));
+    return await Promise.all(deletePromises);
   },
 });
