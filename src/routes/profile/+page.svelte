@@ -247,109 +247,163 @@
       </div>
     {:else}
       <!-- Main Profile Content -->
-      <div class="mx-auto max-w-2xl space-y-6">
-        <!-- 1. Profile Section -->
-        <CompactProfileDisplay {profile} onEditProfile={handleEditProfile} />
+      <div class="mx-auto max-w-2xl space-y-8">
+        <!-- Profile Section -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold text-gray-900">Profile</h2>
 
-        <!-- 2. My Connections -->
-        <div
-          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-        >
-          <a
-            href="/connections"
-            class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+          <!-- Profile Card -->
+          <div
+            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
           >
-            <div class="flex items-center space-x-3">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
-              >
-                <Users size={20} class="text-purple-600" />
-              </div>
-              <div>
-                <div class="font-medium text-gray-900">My Connections</div>
-                <div class="text-sm text-gray-600">
-                  Manage connections with personal notes and tags
-                </div>
-              </div>
-            </div>
-            <ChevronRight size={20} class="text-gray-400" />
-          </a>
-        </div>
-
-        <!-- 4. App Preferences -->
-        <div class="space-y-1">
-          {#each settingsItems as item (item.id)}
-            {@const IconComponent = item.icon}
-            {#if item.href}
-              <a
-                href={item.href}
-                class="flex w-full items-start space-x-4 rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
-              >
-                <div
-                  class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-100"
-                >
-                  <IconComponent size={20} class="text-purple-600" />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <h4 class="font-medium text-gray-900">{item.title}</h4>
-                  <p class="text-sm text-gray-600">{item.description}</p>
-                </div>
-                <div class="flex items-center">
-                  <svg
-                    class="h-5 w-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5l7 7-7 7"
+            <button
+              onclick={handleEditProfile}
+              class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+            >
+              <div class="flex items-center space-x-3">
+                <div class="relative">
+                  {#if profile?.profile?.profileImageUrl}
+                    <img
+                      src={profile.profile.profileImageUrl}
+                      alt="Profile"
+                      class="h-10 w-10 rounded-full object-cover"
                     />
-                  </svg>
+                  {:else}
+                    <div
+                      class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
+                    >
+                      <Users size={20} class="text-purple-600" />
+                    </div>
+                  {/if}
                 </div>
-              </a>
-            {/if}
-          {/each}
-        </div>
-
-        <!-- Information -->
-        <div
-          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-        >
-          <h3 class="mb-4 text-lg font-semibold text-gray-900">Information</h3>
-
-          <div class="space-y-1">
-            {#each infoItems as item (item.title)}
-              <a
-                href={item.href}
-                class="block w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-              >
-                {item.title}
-              </a>
-            {/each}
+                <div>
+                  <div class="font-medium text-gray-900">
+                    {profile?.profile?.displayName ||
+                      profile?.user?.name ||
+                      "Your Profile"}
+                  </div>
+                  <div class="text-sm text-gray-600">
+                    Edit profile, photo, and basic information
+                  </div>
+                </div>
+              </div>
+              <ChevronRight size={20} class="text-gray-400" />
+            </button>
           </div>
         </div>
 
-        <!-- 5. Account Actions -->
-        <div
-          class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
-        >
-          <div class="space-y-2">
-            <button
-              onclick={showPasswordResetRequestForm}
-              class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-            >
-              Reset Password
-            </button>
+        <!-- Social Section -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold text-gray-900">Social</h2>
 
-            <div class="border-t border-gray-100 pt-2">
+          <!-- My Connections -->
+          <div
+            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+          >
+            <a
+              href="/connections"
+              class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+            >
+              <div class="flex items-center space-x-3">
+                <div
+                  class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
+                >
+                  <Users size={20} class="text-purple-600" />
+                </div>
+                <div>
+                  <div class="font-medium text-gray-900">My Connections</div>
+                  <div class="text-sm text-gray-600">
+                    Manage connections with personal notes and tags
+                  </div>
+                </div>
+              </div>
+              <ChevronRight size={20} class="text-gray-400" />
+            </a>
+          </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold text-gray-900">Settings</h2>
+
+          <!-- App Preferences -->
+          <div
+            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+          >
+            <div class="space-y-1">
+              {#each settingsItems as item (item.id)}
+                {@const IconComponent = item.icon}
+                {#if item.href}
+                  <a
+                    href={item.href}
+                    class="flex w-full items-center justify-between rounded-xl px-4 py-4 text-left transition-colors hover:bg-gray-50"
+                  >
+                    <div class="flex items-center space-x-3">
+                      <div
+                        class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100"
+                      >
+                        <IconComponent size={20} class="text-purple-600" />
+                      </div>
+                      <div>
+                        <div class="font-medium text-gray-900">
+                          {item.title}
+                        </div>
+                        <div class="text-sm text-gray-600">
+                          {item.description}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={20} class="text-gray-400" />
+                  </a>
+                {/if}
+              {/each}
+            </div>
+          </div>
+        </div>
+
+        <!-- Support Section -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold text-gray-900">Support</h2>
+
+          <div
+            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+          >
+            <div class="space-y-1">
+              {#each infoItems as item (item.title)}
+                <a
+                  href={item.href}
+                  class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                >
+                  <div class="font-medium text-gray-700">{item.title}</div>
+                  <ChevronRight size={16} class="text-gray-400" />
+                </a>
+              {/each}
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Section -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-semibold text-gray-900">Account</h2>
+
+          <div
+            class="rounded-2xl border border-white/50 bg-white/90 p-6 backdrop-blur-sm"
+          >
+            <div class="space-y-1">
+              <button
+                onclick={showPasswordResetRequestForm}
+                class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-gray-50"
+              >
+                <div class="font-medium text-gray-700">Reset Password</div>
+                <ChevronRight size={16} class="text-gray-400" />
+              </button>
+
               <button
                 onclick={handleSignOut}
-                class="w-full rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50"
+                class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-red-50"
               >
-                Sign Out
+                <div class="font-medium text-red-600">Sign Out</div>
+                <ChevronRight size={16} class="text-red-400" />
               </button>
             </div>
           </div>
