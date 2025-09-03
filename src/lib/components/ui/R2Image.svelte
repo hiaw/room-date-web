@@ -22,27 +22,42 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  // Generate the signed URL
-  async function loadImageUrl() {
-    try {
-      loading = true;
-      error = null;
-      const url = await convex.mutation(api.imageStorage.getImageUrl, {
-        key: imageKey,
-        expiresInSeconds,
-      });
-      imageUrl = url;
-    } catch (err) {
-      console.error("Error loading image URL:", err);
-      error = err instanceof Error ? err.message : "Failed to load image";
-    } finally {
-      loading = false;
-    }
-  }
-
-  // Load URL when component mounts
+  // Generate URL when component mounts or imageKey changes, and set up automatic refresh
   $effect(() => {
-    loadImageUrl();
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    async function loadImageUrlWithRefresh() {
+      try {
+        loading = true;
+        error = null;
+        const url = await convex.mutation(api.imageStorage.getImageUrl, {
+          key: imageKey,
+          expiresInSeconds,
+        });
+        imageUrl = url;
+
+        // Refresh the URL 60 seconds before it expires to be safe
+        const refreshInMs = (expiresInSeconds - 60) * 1000;
+        if (refreshInMs > 0) {
+          timeoutId = setTimeout(loadImageUrlWithRefresh, refreshInMs);
+        }
+      } catch (err) {
+        console.error("Error loading image URL:", err);
+        error = err instanceof Error ? err.message : "Failed to load image";
+      } finally {
+        loading = false;
+      }
+    }
+
+    // Only load if we have an imageKey
+    if (imageKey) {
+      loadImageUrlWithRefresh();
+    }
+
+    // Cleanup function to clear timeout when component unmounts or imageKey changes
+    return () => {
+      clearTimeout(timeoutId);
+    };
   });
 </script>
 
