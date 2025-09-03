@@ -31,10 +31,12 @@
   let isSubmitting = $state(false);
 
   // Queries
-  const messagesQuery = useQuery(api.connections.getMessages, { connectionId });
-  const connectionQuery = useQuery(api.connections.getConnection, {
+  const messagesQuery = useQuery(api.connections.getMessages, () => ({
     connectionId,
-  });
+  }));
+  const connectionQuery = useQuery(api.connections.getConnection, () => ({
+    connectionId,
+  }));
 
   // Convex client for mutations
   const convex = useConvexClient();
