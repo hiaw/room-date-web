@@ -83,8 +83,29 @@ export const getImageUrl = mutation({
   },
 });
 
-// Helper function to verify if user owns an image key
+// Helper function to verify if user owns an image key (efficient single query)
 async function verifyImageOwnership(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  key: string,
+): Promise<boolean> {
+  // Single efficient query using the images table
+  const imageRecord = await ctx.db
+    .query("images")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .first();
+
+  // If no record exists, fall back to legacy verification for backwards compatibility
+  if (!imageRecord) {
+    return await legacyVerifyImageOwnership(ctx, userId, key);
+  }
+
+  // Check if the user owns this image
+  return imageRecord.ownerId === userId;
+}
+
+// Legacy verification function for images uploaded before the images table
+async function legacyVerifyImageOwnership(
   ctx: MutationCtx,
   userId: Id<"users">,
   key: string,
@@ -125,6 +146,54 @@ async function verifyImageOwnership(
   return false;
 }
 
+// Helper function to track uploaded image in the images table
+export const trackImageUpload = mutation({
+  args: {
+    key: v.string(),
+    entityType: v.union(
+      v.literal("user_profile"),
+      v.literal("room"),
+      v.literal("event"),
+    ),
+    entityId: v.optional(v.union(v.id("rooms"), v.id("events"))),
+    isPrimary: v.optional(v.boolean()),
+    originalFileName: v.optional(v.string()),
+    sizeBytes: v.optional(v.number()),
+    mimeType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to track image uploads");
+    }
+
+    // Create image record
+    await ctx.db.insert("images", {
+      key: args.key,
+      ownerId: userId,
+      entityType: args.entityType,
+      entityId: args.entityId,
+      isPrimary: args.isPrimary ?? false,
+      originalFileName: args.originalFileName,
+      uploadedAt: Date.now(),
+      sizeBytes: args.sizeBytes,
+      mimeType: args.mimeType,
+    });
+  },
+});
+
+// Helper function to remove image tracking when image is deleted
+async function untrackImage(ctx: MutationCtx, key: string): Promise<void> {
+  const imageRecord = await ctx.db
+    .query("images")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .first();
+
+  if (imageRecord) {
+    await ctx.db.delete(imageRecord._id);
+  }
+}
+
 // Helper function to delete images from R2
 export const deleteImage = mutation({
   args: { key: v.string() },
@@ -140,7 +209,13 @@ export const deleteImage = mutation({
       throw new Error("Unauthorized: You can only delete images that you own");
     }
 
-    return await r2.deleteObject(ctx, key);
+    // Delete from R2 storage
+    const result = await r2.deleteObject(ctx, key);
+
+    // Remove tracking record
+    await untrackImage(ctx, key);
+
+    return result;
   },
 });
 
@@ -163,8 +238,13 @@ export const deleteImages = mutation({
       }
     }
 
-    // Delete all images in parallel only after verifying ownership of all
+    // Delete all images from R2 in parallel
     const deletePromises = keys.map((key) => r2.deleteObject(ctx, key));
-    return await Promise.all(deletePromises);
+    const results = await Promise.all(deletePromises);
+
+    // Remove all tracking records
+    await Promise.all(keys.map((key) => untrackImage(ctx, key)));
+
+    return results;
   },
 });
