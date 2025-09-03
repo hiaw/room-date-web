@@ -50,7 +50,7 @@
         bio: bio || undefined,
       });
 
-      goto("/settings");
+      goto("/profile");
     } catch (error) {
       console.error("Failed to update privacy settings:", error);
       alert("Failed to update privacy settings. Please try again.");
@@ -60,7 +60,7 @@
   }
 
   function handleBack() {
-    goto("/settings");
+    goto("/profile");
   }
 </script>
 

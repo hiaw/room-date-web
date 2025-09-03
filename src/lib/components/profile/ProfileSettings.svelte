@@ -34,7 +34,7 @@
       </button>
 
       <button
-        onclick={() => goto("/settings/notifications")}
+        onclick={() => goto("/profile/preferences")}
         class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
       >
         Notification Preferences
