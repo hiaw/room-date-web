@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../../../../lib/convex/api.js";
+  import { api } from "../../../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -14,22 +14,8 @@
   import EventTimingForm from "$lib/components/events/EventTimingForm.svelte";
   import EventGuestPreferences from "$lib/components/events/EventGuestPreferences.svelte";
   import type { Id } from "../../../../../convex/_generated/dataModel";
-  import { browser } from "$app/environment";
 
   const roomId = $page.params.roomId as Id<"rooms">;
-
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in event create page:", error);
-      });
-  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -39,9 +25,7 @@
   });
 
   // Fetch room details
-  let roomQuery = $derived(
-    api ? useQuery((api as ConvexAPI).rooms.getRoom, { roomId }) : null,
-  );
+  let roomQuery = useQuery(api.rooms.getRoom, { roomId });
   let room = $derived(roomQuery?.data);
   let roomLoading = $derived(roomQuery?.isLoading ?? true);
 
@@ -164,10 +148,6 @@
         eventImages,
         primaryEventImageUrl: eventImages[0] || undefined,
       };
-
-      if (!api) {
-        throw new Error("API not available");
-      }
 
       await convex.mutation(api.events.createEvent, eventData);
       goto("/my-rooms");

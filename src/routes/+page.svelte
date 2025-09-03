@@ -2,26 +2,12 @@
   import { onMount, tick } from "svelte";
   import { replaceState, goto } from "$app/navigation";
   import { useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../lib/convex/api.js";
+  import { api } from "../convex/_generated/api.js";
   import { authStore, isAuthenticated } from "../lib/stores/auth.js";
   import AuthenticatedView from "../lib/components/AuthenticatedView.svelte";
   import UnauthenticatedView from "../lib/components/UnauthenticatedView.svelte";
-  import { browser } from "$app/environment";
 
   const convex = useConvexClient();
-
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in +page.svelte:", error);
-      });
-  }
 
   let passwordResetCode = $state<string | undefined>(undefined);
 
@@ -41,7 +27,10 @@
 
     // Don't process OAuth callback if user just signed out
     if (urlParams.get("signedOut") === "true") {
-      authStore.signOut();
+      console.log("User signed out, cleaning up");
+      authStore.setLoading(false);
+      // Clean up URL
+      await safeReplaceState("/");
       return;
     }
 
@@ -51,11 +40,6 @@
 
       if (verifier) {
         // This is an OAuth code - handle OAuth flow
-        if (!api) {
-          authStore.setAuthError("API not ready");
-          return;
-        }
-
         try {
           authStore.setLoading(true);
 
@@ -119,9 +103,7 @@
             setTimeout(() => reject(new Error("Auth timeout")), 10000),
           );
 
-          const userDataPromise = api
-            ? convex.query(api.users.getUserProfile, {})
-            : Promise.resolve(null);
+          const userDataPromise = convex.query(api.users.getUserProfile, {});
           const userData = (await Promise.race([
             userDataPromise,
             timeoutPromise,

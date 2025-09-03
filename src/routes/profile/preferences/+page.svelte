@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../../lib/convex/api.js";
+  import { api } from "../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Save } from "lucide-svelte";
@@ -10,20 +10,6 @@
   import NotificationPreferences from "$lib/components/profile/NotificationPreferences.svelte";
   import DiscoveryPreferences from "$lib/components/profile/DiscoveryPreferences.svelte";
   import AppearancePreferences from "$lib/components/profile/AppearancePreferences.svelte";
-  import { browser } from "$app/environment";
-
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in preferences page:", error);
-      });
-  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -33,9 +19,7 @@
   });
 
   // Fetch current profile and settings
-  let profileQuery = $derived(
-    api ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {}) : null,
-  );
+  let profileQuery = useQuery(api.userProfiles.getUserProfile, {});
   let settings = $derived(profileQuery?.data?.settings);
   let loading = $derived(profileQuery?.isLoading ?? true);
 
@@ -75,11 +59,6 @@
   async function handleSave(event: Event) {
     event.preventDefault();
     saving = true;
-
-    if (!api) {
-      alert("API not available. Please try again.");
-      return;
-    }
 
     try {
       await convex.mutation(api.userProfiles.updateUserSettings, {

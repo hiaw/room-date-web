@@ -1,21 +1,8 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
   import { Upload, X, Camera } from "lucide-svelte";
+  import { api } from "../../../convex/_generated/api.js";
   import { useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "$lib/convex/api.js";
-
-  // Import API only on client side to avoid SSR issues
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in ImageUploader:", error);
-      });
-  }
+  import { browser } from "$app/environment";
 
   interface Props {
     images?: string[];

@@ -1,10 +1,9 @@
 <script lang="ts">
   import { useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../convex/api.js";
+  import { api } from "../../../convex/_generated/api.js";
   import { MapPin, User, Calendar } from "lucide-svelte";
   import Button from "../ui/Button.svelte";
   import type { OnboardingModalProps } from "$lib/types/components.js";
-  import { browser } from "$app/environment";
 
   let {
     open = $bindable(),
@@ -15,19 +14,6 @@
   let convex = useConvexClient();
   let step = $state(1);
   let saving = $state(false);
-
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in OnboardingModal:", error);
-      });
-  }
 
   // Form data
   let displayName = $state("");
@@ -147,26 +133,19 @@
   }
 
   async function handleSave() {
-    if (!api) {
-      validationErrors.save = "API not ready. Please try again.";
-      return;
-    }
-
     saving = true;
     validationErrors.save = undefined; // Clear any previous save error
 
     try {
-      const profileData = {
+      await convex.mutation(api.userProfiles.updateUserProfile, {
         displayName: displayName.trim(),
         dateOfBirth: new Date(dateOfBirth).getTime(),
-        bio: bio.trim() || undefined,
+        bio: bio.trim() || undefined, // Only save if provided
         location: location || undefined,
         latitude,
         longitude,
         locationSharing,
-      };
-
-      await convex.mutation(api.userProfiles.updateUserProfile, profileData);
+      });
 
       // Update settings with location preferences
       await convex.mutation(api.userProfiles.updateUserSettings, {

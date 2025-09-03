@@ -1,31 +1,15 @@
 <script lang="ts">
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../convex/api.js";
+  import { api } from "../../../convex/_generated/api.js";
   import { Monitor, Smartphone, Tablet, X } from "lucide-svelte";
   import Button from "../ui/Button.svelte";
   import { generateDeviceFingerprint } from "$lib/utils/security.js";
   import type { Id } from "../../../convex/_generated/dataModel.js";
-  import { browser } from "$app/environment";
 
   let convex = useConvexClient();
 
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in SessionManagement:", error);
-      });
-  }
-
   // Fetch user's active sessions
-  let sessionsQuery = $derived(
-    api ? useQuery((api as ConvexAPI).sessions.getUserSessions, {}) : null,
-  );
+  let sessionsQuery = useQuery(api.sessions.getUserSessions, {});
   let sessions = $derived(sessionsQuery?.data ?? []);
   let loading = $derived(sessionsQuery?.isLoading ?? true);
 
@@ -83,11 +67,6 @@
 
   // Revoke a specific session
   async function revokeSession(sessionId: string) {
-    if (!api) {
-      console.error("API not available");
-      return;
-    }
-
     try {
       await convex.mutation(api.sessions.revokeSession, {
         sessionId: sessionId as Id<"authSessions">,
@@ -99,11 +78,6 @@
 
   // Revoke all other sessions
   async function revokeAllOtherSessions() {
-    if (!api) {
-      console.error("API not available");
-      return;
-    }
-
     try {
       await convex.mutation(api.sessions.revokeAllOtherSessions, {});
     } catch (error) {

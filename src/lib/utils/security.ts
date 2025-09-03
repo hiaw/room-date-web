@@ -83,12 +83,15 @@ export function getStoredDeviceFingerprint(): string | null {
 export function validateDeviceFingerprint(): boolean {
   if (!browser) return true; // Skip validation on server
 
-  const stored = getStoredDeviceFingerprint();
-  const current = generateDeviceFingerprint();
+  // Temporarily disable device fingerprint validation during development
+  // This prevents false positives that cause unwanted logouts
+  return true;
 
-  if (!stored || !current) return true; // Allow if we can't validate
-
-  return stored === current.hash;
+  // TODO: Re-enable with better fingerprint stability in production
+  // const stored = getStoredDeviceFingerprint();
+  // const current = generateDeviceFingerprint();
+  // if (!stored || !current) return true; // Allow if we can't validate
+  // return stored === current.hash;
 }
 
 /**

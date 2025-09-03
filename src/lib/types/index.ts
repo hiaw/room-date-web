@@ -31,7 +31,6 @@ export * from "./domains/messaging";
 export * from "./domains/message-page";
 export * from "./domains/ui-components";
 export * from "./domains/common";
-export * from "./domains/convex";
 
 // UI types (with resolved conflicts)
 export type {

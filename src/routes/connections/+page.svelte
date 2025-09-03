@@ -1,27 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../lib/convex/api.js";
+  import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import ConnectionsHeader from "$lib/components/connections/ConnectionsHeader.svelte";
   import ConversationsList from "$lib/components/connections/ConversationsList.svelte";
   import ConnectionsList from "$lib/components/connections/ConnectionsList.svelte";
-  import { browser } from "$app/environment";
-
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in connections page:", error);
-      });
-  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -35,15 +21,10 @@
   let activeTab = $state<"messages" | "connections">("messages");
 
   // Reactive queries
-  let connectionsQueryResult = $derived(
-    api
-      ? useQuery((api as ConvexAPI).connections.getUserConnections, {})
-      : null,
-  );
-  let conversationsQueryResult = $derived(
-    api
-      ? useQuery((api as ConvexAPI).connections.getUserConversations, {})
-      : null,
+  let connectionsQueryResult = useQuery(api.connections.getUserConnections, {});
+  let conversationsQueryResult = useQuery(
+    api.connections.getUserConversations,
+    {},
   );
 
   let connections = $derived(connectionsQueryResult?.data ?? []);

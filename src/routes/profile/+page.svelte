@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../lib/convex/api.js";
+  import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated, authStore } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { Edit3, Settings, LogOut, Lock } from "lucide-svelte";
@@ -14,20 +14,6 @@
   import PasswordResetForm from "$lib/components/profile/PasswordResetForm.svelte";
   import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
-  import { browser } from "$app/environment";
-
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in profile page:", error);
-      });
-  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -41,9 +27,7 @@
   let showPasswordResetRequest = $state(false);
 
   // Reactive queries
-  let profileQueryResult = $derived(
-    api ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {}) : null,
-  );
+  let profileQueryResult = useQuery(api.userProfiles.getUserProfile, {});
   let profile = $derived(
     profileQueryResult?.data as UserProfileResponse | undefined,
   );

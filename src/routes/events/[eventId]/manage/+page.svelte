@@ -2,7 +2,7 @@
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../../../lib/convex/api.js";
+  import { api } from "../../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { ArrowLeft, Trash2 } from "lucide-svelte";
@@ -12,7 +12,6 @@
   import EventTimingForm from "$lib/components/events/EventTimingForm.svelte";
   import EventGuestPreferences from "$lib/components/events/EventGuestPreferences.svelte";
   import type { Id } from "../../../../convex/_generated/dataModel";
-  import { browser } from "$app/environment";
 
   // Redirect if not authenticated
   onMount(() => {
@@ -24,23 +23,8 @@
   let eventId = $derived($page.params.eventId as Id<"events">);
   let convex = useConvexClient();
 
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error("Failed to load Convex API in event manage page:", error);
-      });
-  }
-
   // Fetch event data - using reactive statement to ensure it updates when eventId changes
-  let eventQuery = $derived(
-    api ? useQuery((api as ConvexAPI).events.getEvent, { eventId }) : null,
-  );
+  let eventQuery = $derived(useQuery(api.events.getEvent, { eventId }));
   let event = $derived(eventQuery?.data);
   let loading = $derived(eventQuery?.isLoading ?? true);
 
@@ -131,7 +115,7 @@
 
   async function handleSave(event: SubmitEvent) {
     event.preventDefault();
-    if (!validateForm() || !api) return;
+    if (!validateForm()) return;
 
     saving = true;
     try {
@@ -174,9 +158,8 @@
   async function handleDelete() {
     if (
       !confirm(
-        "Are you sure you want to delete this event? This cannot be undone.",
-      ) ||
-      !api
+        "Are you sure you want to delete this event? This action cannot be undone.",
+      )
     ) {
       return;
     }

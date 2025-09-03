@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { useQuery, useConvexClient } from "convex-svelte";
-  import { loadApi, type ConvexAPI } from "../../../lib/convex/api.js";
+  import { api } from "../../../convex/_generated/api.js";
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -13,31 +13,13 @@
     Clock,
     Heart,
     Send,
-    MessageCircle,
   } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
   import ApplicationManagement from "$lib/components/events/ApplicationManagement.svelte";
   import type { Id } from "../../../convex/_generated/dataModel";
-  import { browser } from "$app/environment";
 
   const eventId = $page.params.eventId as Id<"events">;
-
-  // Import API only on client side
-  let api: ConvexAPI | null = null;
-
-  if (browser) {
-    loadApi()
-      .then((loadedApi) => {
-        api = loadedApi;
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to load Convex API in event details page:",
-          error,
-        );
-      });
-  }
 
   // Redirect if not authenticated
   onMount(() => {
@@ -47,25 +29,13 @@
   });
 
   // Fetch event details
-  let eventQuery = $derived(
-    api ? useQuery((api as ConvexAPI).events.getEvent, { eventId }) : null,
-  );
+  let eventQuery = useQuery(api.events.getEvent, { eventId });
   let event = $derived(eventQuery?.data);
   let eventLoading = $derived(eventQuery?.isLoading ?? true);
 
   // Get current user to check ownership
-  let userProfileQuery = $derived(
-    api ? useQuery((api as ConvexAPI).userProfiles.getUserProfile, {}) : null,
-  );
+  let userProfileQuery = useQuery(api.userProfiles.getUserProfile, {});
   let currentUser = $derived(userProfileQuery?.data?.user);
-
-  // Check chat access
-  let chatAccessQuery = $derived(
-    api
-      ? useQuery((api as ConvexAPI).eventChat.canAccessEventChat, { eventId })
-      : null,
-  );
-  let canAccessChat = $derived(chatAccessQuery?.data?.canAccess ?? false);
 
   // Create convex client for mutations
   let convex = useConvexClient();
@@ -82,7 +52,7 @@
   }
 
   async function handleApply() {
-    if (!event || !api) return;
+    if (!event) return;
 
     applying = true;
     try {
@@ -91,7 +61,7 @@
         message: "", // Could add a form for this later
       });
       // Refresh event data to show updated application status
-      // Note: In a real app, this would be reactive via Convex subscriptions
+      eventQuery = useQuery(api.events.getEvent, { eventId });
     } catch (error) {
       console.error("Failed to apply:", error);
       alert("Failed to apply to event. Please try again.");
@@ -101,7 +71,7 @@
   }
 
   async function handleBookmark() {
-    if (!event || !api) return;
+    if (!event) return;
 
     bookmarking = true;
     try {
@@ -114,7 +84,8 @@
           eventId: event._id,
         });
       }
-      // Note: In a real app, this would be reactive via Convex subscriptions
+      // Refresh event data
+      eventQuery = useQuery(api.events.getEvent, { eventId });
     } catch (error) {
       console.error("Failed to bookmark:", error);
       alert("Failed to bookmark event. Please try again.");
@@ -362,25 +333,11 @@
               <p class="text-sm text-yellow-700">Waiting for host response</p>
             </div>
           {:else if event.userApplication.status === "approved"}
-            <div class="space-y-3">
-              {#if canAccessChat}
-                <Button
-                  onclick={() => goto(`/events/${eventId}/chat`)}
-                  variant="secondary"
-                  class="w-full"
-                >
-                  <MessageCircle size={16} class="mr-2" />
-                  Join Chat
-                </Button>
-              {/if}
-              <div
-                class="rounded-xl border border-green-200 bg-green-50 p-4 text-center"
-              >
-                <p class="font-medium text-green-800">Application Approved</p>
-                <p class="text-sm text-green-700">
-                  You're going to this event!
-                </p>
-              </div>
+            <div
+              class="rounded-xl border border-green-200 bg-green-50 p-4 text-center"
+            >
+              <p class="font-medium text-green-800">Application Approved</p>
+              <p class="text-sm text-green-700">You're going to this event!</p>
             </div>
           {:else if event.userApplication.status === "rejected"}
             <div
@@ -401,16 +358,6 @@
           >
             Manage Event
           </Button>
-          {#if canAccessChat}
-            <Button
-              onclick={() => goto(`/events/${eventId}/chat`)}
-              variant="secondary"
-              class="w-full"
-            >
-              <MessageCircle size={16} class="mr-2" />
-              Event Chat
-            </Button>
-          {/if}
           <div
             class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center"
           >
