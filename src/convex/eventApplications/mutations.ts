@@ -102,6 +102,25 @@ export const respondToApplication = mutation({
         application.eventId,
       );
 
+      // Ensure owner is a participant (for old events)
+      const ownerParticipant = await ctx.db
+        .query("eventChatParticipants")
+        .withIndex("by_event_user", (q) =>
+          q.eq("eventId", application.eventId).eq("userId", event.ownerId),
+        )
+        .unique();
+
+      let countIncrement = 0;
+      if (!ownerParticipant) {
+        await ctx.db.insert("eventChatParticipants", {
+          eventId: application.eventId,
+          userId: event.ownerId,
+          role: "owner",
+          joinedAt: event._creationTime,
+        });
+        countIncrement++;
+      }
+
       // Add approved user to event chat participants
       const existingParticipant = await ctx.db
         .query("eventChatParticipants")
@@ -119,10 +138,15 @@ export const respondToApplication = mutation({
           role: "participant",
           joinedAt: Date.now(),
         });
+        countIncrement++;
+      }
 
+      if (countIncrement > 0) {
         // Increment the denormalized participant count
+        const currentEvent = await ctx.db.get(application.eventId);
         await ctx.db.patch(application.eventId, {
-          chatParticipantCount: event.chatParticipantCount === undefined ? 2 : event.chatParticipantCount + 1,
+          chatParticipantCount:
+            (currentEvent?.chatParticipantCount ?? 0) + countIncrement,
         });
       }
     }
