@@ -130,10 +130,14 @@
 
           <div class="space-y-4">
             <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700">
+              <label
+                for="display-name"
+                class="mb-2 block text-sm font-medium text-gray-700"
+              >
                 Display Name
               </label>
               <input
+                id="display-name"
                 type="text"
                 bind:value={displayName}
                 placeholder="Your display name"
@@ -145,10 +149,14 @@
             </div>
 
             <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700">
+              <label
+                for="bio"
+                class="mb-2 block text-sm font-medium text-gray-700"
+              >
                 Bio
               </label>
               <textarea
+                id="bio"
                 bind:value={bio}
                 placeholder="Tell others about yourself..."
                 rows="3"
