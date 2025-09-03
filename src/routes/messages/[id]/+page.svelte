@@ -119,8 +119,8 @@
     }
   };
 
-  const handleBackToConnections: NavigationHandler = () => {
-    goto("/connections");
+  const handleBackToMessages: NavigationHandler = () => {
+    goto("/messages");
   };
 
   function formatTime(timestamp: number): string {
@@ -173,7 +173,7 @@
       <Button
         variant="secondary"
         size="sm"
-        onclick={handleBackToConnections}
+        onclick={handleBackToMessages}
         class="p-2"
       >
         <ArrowLeft class="h-5 w-5" />
@@ -224,7 +224,7 @@
         <p class="mb-4 text-gray-600">
           This conversation doesn't exist or you don't have access to it.
         </p>
-        <Button onclick={handleBackToConnections}>Back to Connections</Button>
+        <Button onclick={handleBackToMessages}>Back to Messages</Button>
       </div>
     </div>
   {:else}

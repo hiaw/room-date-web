@@ -4,15 +4,14 @@
   import { api } from "../../convex/_generated/api.js";
   import { isAuthenticated, authStore } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
-  import { Edit3, Settings, LogOut, Lock } from "lucide-svelte";
   import LoadingSpinner from "$lib/components/ui/LoadingSpinner.svelte";
-  import ProfileHeader from "$lib/components/profile/sections/ProfileHeader.svelte";
-  import ProfileDetails from "$lib/components/profile/sections/ProfileDetails.svelte";
-  import PhotoGallery from "$lib/components/profile/sections/PhotoGallery.svelte";
-  import ProfileActions from "$lib/components/profile/sections/ProfileActions.svelte";
-  import ProfileEmpty from "$lib/components/profile/sections/ProfileEmpty.svelte";
   import PasswordResetForm from "$lib/components/profile/PasswordResetForm.svelte";
-  import { getAgeFromBirthDate, formatLocation } from "$lib/utils/profile.js";
+  import ProfileSection from "$lib/components/profile/ProfileSection.svelte";
+  import SocialSection from "$lib/components/profile/SocialSection.svelte";
+  import SettingsSection from "$lib/components/profile/SettingsSection.svelte";
+  import SupportSection from "$lib/components/profile/SupportSection.svelte";
+  import AccountSection from "$lib/components/profile/AccountSection.svelte";
+  import { Palette, Shield } from "lucide-svelte";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
@@ -23,7 +22,6 @@
   });
 
   // State
-  let showSettings = $state(false);
   let showPasswordResetRequest = $state(false);
 
   // Reactive queries
@@ -44,10 +42,6 @@
     goto("/profile/edit");
   }
 
-  function toggleSettings() {
-    showSettings = !showSettings;
-  }
-
   async function handleSignOut() {
     try {
       authStore.signOut();
@@ -59,7 +53,6 @@
 
   function showPasswordResetRequestForm() {
     showPasswordResetRequest = true;
-    showSettings = false;
   }
 
   function hidePasswordResetRequestForm() {
@@ -98,14 +91,41 @@
     }
   }
 
-  let age = $derived(
-    profile?.profile?.dateOfBirth
-      ? getAgeFromBirthDate(profile.profile.dateOfBirth)
-      : null,
-  );
-  let location = $derived(
-    profile?.profile ? formatLocation(profile.profile) : "",
-  );
+  const settingsItems = [
+    {
+      id: "preferences",
+      title: "App Preferences",
+      description: "Discovery, theme, and other preferences",
+      icon: Palette,
+      href: "/profile/preferences",
+    },
+    {
+      id: "privacy",
+      title: "Privacy Settings",
+      description: "Data and visibility preferences",
+      icon: Shield,
+      href: "/settings/privacy",
+    },
+  ];
+
+  const infoItems = [
+    {
+      title: "About Room Dates",
+      href: "/about",
+    },
+    {
+      title: "Help & Support",
+      href: "/help",
+    },
+    {
+      title: "Privacy Policy",
+      href: "/privacy",
+    },
+    {
+      title: "Terms of Service",
+      href: "/terms",
+    },
+  ];
 </script>
 
 <svelte:head>
@@ -124,96 +144,12 @@
         <div>
           <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
           <p class="text-sm text-gray-600">
-            Manage your account and preferences
+            Your profile and personal settings
           </p>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button
-            onclick={handleEditProfile}
-            class="rounded-lg p-2 text-purple-600 transition-colors hover:bg-purple-50"
-            title="Edit Profile"
-          >
-            <Edit3 size={20} />
-          </button>
-          <button
-            onclick={toggleSettings}
-            class="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-50"
-            title="Settings"
-          >
-            <Settings size={20} />
-          </button>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- Settings Panel -->
-  {#if showSettings}
-    <div
-      class="border-b border-gray-100 bg-white/95 px-4 py-4 backdrop-blur-md"
-    >
-      <div class="space-y-3">
-        <button
-          onclick={showPasswordResetRequestForm}
-          class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          <Lock size={18} />
-          <span>Reset Password</span>
-        </button>
-        <button
-          onclick={() => goto("/profile/privacy")}
-          class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          Privacy Settings
-        </button>
-        <button
-          onclick={() => goto("/profile/notifications")}
-          class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          Notification Preferences
-        </button>
-
-        <!-- Divider -->
-        <div class="border-t border-gray-100 pt-3">
-          <button
-            onclick={() => goto("/about")}
-            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            About Room Dates
-          </button>
-          <button
-            onclick={() => goto("/help")}
-            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            Help & Support
-          </button>
-          <button
-            onclick={() => goto("/privacy")}
-            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            Privacy Policy
-          </button>
-          <button
-            onclick={() => goto("/terms")}
-            class="w-full rounded-xl px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            Terms of Service
-          </button>
-        </div>
-
-        <!-- Sign Out -->
-        <div class="border-t border-gray-100 pt-3">
-          <button
-            onclick={handleSignOut}
-            class="flex w-full items-center space-x-2 rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50"
-          >
-            <LogOut size={18} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
 
   <!-- Content -->
   <div class="px-4 py-6">
@@ -239,32 +175,16 @@
       <div class="flex items-center justify-center py-16">
         <LoadingSpinner />
       </div>
-    {:else if !profile?.profile}
-      <ProfileEmpty onSetupProfile={handleEditProfile} />
     {:else}
-      <!-- Profile Content -->
-      <div class="mx-auto max-w-2xl space-y-6">
-        <!-- Profile Header -->
-        <ProfileHeader
-          profile={profile?.profile}
-          {age}
-          {location}
-          onEditProfile={handleEditProfile}
-        />
-
-        <!-- Profile Details -->
-        <ProfileDetails profile={profile?.profile} />
-
-        <!-- Photos -->
-        <PhotoGallery
-          profile={profile?.profile}
-          onEditProfile={handleEditProfile}
-        />
-
-        <!-- Actions -->
-        <ProfileActions
-          onEditProfile={handleEditProfile}
-          onPreferences={() => goto("/profile/preferences")}
+      <!-- Main Profile Content -->
+      <div class="mx-auto max-w-2xl space-y-8">
+        <ProfileSection {profile} onEditProfile={handleEditProfile} />
+        <SocialSection />
+        <SettingsSection {settingsItems} />
+        <SupportSection {infoItems} />
+        <AccountSection
+          onPasswordReset={showPasswordResetRequestForm}
+          onSignOut={handleSignOut}
         />
       </div>
     {/if}

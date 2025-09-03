@@ -5,6 +5,7 @@
     disabled?: boolean;
     loading?: boolean;
     type?: "button" | "submit";
+    form?: string;
     class?: string;
     onclick?: () => void;
     children: import("svelte").Snippet;
@@ -16,6 +17,7 @@
     disabled = false,
     loading = false,
     type = "button",
+    form,
     class: className = "",
     onclick,
     children,
@@ -42,6 +44,7 @@
 
 <button
   {type}
+  {form}
   disabled={disabled || loading}
   {onclick}
   class="{baseClasses} {variantClasses[variant]} {sizeClasses[

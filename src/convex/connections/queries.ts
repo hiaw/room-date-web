@@ -26,6 +26,14 @@ async function getConnectionWithDetails(
     .withIndex("by_user", (q) => q.eq("userId", otherUserId))
     .first();
 
+  // Get personal notes for this connection
+  const personalNote = await ctx.db
+    .query("connectionNotes")
+    .withIndex("by_connection_user", (q) =>
+      q.eq("connectionId", connection._id).eq("userId", currentUserId),
+    )
+    .first();
+
   let unreadCount = 0;
   let lastMessage = null;
 
@@ -56,6 +64,7 @@ async function getConnectionWithDetails(
           profile: otherProfile,
         }
       : undefined,
+    personalNote,
     unreadCount,
     lastMessage,
   };
