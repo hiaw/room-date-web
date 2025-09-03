@@ -127,7 +127,7 @@
   // Reactive query - recreate the query when params change
   let eventsQueryResult = $derived(
     userLocation && api
-      ? useQuery((api as ConvexAPI).events.getEventsNearUser, {
+      ? useQuery(api.events.getEventsNearUser, {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
           radiusMiles: $discoverFilters.maxDistance,

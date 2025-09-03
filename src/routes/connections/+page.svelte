@@ -34,19 +34,8 @@
       (conversationsQueryResult?.isLoading ?? true),
   );
 
-  interface ConversationType {
-    otherUser?: {
-      profile?: {
-        displayName?: string;
-      };
-    };
-    lastMessage?: {
-      content?: string;
-    };
-  }
-
   let filteredConversations = $derived(
-    conversations.filter((conversation: ConversationType) => {
+    conversations.filter((conversation) => {
       if (!searchQuery) return true;
       const searchLower = searchQuery.toLowerCase();
       return (
@@ -58,16 +47,16 @@
     }),
   );
 
+  // Event handlers
+
   let filteredConnections = $derived(
-    connections.filter(
-      (connection: { otherUser?: { profile?: { displayName?: string } } }) => {
-        if (!searchQuery) return true;
-        const searchLower = searchQuery.toLowerCase();
-        return connection.otherUser?.profile?.displayName
-          ?.toLowerCase()
-          .includes(searchLower);
-      },
-    ),
+    connections.filter((connection) => {
+      if (!searchQuery) return true;
+      const searchLower = searchQuery.toLowerCase();
+      return connection.otherUser?.profile?.displayName
+        ?.toLowerCase()
+        .includes(searchLower);
+    }),
   );
 
   // Event handlers

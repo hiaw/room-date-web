@@ -37,6 +37,7 @@
       }
 
       // Get the OAuth redirect URL from Convex
+      // @ts-expect-error - Complex type inference issue with Convex actions
       const result = await convex.action(api.auth.signIn, { provider });
 
       // Store the verifier for use in the callback (now using sessionStorage)
