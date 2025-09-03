@@ -11,7 +11,7 @@
   import SettingsSection from "$lib/components/profile/SettingsSection.svelte";
   import SupportSection from "$lib/components/profile/SupportSection.svelte";
   import AccountSection from "$lib/components/profile/AccountSection.svelte";
-  import { Palette, Shield } from "lucide-svelte";
+  import { Palette, Shield, CreditCard } from "lucide-svelte";
   import type { UserProfileResponse } from "$lib/types/domains/user-types.js";
 
   // Redirect if not authenticated
@@ -92,6 +92,13 @@
   }
 
   const settingsItems = [
+    {
+      id: "credits",
+      title: "Credits",
+      description: "Manage your credits and purchase more",
+      icon: CreditCard,
+      href: "/credits",
+    },
     {
       id: "preferences",
       title: "App Preferences",

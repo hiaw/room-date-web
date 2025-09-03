@@ -1,9 +1,14 @@
 <script lang="ts">
   import { CreditCard, Package, Check } from "lucide-svelte";
   import Button from "./ui/Button.svelte";
+  import { useConvexClient } from "convex-svelte";
+  import { api } from "../../convex/_generated/api.js";
+  import { authStore } from "$lib/stores/auth.js";
 
   let selectedPackage = $state("credits_5");
   let loading = $state(false);
+
+  const convex = useConvexClient();
 
   const creditPackages = [
     {
@@ -28,17 +33,42 @@
     },
   ];
 
-  function handlePurchase() {
+  async function handlePurchase() {
+    if (!$authStore.isAuthenticated) {
+      alert("Please sign in to purchase credits");
+      return;
+    }
+
+    const selectedPkg = creditPackages.find(
+      (pkg) => pkg.id === selectedPackage,
+    );
+    if (!selectedPkg) return;
+
     loading = true;
 
-    // TODO: Implement Stripe payment integration
-    console.log("Purchasing package:", selectedPackage);
+    try {
+      // For now, we'll simulate the payment since we need Stripe keys
+      console.log(
+        `Would purchase ${selectedPkg.credits} credits for $${selectedPkg.price}`,
+      );
 
-    // Simulate API call
-    setTimeout(() => {
+      // In a production app, you'd call:
+      // const paymentIntent = await convex.mutation(api.payments.createPaymentIntent, {
+      //   credits: selectedPkg.credits,
+      //   amount: selectedPkg.price * 100, // Convert to cents
+      //   currency: "usd",
+      // });
+      // window.location.href = paymentIntent.checkoutUrl;
+
+      alert(
+        `Payment ready! Would process ${selectedPkg.credits} credits ($${selectedPkg.price})`,
+      );
+    } catch (error) {
+      console.error("Payment error:", error);
+      alert("Payment failed. Please try again.");
+    } finally {
       loading = false;
-      alert("Payment integration coming soon!");
-    }, 1000);
+    }
   }
 </script>
 
