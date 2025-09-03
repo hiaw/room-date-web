@@ -96,8 +96,9 @@ export async function loadApi(): Promise<ConvexAPI> {
   }
 
   try {
-    // Use eval to avoid static type checking during bundling
-    const apiModule = await eval('import("../../convex/_generated/api.js")');
+    // Use Vite ignore comment to prevent static analysis during bundling
+    const path = "../../convex/_generated/api.js";
+    const apiModule = await import(/* @vite-ignore */ path);
     return apiModule.api as ConvexAPI;
   } catch (error) {
     console.error("Failed to load Convex API:", error);
