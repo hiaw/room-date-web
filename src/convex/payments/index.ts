@@ -3,11 +3,60 @@ import {
   query,
   action,
   internalMutation,
+  MutationCtx,
 } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import type { Id } from "../_generated/dataModel";
+import type { Id, Doc } from "../_generated/dataModel";
 import Stripe from "stripe";
+
+// Helper function for granting credits and creating transaction record
+async function grantCreditsForPayment(
+  ctx: MutationCtx,
+  payment: Doc<"paymentTransactions">,
+  customDescription?: string,
+) {
+  // Get or create user's credit record
+  const creditRecord = await ctx.db
+    .query("connectionCredits")
+    .withIndex("by_user", (q) => q.eq("userId", payment.userId))
+    .unique();
+
+  if (!creditRecord) {
+    // Create initial credit record
+    await ctx.db.insert("connectionCredits", {
+      userId: payment.userId,
+      availableCredits: payment.creditsGranted,
+      heldCredits: 0,
+      totalPurchased: payment.creditsGranted,
+      totalUsed: 0,
+      lastUpdated: Date.now(),
+    });
+  } else {
+    // Update existing record
+    await ctx.db.patch(creditRecord._id, {
+      availableCredits: creditRecord.availableCredits + payment.creditsGranted,
+      totalPurchased: creditRecord.totalPurchased + payment.creditsGranted,
+      lastUpdated: Date.now(),
+    });
+  }
+
+  // Record credit transaction
+  const description =
+    customDescription ||
+    `Purchased ${payment.creditsGranted} credits for $${(payment.amount / 100).toFixed(2)}`;
+
+  await ctx.db.insert("creditTransactions", {
+    userId: payment.userId,
+    type: "purchase",
+    amount: payment.creditsGranted,
+    paymentTransactionId: payment._id,
+    description,
+    timestamp: Date.now(),
+  });
+
+  return { success: true, creditsGranted: payment.creditsGranted };
+}
 
 // Create Stripe Checkout Session (ACTION - allows external API calls)
 export const createCheckoutSession = action({
@@ -222,43 +271,8 @@ export const completePayment = mutation({
       updatedAt: Date.now(),
     });
 
-    // Get or create user's credit record
-    const creditRecord = await ctx.db
-      .query("connectionCredits")
-      .withIndex("by_user", (q) => q.eq("userId", payment.userId))
-      .unique();
-
-    if (!creditRecord) {
-      // Create initial credit record
-      await ctx.db.insert("connectionCredits", {
-        userId: payment.userId,
-        availableCredits: payment.creditsGranted,
-        heldCredits: 0,
-        totalPurchased: payment.creditsGranted,
-        totalUsed: 0,
-        lastUpdated: Date.now(),
-      });
-    } else {
-      // Update existing record
-      await ctx.db.patch(creditRecord._id, {
-        availableCredits:
-          creditRecord.availableCredits + payment.creditsGranted,
-        totalPurchased: creditRecord.totalPurchased + payment.creditsGranted,
-        lastUpdated: Date.now(),
-      });
-    }
-
-    // Record credit transaction
-    await ctx.db.insert("creditTransactions", {
-      userId: payment.userId,
-      type: "purchase",
-      amount: payment.creditsGranted,
-      paymentTransactionId: args.paymentTransactionId,
-      description: `Purchased ${payment.creditsGranted} credits for $${(payment.amount / 100).toFixed(2)}`,
-      timestamp: Date.now(),
-    });
-
-    return { success: true, creditsGranted: payment.creditsGranted };
+    // Grant credits using shared logic
+    return await grantCreditsForPayment(ctx, payment);
   },
 });
 
@@ -309,49 +323,14 @@ export const completePaymentByIntentId = mutation({
       return { success: true, message: "Payment already processed" };
     }
 
-    // Complete the payment using the completePayment function
+    // Update payment status
     await ctx.db.patch(payment._id, {
       status: "completed",
       updatedAt: Date.now(),
     });
 
-    // Get or create user's credit record
-    const creditRecord = await ctx.db
-      .query("connectionCredits")
-      .withIndex("by_user", (q) => q.eq("userId", payment.userId))
-      .unique();
-
-    if (!creditRecord) {
-      // Create initial credit record
-      await ctx.db.insert("connectionCredits", {
-        userId: payment.userId,
-        availableCredits: payment.creditsGranted,
-        heldCredits: 0,
-        totalPurchased: payment.creditsGranted,
-        totalUsed: 0,
-        lastUpdated: Date.now(),
-      });
-    } else {
-      // Update existing record
-      await ctx.db.patch(creditRecord._id, {
-        availableCredits:
-          creditRecord.availableCredits + payment.creditsGranted,
-        totalPurchased: creditRecord.totalPurchased + payment.creditsGranted,
-        lastUpdated: Date.now(),
-      });
-    }
-
-    // Record credit transaction
-    await ctx.db.insert("creditTransactions", {
-      userId: payment.userId,
-      type: "purchase",
-      amount: payment.creditsGranted,
-      paymentTransactionId: payment._id,
-      description: `Purchased ${payment.creditsGranted} credits for $${(payment.amount / 100).toFixed(2)}`,
-      timestamp: Date.now(),
-    });
-
-    return { success: true, creditsGranted: payment.creditsGranted };
+    // Grant credits using shared logic
+    return await grantCreditsForPayment(ctx, payment);
   },
 });
 
@@ -498,42 +477,12 @@ export const processWebhookPayment = internalMutation({
       updatedAt: Date.now(),
     });
 
-    // Get user's current credit record
-    const creditRecord = await ctx.db
-      .query("connectionCredits")
-      .withIndex("by_user", (q) => q.eq("userId", existingPayment.userId))
-      .unique();
-
-    if (!creditRecord) {
-      // Create credit record if it doesn't exist
-      await ctx.db.insert("connectionCredits", {
-        userId: existingPayment.userId,
-        availableCredits: existingPayment.creditsGranted,
-        heldCredits: 0,
-        totalPurchased: existingPayment.creditsGranted,
-        totalUsed: 0,
-        lastUpdated: Date.now(),
-      });
-    } else {
-      // Update existing record
-      await ctx.db.patch(creditRecord._id, {
-        availableCredits:
-          creditRecord.availableCredits + existingPayment.creditsGranted,
-        totalPurchased:
-          creditRecord.totalPurchased + existingPayment.creditsGranted,
-        lastUpdated: Date.now(),
-      });
-    }
-
-    // Record credit transaction
-    await ctx.db.insert("creditTransactions", {
-      userId: existingPayment.userId,
-      type: "purchase",
-      amount: existingPayment.creditsGranted,
-      paymentTransactionId: existingPayment._id,
-      description: `Purchased ${existingPayment.creditsGranted} credits via Stripe`,
-      timestamp: Date.now(),
-    });
+    // Grant credits using shared logic
+    await grantCreditsForPayment(
+      ctx,
+      existingPayment,
+      `Purchased ${existingPayment.creditsGranted} credits via Stripe`,
+    );
 
     // Log security event
     await ctx.db.insert("securityEvents", {
