@@ -3,7 +3,7 @@
     discoverFilters,
     updateFilter,
   } from "$lib/stores/discover-filters.js";
-  import type { ActivityLevel } from "./types.js";
+  import type { ActivityLevel } from "$lib/types/discover.js";
   import { activityLevels } from "./types.js";
 
   function setActivityLevel(level: string) {

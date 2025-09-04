@@ -2,33 +2,21 @@
  * Credit-related constants and utilities
  */
 
+import type {
+  CreditValidationResult,
+  CreditBalance,
+  ModalState,
+} from "$lib/types/credits.js";
+
+// Re-export types for backwards compatibility
+export type { CreditValidationResult, CreditBalance, ModalState };
+
 // Constants
 export const CREDIT_CONSTANTS = {
   LOW_CREDIT_THRESHOLD: 5,
   MAX_GUESTS_FALLBACK: 50,
   MIN_GUESTS: 1,
 } as const;
-
-// Types
-export interface CreditValidationResult {
-  isValid: boolean;
-  error?: string;
-  requiredCredits?: number;
-  availableCredits?: number;
-  shortfall?: number;
-}
-
-export interface CreditBalance {
-  availableCredits: number;
-  heldCredits: number;
-  totalPurchased: number;
-  totalUsed: number;
-}
-
-export interface ModalState {
-  show: boolean;
-  requiredCredits: number;
-}
 
 /**
  * Validates if user has sufficient credits for the requested number of guests

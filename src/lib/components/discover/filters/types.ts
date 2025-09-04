@@ -1,3 +1,5 @@
+import type { DateRange, SortBy } from "$lib/types/discover.js";
+
 export interface EventCategory {
   value: string;
   label: string;
@@ -9,10 +11,6 @@ export interface ActivityLevelOption {
   label: string;
   description: string;
 }
-
-export type DateRange = "any" | "today" | "this_week" | "this_month";
-export type ActivityLevel = "low" | "medium" | "high" | null;
-export type SortBy = "distance" | "date" | "popularity" | "newest";
 
 // Event categories
 export const eventCategories: EventCategory[] = [
