@@ -32,31 +32,14 @@
     paymentMessage = "Processing your payment...";
 
     try {
-      // For now, let's manually grant 10 credits for the test payment
-      // In production, we'd retrieve the session from Stripe to get the actual amount
-      const credits = 10; // This should come from the Stripe session
-      const amount = 4400; // $44.00 in cents
-
-      // Create payment transaction
-      const paymentId = await convex.mutation(
-        api.payments.createPaymentTransaction,
-        {
-          providerTransactionId: sessionId,
-          amount: amount,
-          currency: "usd",
-          creditsToGrant: credits,
-          stripePaymentIntentId: sessionId, // Using session ID for now
-          stripeCustomerId: "",
-        },
-      );
-
-      // Complete the payment and grant credits
-      const result = await convex.mutation(api.payments.completePayment, {
-        paymentTransactionId: paymentId,
+      // SECURITY NOTE: This now calls a backend verification function
+      // instead of trusting client-side values
+      const result = await convex.mutation(api.payments.processStripeRedirect, {
+        sessionId: sessionId,
       });
 
       paymentStatus = "success";
-      paymentMessage = `Success! ${result.creditsGranted} credits have been added to your account.`;
+      paymentMessage = result.message || "Payment processed successfully!";
 
       // Clear URL parameters after processing
       window.history.replaceState({}, document.title, "/credits");

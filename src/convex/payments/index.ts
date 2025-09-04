@@ -376,6 +376,47 @@ export const failPayment = mutation({
   },
 });
 
+// Securely process payment after Stripe redirect (basic verification)
+export const processStripeRedirect = mutation({
+  args: {
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to process payment");
+    }
+
+    // For now, this is a placeholder that validates session format
+    // In a full implementation, we'd use a webhook or server-side verification
+    if (!args.sessionId.startsWith("cs_")) {
+      throw new Error("Invalid session ID format");
+    }
+
+    // Check if already processed
+    const existing = await ctx.db
+      .query("paymentTransactions")
+      .withIndex("by_provider_transaction", (q) =>
+        q.eq("provider", "stripe").eq("providerTransactionId", args.sessionId),
+      )
+      .unique();
+
+    if (existing && existing.status === "completed") {
+      return {
+        success: true,
+        creditsGranted: existing.creditsGranted,
+        message: "Payment already processed",
+      };
+    }
+
+    // This is a temporary implementation - DO NOT USE IN PRODUCTION
+    // The real implementation should verify with Stripe's API
+    throw new Error(
+      "Payment verification not yet implemented - use webhook instead",
+    );
+  },
+});
+
 // Get payment transaction by provider ID (for webhook processing)
 export const getPaymentByProviderTransactionId = query({
   args: {
