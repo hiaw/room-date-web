@@ -54,14 +54,18 @@
 
   // Also check if there's a stored token for cases where auth state hasn't been restored yet
   let hasStoredToken = $state(false);
+  let authInitialized = $state(false);
 
   onMount(() => {
-    // Initialize auth check on mount to handle direct navigation cases
-    authStore.checkExistingAuth();
-
     // Check for stored token to handle race conditions with auth state restoration
     if (browser) {
       hasStoredToken = !!getStoredToken();
+
+      // Only initialize auth check if not already done and we have a token
+      if (hasStoredToken && !$authStore.isAuthenticated && !authInitialized) {
+        authStore.checkExistingAuth();
+        authInitialized = true;
+      }
     }
   });
 

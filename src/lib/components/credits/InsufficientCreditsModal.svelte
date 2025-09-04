@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { CreditCard, X } from "lucide-svelte";
   import Button from "$lib/components/ui/Button.svelte";
+  import { formatCreditCount } from "$lib/utils/credits.js";
 
   interface Props {
     open: boolean;
@@ -15,6 +16,7 @@
     $props();
 
   let shortfall = $derived(Math.max(0, requiredCredits - availableCredits));
+  let hasZeroCredits = $derived(availableCredits === 0);
 
   function handleBuyCredits() {
     onClose();
@@ -43,12 +45,17 @@
   }
 </script>
 
+<!-- Global key handler - only active when modal is open -->
+<svelte:window on:keydown={open ? handleKeydown : undefined} />
+
 {#if open}
-  <svelte:window on:keydown={handleKeydown} />
   <!-- Modal backdrop -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
     onclick={handleModalClick}
+    onkeydown={handleKeydown}
+    role="button"
+    tabindex="0"
   >
     <!-- Modal content -->
     <div
@@ -75,38 +82,39 @@
       </div>
 
       <!-- Title -->
-      <h2 id="modal-title" class="mb-2 text-center text-xl font-bold text-gray-900">
+      <h2
+        id="modal-title"
+        class="mb-2 text-center text-xl font-bold text-gray-900"
+      >
         Insufficient Credits
       </h2>
 
       <!-- Description -->
       <div class="mb-6 text-center text-gray-600">
-        {#if availableCredits === 0}
+        {#if hasZeroCredits}
           <p class="mb-2">
             You need credits to create events with guest limits. You currently
             have no credits available.
           </p>
           <p>
             Purchase <span class="font-semibold text-orange-600"
-              >{requiredCredits}</span
-            >
-            {requiredCredits === 1 ? "credit" : "credits"} to create this event.
+              >{formatCreditCount(requiredCredits)}</span
+            > to create this event.
           </p>
         {:else}
           <p class="mb-2">
             You need <span class="font-semibold text-gray-900"
-              >{requiredCredits}</span
+              >{formatCreditCount(requiredCredits)}</span
             >
-            {requiredCredits === 1 ? "credit" : "credits"} to create this event,
-            but you only have
-            <span class="font-semibold text-gray-900">{availableCredits}</span>
-            {availableCredits === 1 ? "credit" : "credits"} available.
+            to create this event, but you only have
+            <span class="font-semibold text-gray-900"
+              >{formatCreditCount(availableCredits)}</span
+            > available.
           </p>
           <p>
             You need <span class="font-semibold text-orange-600"
-              >{shortfall}</span
-            >
-            more {shortfall === 1 ? "credit" : "credits"} to continue.
+              >{formatCreditCount(shortfall)}</span
+            > more to continue.
           </p>
         {/if}
       </div>
@@ -135,7 +143,7 @@
           Buy More Credits
         </Button>
         <Button variant="secondary" onclick={handleCancel} class="sm:flex-1">
-          {#if availableCredits === 0}
+          {#if hasZeroCredits}
             Go Back
           {:else}
             Cancel

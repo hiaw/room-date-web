@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    validateCreditsForGuests,
+    getMaxGuestsAllowed,
+    formatCreditCount,
+  } from "$lib/utils/credits.js";
+
   interface Props {
     maxGuests: number | undefined;
     minAge: number | undefined;
@@ -58,10 +64,13 @@
   function handleMaxGuestsChange(value: string) {
     const num = value === "" ? undefined : Number(value);
 
-    // Check if user has sufficient credits
-    if (num && availableCredits !== undefined && num > availableCredits) {
-      onInsufficientCredits?.(num);
-      return;
+    // Use utility function to validate credits
+    if (num && availableCredits !== undefined) {
+      const validation = validateCreditsForGuests(num, availableCredits);
+      if (!validation.isValid) {
+        onInsufficientCredits?.(num);
+        return;
+      }
     }
 
     onMaxGuestsChange(num);
@@ -121,8 +130,7 @@
       </label>
       {#if availableCredits !== undefined}
         <span class="text-xs text-gray-500">
-          {availableCredits}
-          {availableCredits === 1 ? "credit" : "credits"} available
+          {formatCreditCount(availableCredits)} available
         </span>
       {/if}
     </div>
@@ -133,7 +141,7 @@
       oninput={(e) =>
         handleMaxGuestsChange((e.target as HTMLInputElement).value)}
       min="1"
-      max={availableCredits ?? 50}
+      max={getMaxGuestsAllowed(availableCredits)}
       placeholder="Leave empty for no limit"
       class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none"
     />
@@ -146,8 +154,7 @@
       </p>
     {:else if availableCredits !== undefined && maxGuests && maxGuests > availableCredits}
       <p class="mt-1 text-xs text-orange-600">
-        You only have {availableCredits}
-        {availableCredits === 1 ? "credit" : "credits"}.
+        You only have {formatCreditCount(availableCredits)}.
         <a href="/credits" class="underline hover:no-underline"
           >Buy more credits</a
         > to allow more guests.
