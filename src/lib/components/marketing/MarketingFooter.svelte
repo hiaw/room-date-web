@@ -1,10 +1,5 @@
 <script lang="ts">
   import { Heart, Smartphone, Monitor } from "lucide-svelte";
-  import { goto } from "$app/navigation";
-
-  function navigateTo(path: string) {
-    goto(path);
-  }
 
   // TODO: Replace with actual app store URLs when available
   const appStoreUrl = "#"; // "https://apps.apple.com/app/room-dates/id123456789"
@@ -72,36 +67,36 @@
         <h3 class="mb-4 text-sm font-semibold text-gray-900">Quick Links</h3>
         <ul class="space-y-3">
           <li>
-            <button
-              onclick={() => navigateTo("/")}
+            <a
+              href="/"
               class="text-sm text-gray-600 transition-colors hover:text-purple-600"
             >
               Home
-            </button>
+            </a>
           </li>
           <li>
-            <button
-              onclick={() => navigateTo("/about")}
+            <a
+              href="/about"
               class="text-sm text-gray-600 transition-colors hover:text-purple-600"
             >
               About Us
-            </button>
+            </a>
           </li>
           <li>
-            <button
-              onclick={() => navigateTo("/faq")}
+            <a
+              href="/faq"
               class="text-sm text-gray-600 transition-colors hover:text-purple-600"
             >
               FAQ
-            </button>
+            </a>
           </li>
           <li>
-            <button
-              onclick={() => navigateTo("/auth")}
+            <a
+              href="/auth"
               class="text-sm text-gray-600 transition-colors hover:text-purple-600"
             >
               Sign Up
-            </button>
+            </a>
           </li>
         </ul>
       </div>
@@ -111,20 +106,20 @@
         <h3 class="mb-4 text-sm font-semibold text-gray-900">Legal</h3>
         <ul class="space-y-3">
           <li>
-            <button
-              onclick={() => navigateTo("/privacy")}
+            <a
+              href="/privacy"
               class="text-sm text-gray-600 transition-colors hover:text-purple-600"
             >
               Privacy Policy
-            </button>
+            </a>
           </li>
           <li>
-            <button
-              onclick={() => navigateTo("/terms")}
+            <a
+              href="/terms"
               class="text-sm text-gray-600 transition-colors hover:text-purple-600"
             >
               Terms of Service
-            </button>
+            </a>
           </li>
         </ul>
 

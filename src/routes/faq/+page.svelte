@@ -144,12 +144,12 @@
             >
               Contact Support
             </a>
-            <button
-              onclick={() => (window.location.href = "/auth")}
+            <a
+              href="/auth"
               class="inline-flex items-center justify-center rounded-full border border-purple-600 px-6 py-3 font-medium text-purple-600 transition-colors hover:bg-purple-50"
             >
               Get Started
-            </button>
+            </a>
           </div>
         </div>
       </div>

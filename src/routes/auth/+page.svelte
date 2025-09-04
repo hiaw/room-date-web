@@ -72,17 +72,11 @@
       <div
         class="flex items-center justify-center space-x-4 text-xs text-gray-400"
       >
-        <button onclick={() => goto("/privacy")} class="hover:text-gray-600"
-          >Privacy</button
-        >
+        <a href="/privacy" class="hover:text-gray-600">Privacy</a>
         <span>•</span>
-        <button onclick={() => goto("/terms")} class="hover:text-gray-600"
-          >Terms</button
-        >
+        <a href="/terms" class="hover:text-gray-600">Terms</a>
         <span>•</span>
-        <button onclick={() => goto("/faq")} class="hover:text-gray-600"
-          >FAQ</button
-        >
+        <a href="/faq" class="hover:text-gray-600">FAQ</a>
       </div>
     </div>
   </div>
