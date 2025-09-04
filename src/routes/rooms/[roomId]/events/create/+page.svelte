@@ -141,12 +141,6 @@
       }
     }
 
-    // Credit validation - check if user has sufficient credits for event creation
-    if (maxGuests && maxGuests > 0 && availableCredits < maxGuests) {
-      modalState = { show: true, requiredCredits: maxGuests };
-      return;
-    }
-
     // Validate age range
     if (minAge && maxAge && minAge > maxAge) {
       alert("Minimum age cannot be greater than maximum age");

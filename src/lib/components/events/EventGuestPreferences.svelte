@@ -63,6 +63,7 @@
 
   function handleMaxGuestsChange(value: string) {
     const num = value === "" ? undefined : Number(value);
+    onMaxGuestsChange(num);
 
     // Use utility function to validate credits
     if (num && availableCredits !== undefined) {
@@ -72,8 +73,6 @@
         return;
       }
     }
-
-    onMaxGuestsChange(num);
 
     // Update guest preferences array to match new size
     if (num) {
