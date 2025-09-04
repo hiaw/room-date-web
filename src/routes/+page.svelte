@@ -5,7 +5,7 @@
   import { api } from "../convex/_generated/api.js";
   import { authStore, isAuthenticated } from "../lib/stores/auth.js";
   import AuthenticatedView from "../lib/components/AuthenticatedView.svelte";
-  import UnauthenticatedView from "../lib/components/UnauthenticatedView.svelte";
+  import MarketingHomepage from "../lib/components/marketing/MarketingHomepage.svelte";
 
   const convex = useConvexClient();
 
@@ -132,5 +132,5 @@
 {#if $isAuthenticated}
   <AuthenticatedView />
 {:else}
-  <UnauthenticatedView {passwordResetCode} />
+  <MarketingHomepage {passwordResetCode} />
 {/if}
