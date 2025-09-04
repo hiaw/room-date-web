@@ -98,7 +98,7 @@ export const paymentSchemas = {
       v.literal("pending"), // Awaiting admin review
       v.literal("approved"), // Refund approved, credits restored
       v.literal("rejected"), // Refund rejected
-      v.literal("under_review"), // Being reviewed by admin
+      v.literal("rejected"), // Refund rejected
     ),
     adminNotes: v.optional(v.string()), // Admin's notes/decision reason
     reviewedBy: v.optional(v.id("users")), // Admin who reviewed
