@@ -43,15 +43,12 @@
 
       if (verificationResult.success) {
         // Create payment record if it doesn't exist and complete the payment
-        const paymentResult = await convex.mutation(
-          api.payments.completePaymentBySessionId,
-          {
-            sessionId: sessionId,
-            credits: verificationResult.creditsGranted,
-            amount: verificationResult.amountTotal,
-            currency: verificationResult.currency,
-          },
-        );
+        await convex.mutation(api.payments.completePaymentBySessionId, {
+          sessionId: sessionId,
+          credits: verificationResult.creditsGranted,
+          amount: verificationResult.amountTotal,
+          currency: verificationResult.currency,
+        });
 
         paymentStatus = "success";
         paymentMessage = `Payment successful! ${verificationResult.creditsGranted} credits have been added to your account.`;
