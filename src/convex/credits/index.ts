@@ -77,50 +77,6 @@ export const getActiveCreditHolds = query({
   },
 });
 
-// Initialize credits for new user (4 free credits)
-export const initializeUserCredits = mutation({
-  args: {
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const adminUserId = await getAuthUserId(ctx);
-    if (!adminUserId) {
-      throw new Error("Must be authenticated to initialize credits");
-    }
-
-    // Check if user already has credits
-    const existing = await ctx.db
-      .query("connectionCredits")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .unique();
-
-    if (existing) {
-      throw new Error("User already has credit record");
-    }
-
-    // Create initial credit record
-    await ctx.db.insert("connectionCredits", {
-      userId: args.userId,
-      availableCredits: 4,
-      heldCredits: 0,
-      totalPurchased: 4, // Count free credits as purchased
-      totalUsed: 0,
-      lastUpdated: Date.now(),
-    });
-
-    // Record the initial grant transaction
-    await ctx.db.insert("creditTransactions", {
-      userId: args.userId,
-      type: "initial_grant",
-      amount: 4,
-      description: "Welcome bonus - 4 free connection credits",
-      timestamp: Date.now(),
-    });
-
-    return { success: true, creditsGranted: 4 };
-  },
-});
-
 // Helper function for holding credits (internal use)
 export async function holdCreditsLogic(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
