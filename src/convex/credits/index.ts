@@ -121,6 +121,69 @@ export const initializeUserCredits = mutation({
   },
 });
 
+// Helper function for holding credits (internal use)
+export async function holdCreditsLogic(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  userId: Id<"users">,
+  eventId: Id<"events">,
+  maxGuests: number,
+  eventTitle?: string,
+) {
+  // Get current credit balance
+  const creditRecord = await ctx.db
+    .query("connectionCredits")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .unique();
+
+  if (!creditRecord) {
+    throw new Error("No credit record found for user");
+  }
+
+  // Check if user has enough available credits
+  if (creditRecord.availableCredits < maxGuests) {
+    throw new Error(
+      `Insufficient credits. Need ${maxGuests}, have ${creditRecord.availableCredits}`,
+    );
+  }
+
+  // Create credit hold record
+  await ctx.db.insert("creditHolds", {
+    userId: userId as Id<"users">,
+    eventId: eventId,
+    creditsHeld: maxGuests,
+    maxGuests: maxGuests,
+    creditsUsed: 0,
+    status: "active",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+
+  // Update user's credit balance
+  await ctx.db.patch(creditRecord._id, {
+    availableCredits: creditRecord.availableCredits - maxGuests,
+    heldCredits: creditRecord.heldCredits + maxGuests,
+    lastUpdated: Date.now(),
+  });
+
+  // Record transaction
+  const description = eventTitle
+    ? `Credits held for event "${eventTitle}" (${maxGuests} credits)`
+    : `Credits held for event (${maxGuests} credits)`;
+
+  await ctx.db.insert("creditTransactions", {
+    userId: userId as Id<"users">,
+    type: "hold",
+    amount: -maxGuests,
+    relatedEventId: eventId,
+    description,
+    timestamp: Date.now(),
+  });
+
+  return { success: true, creditsHeld: maxGuests };
+}
+
 // Hold credits for event creation
 export const holdCreditsForEvent = mutation({
   args: {
@@ -133,53 +196,7 @@ export const holdCreditsForEvent = mutation({
       throw new Error("Must be authenticated to hold credits");
     }
 
-    // Get current credit balance
-    const creditRecord = await ctx.db
-      .query("connectionCredits")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .unique();
-
-    if (!creditRecord) {
-      throw new Error("No credit record found for user");
-    }
-
-    // Check if user has enough available credits
-    if (creditRecord.availableCredits < args.maxGuests) {
-      throw new Error(
-        `Insufficient credits. Need ${args.maxGuests}, have ${creditRecord.availableCredits}`,
-      );
-    }
-
-    // Create credit hold record
-    await ctx.db.insert("creditHolds", {
-      userId: userId as Id<"users">,
-      eventId: args.eventId,
-      creditsHeld: args.maxGuests,
-      maxGuests: args.maxGuests,
-      creditsUsed: 0,
-      status: "active",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    // Update user's credit balance
-    await ctx.db.patch(creditRecord._id, {
-      availableCredits: creditRecord.availableCredits - args.maxGuests,
-      heldCredits: creditRecord.heldCredits + args.maxGuests,
-      lastUpdated: Date.now(),
-    });
-
-    // Record transaction
-    await ctx.db.insert("creditTransactions", {
-      userId: userId as Id<"users">,
-      type: "hold",
-      amount: -args.maxGuests,
-      relatedEventId: args.eventId,
-      description: `Credits held for event (${args.maxGuests} credits)`,
-      timestamp: Date.now(),
-    });
-
-    return { success: true, creditsHeld: args.maxGuests };
+    return await holdCreditsLogic(ctx, userId, args.eventId, args.maxGuests);
   },
 });
 

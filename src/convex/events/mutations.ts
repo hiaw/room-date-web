@@ -4,6 +4,7 @@ import { validateEventTiming, validateAgeRange } from "../lib/eventHelpers.js";
 import { createEventArgs, updateEventArgs } from "./types.js";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
+import { holdCreditsLogic } from "../credits/index";
 
 /**
  * Create a new event
@@ -30,19 +31,8 @@ export const createEvent = mutation({
       throw new Error("Cannot create events in inactive room");
     }
 
-    // Check if user has sufficient credits for the event
+    // Check max guests count
     const maxGuestsCount = args.maxGuests ?? 1; // Default to 1 if not specified
-    const creditRecord = await ctx.db
-      .query("connectionCredits")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .unique();
-
-    if (!creditRecord || creditRecord.availableCredits < maxGuestsCount) {
-      const availableCredits = creditRecord?.availableCredits ?? 0;
-      throw new Error(
-        `Insufficient connection credits. You need ${maxGuestsCount} credits but only have ${availableCredits}. Purchase more credits to create this event.`,
-      );
-    }
 
     // Validate timing
     if (!args.isFlexibleTiming) {
@@ -78,33 +68,7 @@ export const createEvent = mutation({
     });
 
     // Hold credits for this event
-    await ctx.db.insert("creditHolds", {
-      userId: userId as Id<"users">,
-      eventId: eventId,
-      creditsHeld: maxGuestsCount,
-      maxGuests: maxGuestsCount,
-      creditsUsed: 0,
-      status: "active",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    // Update user's credit balance
-    await ctx.db.patch(creditRecord._id, {
-      availableCredits: creditRecord.availableCredits - maxGuestsCount,
-      heldCredits: creditRecord.heldCredits + maxGuestsCount,
-      lastUpdated: Date.now(),
-    });
-
-    // Record credit hold transaction
-    await ctx.db.insert("creditTransactions", {
-      userId: userId as Id<"users">,
-      type: "hold",
-      amount: -maxGuestsCount,
-      relatedEventId: eventId,
-      description: `Credits held for event "${args.title}" (${maxGuestsCount} credits)`,
-      timestamp: Date.now(),
-    });
+    await holdCreditsLogic(ctx, userId, eventId, maxGuestsCount, args.title);
 
     // Log security event
     await ctx.db.insert("securityEvents", {
