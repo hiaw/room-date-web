@@ -141,7 +141,7 @@ export const reviewRefundRequest = mutation({
   args: {
     refundRequestId: v.id("refundRequests"),
     decision: v.union(v.literal("approved"), v.literal("rejected")),
-    adminNotes: v.optional(v.string()),
+    adminNotes: v.string(),
   },
   handler: async (ctx, args) => {
     // Require admin privileges - will throw error if user is not admin
