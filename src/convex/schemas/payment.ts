@@ -44,7 +44,7 @@ export const paymentSchemas = {
     status: v.union(
       v.literal("active"), // Event is active, credits are held
       v.literal("released"), // Event deleted/expired, credits released
-      v.literal("completed"), // Event completed, final accounting done
+      v.literal("released"), // Event deleted/expired, credits released
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
