@@ -381,8 +381,8 @@ export const failPayment = mutation({
   },
 });
 
-// Securely process payment after Stripe redirect (basic verification)
-export const processStripeRedirect = mutation({
+// Securely process payment after Stripe redirect with server-side verification
+export const processStripeRedirect = action({
   args: {
     sessionId: v.string(),
   },
@@ -392,33 +392,53 @@ export const processStripeRedirect = mutation({
       throw new Error("Must be authenticated to process payment");
     }
 
-    // For now, this is a placeholder that validates session format
-    // In a full implementation, we'd use a webhook or server-side verification
+    // Validate session ID format
     if (!args.sessionId.startsWith("cs_")) {
       throw new Error("Invalid session ID format");
     }
 
-    // Check if already processed
-    const existing = await ctx.db
-      .query("paymentTransactions")
-      .withIndex("by_provider_transaction", (q) =>
-        q.eq("provider", "stripe").eq("providerTransactionId", args.sessionId),
-      )
-      .unique();
-
-    if (existing && existing.status === "completed") {
-      return {
-        success: true,
-        creditsGranted: existing.creditsGranted,
-        message: "Payment already processed",
-      };
+    // Initialize Stripe with secret key for server-side verification
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      throw new Error("Stripe is not configured");
     }
 
-    // This is a temporary implementation - DO NOT USE IN PRODUCTION
-    // The real implementation should verify with Stripe's API
-    throw new Error(
-      "Payment verification not yet implemented - use webhook instead",
-    );
+    try {
+      const stripe = new Stripe(stripeSecretKey);
+
+      // SECURITY: Verify session with Stripe API server-side
+      const session = await stripe.checkout.sessions.retrieve(args.sessionId);
+
+      // Verify session belongs to current user and is paid
+      if (session.metadata?.userId !== userId) {
+        throw new Error("Session does not belong to authenticated user");
+      }
+
+      if (session.payment_status !== "paid") {
+        throw new Error("Payment not completed");
+      }
+
+      if (!session.metadata?.credits) {
+        throw new Error("Session missing credits metadata");
+      }
+
+      const credits = parseInt(session.metadata.credits);
+
+      // Since this is an action and we've verified the payment with Stripe,
+      // the actual credit processing will be handled by the webhook
+      // We just confirm that payment verification was successful
+      return {
+        success: true,
+        creditsGranted: credits,
+        message:
+          "Payment verified successfully. Credits will be processed via webhook.",
+      };
+    } catch (error) {
+      console.error("Stripe session verification failed:", error);
+      throw new Error(
+        `Payment verification failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
   },
 });
 

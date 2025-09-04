@@ -32,9 +32,9 @@
     paymentMessage = "Processing your payment...";
 
     try {
-      // SECURITY NOTE: This now calls a backend verification function
-      // instead of trusting client-side values
-      const result = await convex.mutation(api.payments.processStripeRedirect, {
+      // SECURITY NOTE: This now calls a secure backend verification action
+      // that verifies payment with Stripe API server-side
+      const result = await convex.action(api.payments.processStripeRedirect, {
         sessionId: sessionId,
       });
 
