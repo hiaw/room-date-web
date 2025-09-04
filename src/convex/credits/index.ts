@@ -183,6 +183,67 @@ export const holdCreditsForEvent = mutation({
   },
 });
 
+// Helper function for deducting credits (internal use)
+export async function deductCreditLogic(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  userId: Id<"users">,
+  eventId: Id<"events">,
+  applicationId: Id<"eventApplications">,
+) {
+  // Find the active hold for this event
+  const hold = await ctx.db
+    .query("creditHolds")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_event", (q: any) => q.eq("eventId", eventId))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) =>
+      q.and(q.eq(q.field("userId"), userId), q.eq(q.field("status"), "active")),
+    )
+    .unique();
+
+  if (!hold) {
+    throw new Error("No active credit hold found for this event");
+  }
+
+  // Get user's credit record
+  const creditRecord = await ctx.db
+    .query("connectionCredits")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .unique();
+
+  if (!creditRecord) {
+    throw new Error("No credit record found for user");
+  }
+
+  // Update hold record (increment used credits)
+  await ctx.db.patch(hold._id, {
+    creditsUsed: hold.creditsUsed + 1,
+    updatedAt: Date.now(),
+  });
+
+  // Update user's credit record (decrease held credits, increase used)
+  await ctx.db.patch(creditRecord._id, {
+    heldCredits: creditRecord.heldCredits - 1,
+    totalUsed: creditRecord.totalUsed + 1,
+    lastUpdated: Date.now(),
+  });
+
+  // Record transaction
+  await ctx.db.insert("creditTransactions", {
+    userId: userId as Id<"users">,
+    type: "deduction",
+    amount: -1,
+    relatedEventId: eventId,
+    relatedApplicationId: applicationId,
+    description: "Credit deducted for approved participant",
+    timestamp: Date.now(),
+  });
+
+  return { success: true, creditsDeducted: 1 };
+}
+
 // Deduct credit when participant is approved
 export const deductCreditForApprovedParticipant = mutation({
   args: {
@@ -195,57 +256,12 @@ export const deductCreditForApprovedParticipant = mutation({
       throw new Error("Must be authenticated to deduct credits");
     }
 
-    // Find the active hold for this event
-    const hold = await ctx.db
-      .query("creditHolds")
-      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("userId"), userId),
-          q.eq(q.field("status"), "active"),
-        ),
-      )
-      .unique();
-
-    if (!hold) {
-      throw new Error("No active credit hold found for this event");
-    }
-
-    // Get user's credit record
-    const creditRecord = await ctx.db
-      .query("connectionCredits")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .unique();
-
-    if (!creditRecord) {
-      throw new Error("No credit record found for user");
-    }
-
-    // Update hold record (increment used credits)
-    await ctx.db.patch(hold._id, {
-      creditsUsed: hold.creditsUsed + 1,
-      updatedAt: Date.now(),
-    });
-
-    // Update user's credit record (decrease held credits, increase used)
-    await ctx.db.patch(creditRecord._id, {
-      heldCredits: creditRecord.heldCredits - 1,
-      totalUsed: creditRecord.totalUsed + 1,
-      lastUpdated: Date.now(),
-    });
-
-    // Record transaction
-    await ctx.db.insert("creditTransactions", {
-      userId: userId as Id<"users">,
-      type: "deduction",
-      amount: -1,
-      relatedEventId: args.eventId,
-      relatedApplicationId: args.applicationId,
-      description: "Credit deducted for approved participant",
-      timestamp: Date.now(),
-    });
-
-    return { success: true, creditsDeducted: 1 };
+    return await deductCreditLogic(
+      ctx,
+      userId,
+      args.eventId,
+      args.applicationId,
+    );
   },
 });
 

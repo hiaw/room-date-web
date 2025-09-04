@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import type { Id } from "../_generated/dataModel";
 import {
   validateUserAge,
   validateEventCapacity,
@@ -9,6 +8,7 @@ import {
   validateCanRespond,
 } from "./validation";
 import { createConnection } from "./connections";
+import { deductCreditLogic } from "../credits/index";
 
 /**
  * Apply to join an event
@@ -104,50 +104,12 @@ export const respondToApplication = mutation({
       );
 
       // Deduct credit for approved participant
-      const hold = await ctx.db
-        .query("creditHolds")
-        .withIndex("by_event", (q) => q.eq("eventId", application.eventId))
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("userId"), userId),
-            q.eq(q.field("status"), "active"),
-          ),
-        )
-        .unique();
-
-      if (hold) {
-        // Get user's credit record
-        const creditRecord = await ctx.db
-          .query("connectionCredits")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .unique();
-
-        if (creditRecord) {
-          // Update hold record (increment used credits)
-          await ctx.db.patch(hold._id, {
-            creditsUsed: hold.creditsUsed + 1,
-            updatedAt: Date.now(),
-          });
-
-          // Update user's credit record (decrease held credits, increase used)
-          await ctx.db.patch(creditRecord._id, {
-            heldCredits: creditRecord.heldCredits - 1,
-            totalUsed: creditRecord.totalUsed + 1,
-            lastUpdated: Date.now(),
-          });
-
-          // Record transaction
-          await ctx.db.insert("creditTransactions", {
-            userId: userId as Id<"users">,
-            type: "deduction",
-            amount: -1,
-            relatedEventId: application.eventId,
-            relatedApplicationId: args.applicationId,
-            description: "Credit deducted for approved participant",
-            timestamp: Date.now(),
-          });
-        }
-      }
+      await deductCreditLogic(
+        ctx,
+        userId,
+        application.eventId,
+        args.applicationId,
+      );
 
       // Ensure owner is a participant (for old events)
       const ownerParticipant = await ctx.db
