@@ -4,3 +4,4 @@ export { eventSchemas } from "./events";
 export { messagingSchemas } from "./messaging";
 export { systemSchemas } from "./system";
 export { imageSchemas } from "./images";
+export { paymentSchemas } from "./payment";

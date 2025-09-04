@@ -1,0 +1,302 @@
+import {
+  mutation,
+  query,
+  action,
+  type MutationCtx,
+} from "../_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { v } from "convex/values";
+import type { Id, Doc } from "../_generated/dataModel";
+import Stripe from "stripe";
+
+// Helper function for granting credits and creating transaction record
+async function grantCreditsForPayment(
+  ctx: MutationCtx,
+  payment: Doc<"paymentTransactions">,
+  customDescription?: string,
+) {
+  // Get or create user's credit record
+  const creditRecord = await ctx.db
+    .query("connectionCredits")
+    .withIndex("by_user", (q) => q.eq("userId", payment.userId))
+    .unique();
+
+  if (!creditRecord) {
+    // Create initial credit record
+    await ctx.db.insert("connectionCredits", {
+      userId: payment.userId,
+      availableCredits: payment.creditsGranted,
+      heldCredits: 0,
+      totalPurchased: payment.creditsGranted,
+      totalUsed: 0,
+      lastUpdated: Date.now(),
+    });
+  } else {
+    // Update existing record
+    await ctx.db.patch(creditRecord._id, {
+      availableCredits: creditRecord.availableCredits + payment.creditsGranted,
+      totalPurchased: creditRecord.totalPurchased + payment.creditsGranted,
+      lastUpdated: Date.now(),
+    });
+  }
+
+  // Record credit transaction
+  const description =
+    customDescription ||
+    `Purchased ${payment.creditsGranted} credits for $${(payment.amount / 100).toFixed(2)}`;
+
+  await ctx.db.insert("creditTransactions", {
+    userId: payment.userId,
+    type: "purchase",
+    amount: payment.creditsGranted,
+    paymentTransactionId: payment._id,
+    description,
+    timestamp: Date.now(),
+  });
+
+  return { success: true, creditsGranted: payment.creditsGranted };
+}
+
+// Create Stripe Checkout Session (ACTION - allows external API calls)
+export const createCheckoutSession = action({
+  args: {
+    credits: v.number(),
+    amount: v.number(), // Amount in cents
+    currency: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to create checkout session");
+    }
+
+    // Validate environment variables
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      throw new Error(
+        "Stripe is not configured. Please add STRIPE_SECRET_KEY to environment variables.",
+      );
+    }
+
+    try {
+      // Initialize Stripe with secret key
+      const stripe = new Stripe(stripeSecretKey);
+
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: args.currency,
+              product_data: {
+                name: `${args.credits} Credits`,
+                description: `Purchase ${args.credits} credits for Room Dates`,
+              },
+              unit_amount: args.amount,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${process.env.SITE_URL || "http://localhost:5174"}/credits?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.SITE_URL || "http://localhost:5174"}/credits?cancelled=true`,
+        metadata: {
+          userId: userId,
+          credits: args.credits.toString(),
+        },
+      });
+
+      // Return checkout session data
+      return {
+        success: true,
+        sessionId: session.id,
+        url: session.url,
+      };
+    } catch (error) {
+      console.error("Stripe error:", error);
+      throw new Error(
+        `Checkout session creation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  },
+});
+
+// Get user's payment history
+export const getPaymentHistory = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to get payment history");
+    }
+
+    const payments = await ctx.db
+      .query("paymentTransactions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(args.limit ?? 25);
+
+    return payments;
+  },
+});
+
+// Securely process payment after Stripe redirect with server-side verification
+export const processStripeRedirect = action({
+  args: {
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated to process payment");
+    }
+
+    // Validate session ID format
+    if (!args.sessionId.startsWith("cs_")) {
+      throw new Error("Invalid session ID format");
+    }
+
+    // Initialize Stripe with secret key for server-side verification
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      throw new Error("Stripe is not configured");
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey);
+
+      // SECURITY: Verify session with Stripe API server-side
+      const session = await stripe.checkout.sessions.retrieve(args.sessionId);
+
+      // Verify session belongs to current user and is paid
+      if (session.metadata?.userId !== userId) {
+        throw new Error("Session does not belong to authenticated user");
+      }
+
+      if (session.payment_status !== "paid") {
+        throw new Error("Payment not completed");
+      }
+
+      if (!session.metadata?.credits) {
+        throw new Error("Session missing credits metadata");
+      }
+
+      const credits = parseInt(session.metadata.credits);
+
+      // Since this is an action and we've verified the payment with Stripe,
+      // we can safely trust this payment is legitimate and process it directly
+      return {
+        success: true,
+        creditsGranted: credits,
+        message: `Payment verified! ${credits} credits will be processed immediately.`,
+        sessionId: session.id,
+        userId: userId,
+        amountTotal: session.amount_total || 0,
+        currency: session.currency || "usd",
+      };
+    } catch (error) {
+      console.error("Stripe session verification failed:", error);
+      throw new Error(
+        `Payment verification failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  },
+});
+
+// Get payment transaction by provider ID (for webhook processing)
+export const getPaymentByProviderTransactionId = query({
+  args: {
+    provider: v.union(v.literal("stripe")),
+    providerTransactionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const payment = await ctx.db
+      .query("paymentTransactions")
+      .withIndex("by_provider_transaction", (q) =>
+        q
+          .eq("provider", args.provider)
+          .eq("providerTransactionId", args.providerTransactionId),
+      )
+      .unique();
+
+    return payment;
+  },
+});
+
+// Internal function to process Stripe webhook events
+
+// Complete payment by session ID (simpler approach for session-based payments)
+export const completePaymentBySessionId = mutation({
+  args: {
+    sessionId: v.string(),
+    credits: v.number(),
+    amount: v.number(),
+    currency: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated");
+    }
+
+    // Check if payment record already exists
+    const existingPayment = await ctx.db
+      .query("paymentTransactions")
+      .withIndex("by_provider_transaction", (q) =>
+        q.eq("provider", "stripe").eq("providerTransactionId", args.sessionId),
+      )
+      .unique();
+
+    let paymentRecord;
+
+    if (!existingPayment) {
+      // Create the payment record with actual amount from Stripe
+      const paymentId = await ctx.db.insert("paymentTransactions", {
+        userId: userId as Id<"users">,
+        provider: "stripe",
+        providerTransactionId: args.sessionId,
+        amount: args.amount,
+        currency: args.currency,
+        creditsGranted: args.credits,
+        status: "pending",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      paymentRecord = await ctx.db.get(paymentId);
+    } else {
+      paymentRecord = existingPayment;
+    }
+
+    if (!paymentRecord) {
+      throw new Error("Failed to create payment record");
+    }
+
+    // If payment is already completed, return success
+    if (paymentRecord.status === "completed") {
+      return {
+        success: true,
+        creditsGranted: args.credits,
+        message: "Payment already processed",
+      };
+    }
+
+    // Complete the payment and grant credits
+    await ctx.db.patch(paymentRecord._id, {
+      status: "completed",
+      updatedAt: Date.now(),
+    });
+
+    // Grant credits using the helper function
+    await grantCreditsForPayment(ctx, paymentRecord);
+
+    return {
+      success: true,
+      creditsGranted: args.credits,
+      message: "Credits granted successfully",
+    };
+  },
+});

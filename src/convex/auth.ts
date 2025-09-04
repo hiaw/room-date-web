@@ -169,6 +169,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
         longitude: undefined,
         locationSharing: false,
         isProfileComplete: false,
+        isAdmin: false, // New users are not admins by default
       });
 
       const settingsPromise = ctx.db.insert("userSettings", {
@@ -184,7 +185,31 @@ export const { auth, signIn, signOut, store } = convexAuth({
         theme: "system",
       });
 
-      await Promise.all([profilePromise, settingsPromise]);
+      // Initialize new user with 4 free credits
+      const creditsPromise = ctx.db.insert("connectionCredits", {
+        userId,
+        availableCredits: 4,
+        heldCredits: 0,
+        totalPurchased: 0,
+        totalUsed: 0,
+        lastUpdated: Date.now(),
+      });
+
+      // Create welcome credit transaction
+      const transactionPromise = ctx.db.insert("creditTransactions", {
+        userId,
+        type: "initial_grant",
+        amount: 4,
+        description: "Welcome bonus - 4 free credits!",
+        timestamp: Date.now(),
+      });
+
+      await Promise.all([
+        profilePromise,
+        settingsPromise,
+        creditsPromise,
+        transactionPromise,
+      ]);
 
       return userId;
     },

@@ -7,6 +7,7 @@ import { eventSchemas } from "./schemas/events";
 import { messagingSchemas } from "./schemas/messaging";
 import { systemSchemas } from "./schemas/system";
 import { imageSchemas } from "./schemas/images";
+import { paymentSchemas } from "./schemas/payment";
 
 const schema = defineSchema({
   ...authTables,
@@ -16,6 +17,7 @@ const schema = defineSchema({
   ...messagingSchemas,
   ...systemSchemas,
   ...imageSchemas,
+  ...paymentSchemas,
 });
 
 export default schema;

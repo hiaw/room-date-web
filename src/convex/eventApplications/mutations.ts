@@ -8,6 +8,7 @@ import {
   validateCanRespond,
 } from "./validation";
 import { createConnection } from "./connections";
+import { deductCreditLogic } from "../credits/index";
 
 /**
  * Apply to join an event
@@ -100,6 +101,14 @@ export const respondToApplication = mutation({
         userId,
         application.applicantId,
         application.eventId,
+      );
+
+      // Deduct credit for approved participant
+      await deductCreditLogic(
+        ctx,
+        userId,
+        application.eventId,
+        args.applicationId,
       );
 
       // Ensure owner is a participant (for old events)

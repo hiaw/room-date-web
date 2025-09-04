@@ -16,6 +16,8 @@ export const userProfiles = defineTable({
   latitude: v.optional(v.number()),
   longitude: v.optional(v.number()),
   locationSharing: v.boolean(),
+  // Admin role for system administration
+  isAdmin: v.optional(v.boolean()),
 })
   .index("by_user", ["userId"])
   .index("by_location", ["latitude", "longitude"]); // For proximity searches

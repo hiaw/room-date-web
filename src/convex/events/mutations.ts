@@ -4,6 +4,7 @@ import { validateEventTiming, validateAgeRange } from "../lib/eventHelpers.js";
 import { createEventArgs, updateEventArgs } from "./types.js";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
+import { holdCreditsLogic, releaseCreditsLogic } from "../credits/index";
 
 /**
  * Create a new event
@@ -30,6 +31,9 @@ export const createEvent = mutation({
       throw new Error("Cannot create events in inactive room");
     }
 
+    // Check max guests count
+    const maxGuestsCount = args.maxGuests ?? 1; // Default to 1 if not specified
+
     // Validate timing
     if (!args.isFlexibleTiming) {
       validateEventTiming(args.startTime, args.endTime);
@@ -53,7 +57,7 @@ export const createEvent = mutation({
       endTime: args.endTime,
       isFlexibleTiming: args.isFlexibleTiming,
       suggestedTimeSlots: args.suggestedTimeSlots,
-      maxGuests: args.maxGuests,
+      maxGuests: maxGuestsCount,
       guestGenderPreferences: args.guestGenderPreferences,
       minAge: args.minAge,
       maxAge: args.maxAge,
@@ -63,6 +67,9 @@ export const createEvent = mutation({
       isActive: true,
     });
 
+    // Hold credits for this event
+    await holdCreditsLogic(ctx, userId, eventId, maxGuestsCount, args.title);
+
     // Log security event
     await ctx.db.insert("securityEvents", {
       eventType: "event_created",
@@ -71,6 +78,8 @@ export const createEvent = mutation({
         eventId,
         roomId: args.roomId,
         title: args.title,
+        maxGuests: maxGuestsCount,
+        creditsHeld: maxGuestsCount,
         isFlexibleTiming: args.isFlexibleTiming,
         hasTimeSlots: !!args.suggestedTimeSlots?.length,
       },
@@ -148,7 +157,7 @@ export const updateEvent = mutation({
 });
 
 /**
- * Delete an event (mark as inactive)
+ * Delete an event (mark as inactive and release held credits)
  */
 export const deleteEvent = mutation({
   args: {
@@ -171,6 +180,15 @@ export const deleteEvent = mutation({
 
     // Mark event as inactive
     await ctx.db.patch(args.eventId, { isActive: false });
+
+    // Release held credits
+    await releaseCreditsLogic(
+      ctx,
+      userId,
+      args.eventId,
+      `Credits released from deleted event`,
+      false, // Don't throw error if no hold found
+    );
 
     // Cancel all pending applications
     const pendingApplications = await ctx.db
