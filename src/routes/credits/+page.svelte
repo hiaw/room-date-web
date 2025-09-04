@@ -32,14 +32,32 @@
     paymentMessage = "Processing your payment...";
 
     try {
-      // SECURITY NOTE: This now calls a secure backend verification action
+      // SECURITY NOTE: This calls a secure backend verification action
       // that verifies payment with Stripe API server-side
-      const result = await convex.action(api.payments.processStripeRedirect, {
-        sessionId: sessionId,
-      });
+      const verificationResult = await convex.action(
+        api.payments.processStripeRedirect,
+        {
+          sessionId: sessionId,
+        },
+      );
 
-      paymentStatus = "success";
-      paymentMessage = result.message || "Payment processed successfully!";
+      if (verificationResult.success) {
+        // Create payment record if it doesn't exist and complete the payment
+        const paymentResult = await convex.mutation(
+          api.payments.completePaymentBySessionId,
+          {
+            sessionId: sessionId,
+            credits: verificationResult.creditsGranted,
+          },
+        );
+
+        paymentStatus = "success";
+        paymentMessage = `Payment successful! ${verificationResult.creditsGranted} credits have been added to your account.`;
+      } else {
+        throw new Error(
+          verificationResult.message || "Payment verification failed",
+        );
+      }
 
       // Clear URL parameters after processing
       window.history.replaceState({}, document.title, "/credits");

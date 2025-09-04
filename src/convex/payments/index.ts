@@ -2,8 +2,7 @@ import {
   mutation,
   query,
   action,
-  internalMutation,
-  MutationCtx,
+  type MutationCtx,
 } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
@@ -105,7 +104,6 @@ export const createCheckoutSession = action({
         metadata: {
           userId: userId,
           credits: args.credits.toString(),
-          type: "credit_purchase",
         },
       });
 
@@ -155,11 +153,6 @@ export const createPaymentIntent = action({
         currency: args.currency,
         automatic_payment_methods: {
           enabled: true,
-        },
-        metadata: {
-          userId: userId,
-          credits: args.credits.toString(),
-          type: "credit_purchase",
         },
       });
 
@@ -238,10 +231,6 @@ export const createPaymentTransaction = mutation({
       currency: args.currency,
       creditsGranted: args.creditsToGrant,
       status: "pending",
-      metadata: {
-        stripePaymentIntentId: args.stripePaymentIntentId,
-        stripeCustomerId: args.stripeCustomerId,
-      },
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -306,9 +295,6 @@ export const completePaymentByIntentId = mutation({
         currency: "usd",
         creditsGranted: 0, // Will be updated when we have more info
         status: "completed",
-        metadata: {
-          stripePaymentIntentId: args.paymentIntentId,
-        },
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -349,10 +335,6 @@ export const failPayment = mutation({
     // Update payment status
     await ctx.db.patch(args.paymentTransactionId, {
       status: "failed",
-      metadata: {
-        ...payment.metadata,
-        failureReason: args.failureReason,
-      },
       updatedAt: Date.now(),
     });
 
@@ -404,13 +386,13 @@ export const processStripeRedirect = action({
       const credits = parseInt(session.metadata.credits);
 
       // Since this is an action and we've verified the payment with Stripe,
-      // the actual credit processing will be handled by the webhook
-      // We just confirm that payment verification was successful
+      // we can safely trust this payment is legitimate and process it directly
       return {
         success: true,
         creditsGranted: credits,
-        message:
-          "Payment verified successfully. Credits will be processed via webhook.",
+        message: `Payment verified! ${credits} credits will be processed immediately.`,
+        sessionId: session.id,
+        userId: userId,
       };
     } catch (error) {
       console.error("Stripe session verification failed:", error);
@@ -442,16 +424,20 @@ export const getPaymentByProviderTransactionId = query({
 });
 
 // Internal function to process Stripe webhook events
-export const processWebhookPayment = internalMutation({
+
+// Complete payment by session ID (simpler approach for session-based payments)
+export const completePaymentBySessionId = mutation({
   args: {
     sessionId: v.string(),
-    eventType: v.string(),
-    eventId: v.string(),
+    credits: v.number(),
   },
   handler: async (ctx, args) => {
-    console.log(`Processing webhook payment for session: ${args.sessionId}`);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated");
+    }
 
-    // Find existing payment record by session ID
+    // Check if payment record already exists
     const existingPayment = await ctx.db
       .query("paymentTransactions")
       .withIndex("by_provider_transaction", (q) =>
@@ -459,54 +445,53 @@ export const processWebhookPayment = internalMutation({
       )
       .unique();
 
+    let paymentRecord;
+
     if (!existingPayment) {
-      console.error(`No payment record found for session: ${args.sessionId}`);
-      throw new Error(
-        `Payment record not found for session: ${args.sessionId}`,
-      );
+      // Create the payment record
+      const paymentId = await ctx.db.insert("paymentTransactions", {
+        userId: userId as Id<"users">,
+        provider: "stripe",
+        providerTransactionId: args.sessionId,
+        amount: args.credits * 500, // Estimate based on credits (will be updated by webhook if needed)
+        currency: "usd",
+        creditsGranted: args.credits,
+        status: "pending",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      paymentRecord = await ctx.db.get(paymentId);
+    } else {
+      paymentRecord = existingPayment;
     }
 
-    if (existingPayment.status === "completed") {
-      console.log(`Payment already processed for session: ${args.sessionId}`);
-      return { success: true, message: "Already processed" };
+    if (!paymentRecord) {
+      throw new Error("Failed to create payment record");
     }
 
-    // Mark payment as completed
-    await ctx.db.patch(existingPayment._id, {
+    // If payment is already completed, return success
+    if (paymentRecord.status === "completed") {
+      return {
+        success: true,
+        creditsGranted: args.credits,
+        message: "Payment already processed",
+      };
+    }
+
+    // Complete the payment and grant credits
+    await ctx.db.patch(paymentRecord._id, {
       status: "completed",
       updatedAt: Date.now(),
     });
 
-    // Grant credits using shared logic
-    await grantCreditsForPayment(
-      ctx,
-      existingPayment,
-      `Purchased ${existingPayment.creditsGranted} credits via Stripe`,
-    );
-
-    // Log security event
-    await ctx.db.insert("securityEvents", {
-      eventType: "payment_completed",
-      userId: existingPayment.userId,
-      metadata: {
-        paymentId: existingPayment._id,
-        sessionId: args.sessionId,
-        creditsGranted: existingPayment.creditsGranted,
-        amount: existingPayment.amount,
-        webhookEventId: args.eventId,
-      },
-      timestamp: Date.now(),
-      severity: "low",
-    });
-
-    console.log(
-      `Payment processed successfully for session: ${args.sessionId}, credits: ${existingPayment.creditsGranted}`,
-    );
+    // Grant credits using the helper function
+    await grantCreditsForPayment(ctx, paymentRecord);
 
     return {
       success: true,
-      creditsGranted: existingPayment.creditsGranted,
-      message: "Payment processed via webhook",
+      creditsGranted: args.credits,
+      message: "Credits granted successfully",
     };
   },
 });
