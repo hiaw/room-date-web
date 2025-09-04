@@ -9,7 +9,7 @@ import type { Id } from "./_generated/dataModel";
 export const grantAdminRole = mutation({
   args: {
     targetUserId: v.id("users"),
-    reason: v.optional(v.string()),
+    reason: v.string(),
   },
   handler: async (ctx, args) => {
     // CRITICAL: Only existing admins can grant admin role
