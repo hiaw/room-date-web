@@ -59,17 +59,15 @@
         const userData = await convex.query(api.users.getUserProfile, {});
         if (userData) {
           authStore.setAuthSuccess(userData, authResult.tokens);
-          // Redirect to discover page after successful authentication
-          goto("/discover");
         } else {
           // Fallback: minimal user object from email if profile fetch lags
           authStore.setAuthSuccess(
             { _id: "temp", email, name: name || email },
             authResult.tokens,
           );
-          // Redirect to discover page
-          goto("/discover");
         }
+        // Redirect to discover page after successful authentication
+        goto("/discover");
       }
     } catch (err) {
       const errorMessage =
@@ -202,15 +200,7 @@
   }
 
   // Subscribe to auth store for loading state
-  let authState = $state($authStore);
-
-  $effect(() => {
-    return authStore.subscribe((state) => {
-      authState = state;
-    });
-  });
-
-  const isLoading = $derived(authState.isLoading);
+  const isLoading = $derived($authStore.isLoading);
 </script>
 
 <div class="w-full">
