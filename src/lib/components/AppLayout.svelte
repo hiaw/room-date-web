@@ -1,7 +1,10 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { browser } from "$app/environment";
   import { authStore } from "$lib/stores/auth.js";
+  import { getStoredToken } from "$lib/auth.js";
   import { useQuery } from "convex-svelte";
   import { api } from "../../convex/_generated/api.js";
   import { Search, Calendar, MessageCircle, User } from "lucide-svelte";
@@ -49,6 +52,23 @@
   let currentPath = $derived($page.url.pathname);
   let isAuthenticated = $derived($authStore.isAuthenticated);
 
+  // Also check if there's a stored token for cases where auth state hasn't been restored yet
+  let hasStoredToken = $state(false);
+  let authInitialized = $state(false);
+
+  onMount(() => {
+    // Check for stored token to handle race conditions with auth state restoration
+    if (browser) {
+      hasStoredToken = !!getStoredToken();
+
+      // Only initialize auth check if not already done and we have a token
+      if (hasStoredToken && !$authStore.isAuthenticated && !authInitialized) {
+        authStore.checkExistingAuth();
+        authInitialized = true;
+      }
+    }
+  });
+
   // Check if user profile is complete
   let profileQuery = $derived(
     isAuthenticated ? useQuery(api.userProfiles.getUserProfile, {}) : null,
@@ -94,7 +114,9 @@
     showOnboardingModal = false;
   }
 
-  let shouldShowBottomNav = $derived(isAuthenticated && currentPath !== "/");
+  let shouldShowBottomNav = $derived(
+    (isAuthenticated || hasStoredToken) && currentPath !== "/",
+  );
 </script>
 
 <div

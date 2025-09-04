@@ -13,7 +13,17 @@
   import EventDetailsForm from "$lib/components/events/EventDetailsForm.svelte";
   import EventTimingForm from "$lib/components/events/EventTimingForm.svelte";
   import EventGuestPreferences from "$lib/components/events/EventGuestPreferences.svelte";
+  import InsufficientCreditsModal from "$lib/components/credits/InsufficientCreditsModal.svelte";
   import type { Id } from "../../../../../convex/_generated/dataModel";
+  import {
+    validateCreditsForGuests,
+    isLowCreditBalance,
+    hasNoCredits,
+    formatCreditCount,
+    CREDIT_CONSTANTS,
+    type ModalState,
+    type CreditBalance,
+  } from "$lib/utils/credits.js";
 
   const roomId = $page.params.roomId as Id<"rooms">;
 
@@ -24,10 +34,28 @@
     }
   });
 
+  // Check for no credits and show modal
+  $effect(() => {
+    // Prevent race conditions by checking loading state
+    if (creditLoading || modalState.show) return;
+
+    if (hasNoCredits(creditBalance)) {
+      // Show modal immediately if user has no credits
+      modalState = { show: true, requiredCredits: 1 };
+    }
+  });
+
   // Fetch room details
   let roomQuery = useQuery(api.rooms.getRoom, { roomId });
   let room = $derived(roomQuery?.data);
   let roomLoading = $derived(roomQuery?.isLoading ?? true);
+
+  // Fetch user's credit balance
+  let creditQuery = useQuery(api.credits.getCreditBalance, {});
+  let creditBalance = $derived(creditQuery?.data as CreditBalance | undefined);
+  let creditError = $derived(creditQuery?.error);
+  let creditLoading = $derived(creditQuery?.isLoading ?? true);
+  let availableCredits = $derived(creditBalance?.availableCredits ?? 0);
 
   // Create event mutation
   let convex = useConvexClient();
@@ -46,6 +74,9 @@
   let guestGenderPreferences = $state<string[]>([]);
   let saving = $state(false);
   let eventImages: string[] = $state([]);
+
+  // Modal state management
+  let modalState: ModalState = $state({ show: false, requiredCredits: 0 });
 
   // Calculate today's date for min date constraints
   let todayDateString = $derived(() => {
@@ -90,9 +121,24 @@
     }
 
     // Validate guest count
-    if (maxGuests && (maxGuests < 1 || maxGuests > 50)) {
-      alert("Maximum guests must be between 1 and 50");
+    if (
+      maxGuests &&
+      (maxGuests < CREDIT_CONSTANTS.MIN_GUESTS ||
+        maxGuests > CREDIT_CONSTANTS.MAX_GUESTS_FALLBACK)
+    ) {
+      alert(
+        `Maximum guests must be between ${CREDIT_CONSTANTS.MIN_GUESTS} and ${CREDIT_CONSTANTS.MAX_GUESTS_FALLBACK}`,
+      );
       return;
+    }
+
+    // Credit validation using utility function
+    if (maxGuests && maxGuests > 0) {
+      const validation = validateCreditsForGuests(maxGuests, availableCredits);
+      if (!validation.isValid) {
+        modalState = { show: true, requiredCredits: maxGuests };
+        return;
+      }
     }
 
     // Validate age range
@@ -165,6 +211,19 @@
 
   function handleGuestGenderPreferencesChange(preferences: string[]) {
     guestGenderPreferences = preferences;
+  }
+
+  function handleInsufficientCredits(requiredCredits: number) {
+    modalState = { show: true, requiredCredits };
+  }
+
+  function handleInsufficientCreditsCancel() {
+    // If user has no credits, go back to my-rooms instead of staying on the page
+    if (hasNoCredits(creditBalance)) {
+      goto("/my-rooms");
+    } else {
+      modalState = { show: false, requiredCredits: 0 };
+    }
   }
 
   // Event handlers for form components
@@ -261,9 +320,14 @@
     </div>
   </div>
 
-  {#if roomLoading}
+  {#if roomLoading || creditLoading}
     <div class="flex items-center justify-center py-16">
       <LoadingSpinner />
+    </div>
+  {:else if creditError}
+    <div class="flex flex-col items-center justify-center py-16">
+      <p class="mb-4 text-red-600">Failed to load credit information</p>
+      <Button onclick={() => location.reload()} class="mt-4">Retry</Button>
     </div>
   {:else if !room}
     <div class="flex flex-col items-center justify-center py-16">
@@ -278,6 +342,24 @@
       <EventRoomContext {room} />
 
       <form onsubmit={handleSave} class="space-y-6">
+        <!-- Credit Warning (if low credits) -->
+        {#if isLowCreditBalance(creditBalance)}
+          <div class="rounded-lg border border-orange-200 bg-orange-50 p-4">
+            <div class="flex items-start space-x-2">
+              <div class="mt-0.5 h-2 w-2 rounded-full bg-orange-400"></div>
+              <div class="text-sm text-orange-700">
+                <p class="mb-1 font-medium">Limited Credits Available</p>
+                <p>
+                  You have {formatCreditCount(creditBalance!.availableCredits)} available.
+                  Each credit allows one guest to join your event.
+                  <a href="/credits" class="underline hover:no-underline"
+                    >Buy more credits</a
+                  > to host larger events.
+                </p>
+              </div>
+            </div>
+          </div>
+        {/if}
         <!-- Event Photos -->
         <EventImageSection {eventImages} onImagesChange={handleImagesChange} />
 
@@ -310,10 +392,12 @@
           {minAge}
           {maxAge}
           {guestGenderPreferences}
+          {availableCredits}
           onMaxGuestsChange={handleMaxGuestsChange}
           onMinAgeChange={handleMinAgeChange}
           onMaxAgeChange={handleMaxAgeChange}
           onGuestGenderPreferencesChange={handleGuestGenderPreferencesChange}
+          onInsufficientCredits={handleInsufficientCredits}
         />
 
         <!-- Submit Button (Mobile) -->
@@ -335,3 +419,12 @@
     </div>
   {/if}
 </div>
+
+<!-- Insufficient Credits Modal -->
+<InsufficientCreditsModal
+  open={modalState.show}
+  {availableCredits}
+  requiredCredits={modalState.requiredCredits}
+  onClose={() => (modalState = { show: false, requiredCredits: 0 })}
+  onCancel={handleInsufficientCreditsCancel}
+/>
