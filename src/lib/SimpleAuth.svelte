@@ -59,12 +59,16 @@
         const userData = await convex.query(api.users.getUserProfile, {});
         if (userData) {
           authStore.setAuthSuccess(userData, authResult.tokens);
+          // Redirect to discover page after successful authentication
+          goto("/discover");
         } else {
           // Fallback: minimal user object from email if profile fetch lags
           authStore.setAuthSuccess(
             { _id: "temp", email, name: name || email },
             authResult.tokens,
           );
+          // Redirect to discover page
+          goto("/discover");
         }
       }
     } catch (err) {
@@ -130,6 +134,8 @@
         const userData = await convex.query(api.users.getUserProfile, {});
         if (userData) {
           authStore.setAuthSuccess(userData, authResult.tokens);
+          // Redirect to discover page after successful password reset
+          goto("/discover");
         }
       }
 
@@ -196,7 +202,15 @@
   }
 
   // Subscribe to auth store for loading state
-  const { isLoading } = $derived($authStore);
+  let authState = $state($authStore);
+
+  $effect(() => {
+    return authStore.subscribe((state) => {
+      authState = state;
+    });
+  });
+
+  const isLoading = $derived(authState.isLoading);
 </script>
 
 <div class="w-full">
