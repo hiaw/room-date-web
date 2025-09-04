@@ -37,6 +37,8 @@ export const securityEvents = defineTable({
     v.literal("payment_failed"),
     v.literal("credits_purchased"),
     v.literal("credits_deducted"),
+    v.literal("admin_role_granted"),
+    v.literal("admin_role_revoked"),
   ),
   userId: v.optional(v.id("users")),
   identifier: v.optional(v.string()), // IP, email, etc.

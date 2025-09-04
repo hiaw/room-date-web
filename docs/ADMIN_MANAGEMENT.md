@@ -38,32 +38,36 @@ await ctx.db.patch("userProfiles:[USER_PROFILE_ID]", {
 });
 ```
 
-### Option 2: Create Admin Management Mutation
+### Option 2: Use Secure Admin Management Functions (Recommended)
 
-Add this mutation to your Convex functions for easier admin management:
+**✅ SECURE IMPLEMENTATION:** The application now includes secure admin management functions in `src/convex/admin.ts`:
 
 ```typescript
-// src/convex/admin.ts
-export const grantAdminRole = mutation({
-  args: { targetUserId: v.id("users") },
-  handler: async (ctx, args) => {
-    // Only existing admins can grant admin role
-    await requireAdmin(ctx);
-
-    const userProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", args.targetUserId))
-      .unique();
-
-    if (!userProfile) {
-      throw new Error("User profile not found");
-    }
-
-    await ctx.db.patch(userProfile._id, { isAdmin: true });
-    return { success: true };
-  },
+// Grant admin role (requires existing admin)
+await convex.mutation(api.admin.grantAdminRole, {
+  targetUserId: "user_id_here",
+  reason: "Promoted to admin for financial operations",
 });
+
+// Revoke admin role (requires existing admin, cannot self-revoke)
+await convex.mutation(api.admin.revokeAdminRole, {
+  targetUserId: "user_id_here",
+  reason: "Role no longer needed",
+});
+
+// List all current admins (admin-only)
+const admins = await convex.query(api.admin.listAdminUsers);
+
+// Check current user admin status (public)
+const status = await convex.query(api.admin.checkCurrentUserAdminStatus);
 ```
+
+**Security Features:**
+
+- ✅ Only existing admins can grant/revoke admin privileges
+- ✅ Prevents self-revocation (avoids admin lockout)
+- ✅ All admin role changes are logged as CRITICAL security events
+- ✅ Comprehensive audit trail with reasons and timestamps
 
 ### Option 3: Environment Variable Admin (Recommended)
 
