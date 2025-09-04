@@ -22,7 +22,7 @@
   }
 
   function handleCancel() {
-    if (availableCredits === 0 && onCancel) {
+    if (onCancel) {
       onCancel();
     } else {
       onClose();
@@ -44,16 +44,19 @@
 </script>
 
 {#if open}
+  <svelte:window on:keydown={handleKeydown} />
   <!-- Modal backdrop -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
     onclick={handleModalClick}
-    onkeydown={handleKeydown}
-    role="button"
-    tabindex="0"
   >
     <!-- Modal content -->
-    <div class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+    >
       <!-- Close button -->
       <button
         onclick={handleCancel}
@@ -72,7 +75,7 @@
       </div>
 
       <!-- Title -->
-      <h2 class="mb-2 text-center text-xl font-bold text-gray-900">
+      <h2 id="modal-title" class="mb-2 text-center text-xl font-bold text-gray-900">
         Insufficient Credits
       </h2>
 

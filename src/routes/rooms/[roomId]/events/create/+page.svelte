@@ -116,20 +116,11 @@
       return;
     }
 
-    // Credit validation - block creation if no credits and maxGuests is set
-    if (maxGuests && maxGuests > 0 && availableCredits === 0) {
+    // Credit validation - check if user has sufficient credits for event creation
+    if (maxGuests && maxGuests > 0 && availableCredits < maxGuests) {
       showInsufficientCreditsModal = true;
       requiredCreditsForModal = maxGuests;
       return;
-    }
-
-    // Credit validation - check if user needs credits for event creation
-    if (maxGuests && maxGuests > 0) {
-      if (availableCredits < maxGuests) {
-        showInsufficientCreditsModal = true;
-        requiredCreditsForModal = maxGuests;
-        return;
-      }
     }
 
     // Validate age range
