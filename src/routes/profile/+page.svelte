@@ -118,19 +118,19 @@
   const infoItems = [
     {
       title: "About Room Dates",
-      href: "/about",
+      href: "/about?from=profile",
     },
     {
       title: "Help & Support",
-      href: "/help",
+      href: "/help?from=profile",
     },
     {
       title: "Privacy Policy",
-      href: "/privacy",
+      href: "/privacy?from=profile",
     },
     {
       title: "Terms of Service",
-      href: "/terms",
+      href: "/terms?from=profile",
     },
   ];
 </script>

@@ -9,10 +9,40 @@
     HelpCircle,
   } from "lucide-svelte";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import Button from "$lib/components/ui/Button.svelte";
 
   function handleBack() {
-    goto("/");
+    // Check if accessed from profile
+    if (
+      $page.url.searchParams.has("from") &&
+      $page.url.searchParams.get("from") === "profile"
+    ) {
+      goto("/profile");
+    } else {
+      goto("/");
+    }
+  }
+
+  function handleNavToAbout() {
+    // Preserve the from parameter if it exists
+    const fromParam = $page.url.searchParams.get("from");
+    const url = fromParam ? `/about?from=${fromParam}` : "/about";
+    goto(url);
+  }
+
+  function handleNavToPrivacy() {
+    // Preserve the from parameter if it exists
+    const fromParam = $page.url.searchParams.get("from");
+    const url = fromParam ? `/privacy?from=${fromParam}` : "/privacy";
+    goto(url);
+  }
+
+  function handleNavToTerms() {
+    // Preserve the from parameter if it exists
+    const fromParam = $page.url.searchParams.get("from");
+    const url = fromParam ? `/terms?from=${fromParam}` : "/terms";
+    goto(url);
   }
 
   const faqs = [
@@ -96,7 +126,7 @@
     <!-- Quick Actions -->
     <div class="mb-12 grid gap-6 md:grid-cols-3">
       <button
-        onclick={() => goto("/about")}
+        onclick={handleNavToAbout}
         class="rounded-2xl border border-gray-100 bg-white p-6 text-left shadow-sm transition-shadow hover:shadow-md"
       >
         <div
@@ -111,7 +141,7 @@
       </button>
 
       <button
-        onclick={() => goto("/privacy")}
+        onclick={handleNavToPrivacy}
         class="rounded-2xl border border-gray-100 bg-white p-6 text-left shadow-sm transition-shadow hover:shadow-md"
       >
         <div
@@ -126,7 +156,7 @@
       </button>
 
       <button
-        onclick={() => goto("/terms")}
+        onclick={handleNavToTerms}
         class="rounded-2xl border border-gray-100 bg-white p-6 text-left shadow-sm transition-shadow hover:shadow-md"
       >
         <div
