@@ -1,5 +1,9 @@
 import { mutation, query } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import {
+  requireAdmin,
+  getCurrentUserWithAdminStatus,
+} from "../lib/authHelpers";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 
@@ -119,12 +123,8 @@ export const getUserRefundRequests = query({
 export const getPendingRefundRequests = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Must be authenticated to get pending refund requests");
-    }
-
-    // Note: In production, add proper admin role checking here
+    // Require admin privileges - will throw error if user is not admin
+    await requireAdmin(ctx);
 
     const requests = await ctx.db
       .query("refundRequests")
@@ -144,12 +144,8 @@ export const reviewRefundRequest = mutation({
     adminNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Must be authenticated to review refund requests");
-    }
-
-    // Note: In production, add proper admin role checking here
+    // Require admin privileges - will throw error if user is not admin
+    const adminUserId = await requireAdmin(ctx);
 
     const request = await ctx.db.get(args.refundRequestId);
     if (!request) {
@@ -166,7 +162,7 @@ export const reviewRefundRequest = mutation({
     await ctx.db.patch(args.refundRequestId, {
       status: args.decision,
       adminNotes: args.adminNotes?.trim(),
-      reviewedBy: userId as Id<"users">,
+      reviewedBy: adminUserId,
       reviewedAt: now,
       processedAt: args.decision === "approved" ? now : undefined,
     });
@@ -217,7 +213,7 @@ export const reviewRefundRequest = mutation({
     // Log security event
     await ctx.db.insert("securityEvents", {
       eventType: "refund_request_reviewed",
-      userId: userId as Id<"users">,
+      userId: adminUserId,
       metadata: {
         refundRequestId: args.refundRequestId,
         decision: args.decision,
@@ -239,20 +235,19 @@ export const getRefundRequestById = query({
     refundRequestId: v.id("refundRequests"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Must be authenticated to get refund request details");
-    }
+    // Get current user with admin status
+    const { userId, isAdmin } = await getCurrentUserWithAdminStatus(ctx);
 
     const request = await ctx.db.get(args.refundRequestId);
     if (!request) {
       throw new Error("Refund request not found");
     }
 
-    // Users can only view their own requests (or admins can view all)
-    if (request.userId !== userId) {
-      // Note: In production, add proper admin role checking here
-      throw new Error("Access denied");
+    // Users can only view their own requests, admins can view all
+    if (request.userId !== userId && !isAdmin) {
+      throw new Error(
+        "Access denied - you can only view your own refund requests",
+      );
     }
 
     return request;

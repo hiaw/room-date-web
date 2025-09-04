@@ -169,6 +169,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
         longitude: undefined,
         locationSharing: false,
         isProfileComplete: false,
+        isAdmin: false, // New users are not admins by default
       });
 
       const settingsPromise = ctx.db.insert("userSettings", {
