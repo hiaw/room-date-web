@@ -34,10 +34,7 @@
   ];
 
   async function handlePurchase() {
-    console.log("🔥 Purchase button clicked!");
-
     if (!$authStore.isAuthenticated) {
-      console.log("❌ User not authenticated");
       alert("Please sign in to purchase credits");
       return;
     }
@@ -46,16 +43,12 @@
       (pkg) => pkg.id === selectedPackage,
     );
     if (!selectedPkg) {
-      console.log("❌ No package selected");
       return;
     }
 
-    console.log("📦 Selected package:", selectedPkg);
     loading = true;
 
     try {
-      console.log("🚀 Creating checkout session...");
-
       // Create checkout session with our backend
       const checkoutSession = await convex.action(
         api.payments.createCheckoutSession,
@@ -66,14 +59,10 @@
         },
       );
 
-      console.log("✅ Checkout session created:", checkoutSession);
-
       if (checkoutSession.success && checkoutSession.url) {
-        console.log("🚀 Redirecting to Stripe Checkout:", checkoutSession.url);
         // Redirect to Stripe Checkout
         window.location.href = checkoutSession.url;
       } else {
-        console.log("❌ Checkout session failed:", checkoutSession);
         throw new Error("Failed to create checkout session");
       }
     } catch (error) {
@@ -83,7 +72,6 @@
       );
     } finally {
       loading = false;
-      console.log("🏁 Purchase function completed. loading:", loading);
     }
   }
 </script>

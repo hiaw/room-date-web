@@ -48,6 +48,8 @@
           {
             sessionId: sessionId,
             credits: verificationResult.creditsGranted,
+            amount: verificationResult.amountTotal,
+            currency: verificationResult.currency,
           },
         );
 

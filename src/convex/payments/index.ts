@@ -393,6 +393,8 @@ export const processStripeRedirect = action({
         message: `Payment verified! ${credits} credits will be processed immediately.`,
         sessionId: session.id,
         userId: userId,
+        amountTotal: session.amount_total || 0,
+        currency: session.currency || "usd",
       };
     } catch (error) {
       console.error("Stripe session verification failed:", error);
@@ -430,6 +432,8 @@ export const completePaymentBySessionId = mutation({
   args: {
     sessionId: v.string(),
     credits: v.number(),
+    amount: v.number(),
+    currency: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -448,13 +452,13 @@ export const completePaymentBySessionId = mutation({
     let paymentRecord;
 
     if (!existingPayment) {
-      // Create the payment record
+      // Create the payment record with actual amount from Stripe
       const paymentId = await ctx.db.insert("paymentTransactions", {
         userId: userId as Id<"users">,
         provider: "stripe",
         providerTransactionId: args.sessionId,
-        amount: args.credits * 500, // Estimate based on credits (will be updated by webhook if needed)
-        currency: "usd",
+        amount: args.amount,
+        currency: args.currency,
         creditsGranted: args.credits,
         status: "pending",
         createdAt: Date.now(),
