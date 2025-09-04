@@ -1,4 +1,4 @@
-import { mutation, query } from "../_generated/server";
+import { mutation, query, MutationCtx } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
@@ -79,8 +79,7 @@ export const getActiveCreditHolds = query({
 
 // Helper function for holding credits (internal use)
 export async function holdCreditsLogic(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
+  ctx: MutationCtx,
   userId: Id<"users">,
   eventId: Id<"events">,
   maxGuests: number,
@@ -89,8 +88,7 @@ export async function holdCreditsLogic(
   // Get current credit balance
   const creditRecord = await ctx.db
     .query("connectionCredits")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .withIndex("by_user", (q) => q.eq("userId", userId))
     .unique();
 
   if (!creditRecord) {
@@ -158,8 +156,7 @@ export const holdCreditsForEvent = mutation({
 
 // Helper function for deducting credits (internal use)
 export async function deductCreditLogic(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
+  ctx: MutationCtx,
   userId: Id<"users">,
   eventId: Id<"events">,
   applicationId: Id<"eventApplications">,
@@ -167,10 +164,8 @@ export async function deductCreditLogic(
   // Find the active hold for this event
   const hold = await ctx.db
     .query("creditHolds")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_event", (q: any) => q.eq("eventId", eventId))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .filter((q: any) =>
+    .withIndex("by_event", (q) => q.eq("eventId", eventId))
+    .filter((q) =>
       q.and(q.eq(q.field("userId"), userId), q.eq(q.field("status"), "active")),
     )
     .unique();
@@ -182,8 +177,7 @@ export async function deductCreditLogic(
   // Get user's credit record
   const creditRecord = await ctx.db
     .query("connectionCredits")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .withIndex("by_user", (q) => q.eq("userId", userId))
     .unique();
 
   if (!creditRecord) {
@@ -240,8 +234,7 @@ export const deductCreditForApprovedParticipant = mutation({
 
 // Helper function for releasing credits (internal use)
 export async function releaseCreditsLogic(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ctx: any,
+  ctx: MutationCtx,
   userId: Id<"users">,
   eventId: Id<"events">,
   customDescription?: string,
@@ -250,10 +243,8 @@ export async function releaseCreditsLogic(
   // Find the active hold for this event
   const hold = await ctx.db
     .query("creditHolds")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .withIndex("by_event", (q: any) => q.eq("eventId", eventId))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .filter((q: any) =>
+    .withIndex("by_event", (q) => q.eq("eventId", eventId))
+    .filter((q) =>
       q.and(q.eq(q.field("userId"), userId), q.eq(q.field("status"), "active")),
     )
     .unique();
@@ -271,8 +262,7 @@ export async function releaseCreditsLogic(
     // Get user's credit record
     const creditRecord = await ctx.db
       .query("connectionCredits")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
 
     if (!creditRecord) {
