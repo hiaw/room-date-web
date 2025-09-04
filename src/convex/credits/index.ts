@@ -282,6 +282,78 @@ export const deductCreditForApprovedParticipant = mutation({
   },
 });
 
+// Helper function for releasing credits (internal use)
+export async function releaseCreditsLogic(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  userId: Id<"users">,
+  eventId: Id<"events">,
+  customDescription?: string,
+  throwOnMissingHold: boolean = true,
+) {
+  // Find the active hold for this event
+  const hold = await ctx.db
+    .query("creditHolds")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .withIndex("by_event", (q: any) => q.eq("eventId", eventId))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((q: any) =>
+      q.and(q.eq(q.field("userId"), userId), q.eq(q.field("status"), "active")),
+    )
+    .unique();
+
+  if (!hold) {
+    if (throwOnMissingHold) {
+      throw new Error("No active credit hold found for this event");
+    }
+    return { success: true, creditsReleased: 0 };
+  }
+
+  const creditsToRelease = hold.creditsHeld - hold.creditsUsed;
+
+  if (creditsToRelease > 0) {
+    // Get user's credit record
+    const creditRecord = await ctx.db
+      .query("connectionCredits")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .unique();
+
+    if (!creditRecord) {
+      throw new Error("No credit record found for user");
+    }
+
+    // Release unused credits back to available
+    await ctx.db.patch(creditRecord._id, {
+      availableCredits: creditRecord.availableCredits + creditsToRelease,
+      heldCredits: creditRecord.heldCredits - creditsToRelease,
+      lastUpdated: Date.now(),
+    });
+
+    // Record transaction
+    const description =
+      customDescription ||
+      `Credits released from cancelled/expired event (${creditsToRelease} credits)`;
+
+    await ctx.db.insert("creditTransactions", {
+      userId: userId as Id<"users">,
+      type: "release",
+      amount: creditsToRelease,
+      relatedEventId: eventId,
+      description,
+      timestamp: Date.now(),
+    });
+  }
+
+  // Mark hold as released
+  await ctx.db.patch(hold._id, {
+    status: "released",
+    updatedAt: Date.now(),
+  });
+
+  return { success: true, creditsReleased: creditsToRelease };
+}
+
 // Release held credits when event is deleted/expired
 export const releaseCreditsForEvent = mutation({
   args: {
@@ -293,60 +365,7 @@ export const releaseCreditsForEvent = mutation({
       throw new Error("Must be authenticated to release credits");
     }
 
-    // Find the active hold for this event
-    const hold = await ctx.db
-      .query("creditHolds")
-      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("userId"), userId),
-          q.eq(q.field("status"), "active"),
-        ),
-      )
-      .unique();
-
-    if (!hold) {
-      throw new Error("No active credit hold found for this event");
-    }
-
-    const creditsToRelease = hold.creditsHeld - hold.creditsUsed;
-
-    if (creditsToRelease > 0) {
-      // Get user's credit record
-      const creditRecord = await ctx.db
-        .query("connectionCredits")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .unique();
-
-      if (!creditRecord) {
-        throw new Error("No credit record found for user");
-      }
-
-      // Release unused credits back to available
-      await ctx.db.patch(creditRecord._id, {
-        availableCredits: creditRecord.availableCredits + creditsToRelease,
-        heldCredits: creditRecord.heldCredits - creditsToRelease,
-        lastUpdated: Date.now(),
-      });
-
-      // Record transaction
-      await ctx.db.insert("creditTransactions", {
-        userId: userId as Id<"users">,
-        type: "release",
-        amount: creditsToRelease,
-        relatedEventId: args.eventId,
-        description: `Credits released from cancelled/expired event (${creditsToRelease} credits)`,
-        timestamp: Date.now(),
-      });
-    }
-
-    // Mark hold as released
-    await ctx.db.patch(hold._id, {
-      status: "released",
-      updatedAt: Date.now(),
-    });
-
-    return { success: true, creditsReleased: creditsToRelease };
+    return await releaseCreditsLogic(ctx, userId, args.eventId);
   },
 });
 

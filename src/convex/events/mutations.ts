@@ -4,7 +4,7 @@ import { validateEventTiming, validateAgeRange } from "../lib/eventHelpers.js";
 import { createEventArgs, updateEventArgs } from "./types.js";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
-import { holdCreditsLogic } from "../credits/index";
+import { holdCreditsLogic, releaseCreditsLogic } from "../credits/index";
 
 /**
  * Create a new event
@@ -182,53 +182,13 @@ export const deleteEvent = mutation({
     await ctx.db.patch(args.eventId, { isActive: false });
 
     // Release held credits
-    const hold = await ctx.db
-      .query("creditHolds")
-      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("userId"), userId),
-          q.eq(q.field("status"), "active"),
-        ),
-      )
-      .unique();
-
-    if (hold) {
-      const creditsToRelease = hold.creditsHeld - hold.creditsUsed;
-
-      if (creditsToRelease > 0) {
-        // Get user's credit record
-        const creditRecord = await ctx.db
-          .query("connectionCredits")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .unique();
-
-        if (creditRecord) {
-          // Release unused credits back to available
-          await ctx.db.patch(creditRecord._id, {
-            availableCredits: creditRecord.availableCredits + creditsToRelease,
-            heldCredits: creditRecord.heldCredits - creditsToRelease,
-            lastUpdated: Date.now(),
-          });
-
-          // Record transaction
-          await ctx.db.insert("creditTransactions", {
-            userId: userId as Id<"users">,
-            type: "release",
-            amount: creditsToRelease,
-            relatedEventId: args.eventId,
-            description: `Credits released from deleted event (${creditsToRelease} credits)`,
-            timestamp: Date.now(),
-          });
-        }
-      }
-
-      // Mark hold as released
-      await ctx.db.patch(hold._id, {
-        status: "released",
-        updatedAt: Date.now(),
-      });
-    }
+    await releaseCreditsLogic(
+      ctx,
+      userId,
+      args.eventId,
+      `Credits released from deleted event`,
+      false, // Don't throw error if no hold found
+    );
 
     // Cancel all pending applications
     const pendingApplications = await ctx.db
