@@ -82,25 +82,21 @@ export const updateUserProfile = mutation({
     let profileId;
     if (existingProfile) {
       // Update existing profile (dateOfBirth should already exist from signup)
-      const updateData = {
-        ...Object.fromEntries(
-          Object.entries({
-            displayName: args.displayName,
-            gender: args.gender,
-            bio: args.bio,
-            profileImageUrl: args.profileImageUrl,
-            profileImages: args.profileImages,
-            location: args.location,
-            latitude: args.latitude,
-            longitude: args.longitude,
-            locationSharing: args.locationSharing,
-            isProfileComplete,
-            ...(args.dateOfBirth !== undefined && {
-              dateOfBirth: args.dateOfBirth,
-            }),
-          }).filter(([, value]) => value !== undefined),
-        ),
-      };
+      const updateData = Object.fromEntries(
+        Object.entries({
+          displayName: args.displayName,
+          dateOfBirth: args.dateOfBirth,
+          gender: args.gender,
+          bio: args.bio,
+          profileImageUrl: args.profileImageUrl,
+          profileImages: args.profileImages,
+          location: args.location,
+          latitude: args.latitude,
+          longitude: args.longitude,
+          locationSharing: args.locationSharing,
+          isProfileComplete,
+        }).filter(([, value]) => value !== undefined),
+      );
 
       await ctx.db.patch(existingProfile._id, updateData);
       profileId = existingProfile._id;
