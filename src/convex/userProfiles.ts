@@ -152,6 +152,15 @@ export const updateUserProfile = mutation({
         throw new Error("Date of birth is required for new profiles");
       }
 
+      // Validate age for new profile
+      const dateOfBirthString = new Date(args.dateOfBirth)
+        .toISOString()
+        .split("T")[0];
+      const ageValidation = validateAge(dateOfBirthString);
+      if (!ageValidation.valid) {
+        throw new Error(ageValidation.error || "Age validation failed");
+      }
+
       profileId = await ctx.db.insert("userProfiles", {
         userId,
         displayName: args.displayName,
