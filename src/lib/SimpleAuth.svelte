@@ -160,8 +160,13 @@
     forgotPasswordError = "";
 
     try {
-      await convex.action(api.changePassword.default, {
-        email,
+      // Use the Convex Auth signIn action with password reset flow
+      await convex.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          email,
+          flow: "reset",
+        },
       });
 
       forgotPasswordSuccess = true;

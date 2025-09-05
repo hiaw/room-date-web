@@ -73,8 +73,12 @@
       }
 
       // Use the password reset flow for security
-      await convex.action(api.changePassword.default, {
-        email: profile.user.email,
+      await convex.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          email: profile.user.email,
+          flow: "reset",
+        },
       });
 
       hidePasswordResetRequestForm();
