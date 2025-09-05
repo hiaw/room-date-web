@@ -4,7 +4,9 @@
 
   interface StepProfileAndLocationProps {
     state: OnboardingState;
+    needsDateOfBirth?: boolean;
     onDisplayNameChange: (value: string) => void;
+    onDateOfBirthChange: (value: string) => void;
     onBioChange: (value: string) => void;
     onLocationSharingChange: (value: boolean) => void;
     onGetCurrentLocation: () => void;
@@ -12,7 +14,9 @@
 
   let {
     state,
+    needsDateOfBirth = false,
     onDisplayNameChange,
+    onDateOfBirthChange,
     onBioChange,
     onLocationSharingChange,
     onGetCurrentLocation,
@@ -50,6 +54,37 @@
         </p>
       {/if}
     </div>
+
+    {#if needsDateOfBirth}
+      <div>
+        <label
+          for="dateOfBirth"
+          class="mb-1 block text-sm font-medium text-gray-700"
+        >
+          Date of Birth
+        </label>
+        <input
+          id="dateOfBirth"
+          value={state.dateOfBirth}
+          onchange={(e) => onDateOfBirthChange(e.currentTarget.value)}
+          type="date"
+          max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0]}
+          class="w-full rounded-lg border {state.validationErrors.dateOfBirth
+            ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+            : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500'} px-3 py-2 focus:ring-1 focus:outline-none"
+        />
+        <p class="mt-1 text-xs text-gray-500">
+          You must be 18 or older to join Room Dates
+        </p>
+        {#if state.validationErrors.dateOfBirth}
+          <p class="mt-1 text-sm text-red-600">
+            {state.validationErrors.dateOfBirth}
+          </p>
+        {/if}
+      </div>
+    {/if}
 
     <div>
       <label for="bio" class="mb-1 block text-sm font-medium text-gray-700">

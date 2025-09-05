@@ -6,6 +6,7 @@ export interface OnboardingState {
 
   // Form data
   displayName: string;
+  dateOfBirth: string;
   bio: string;
   location: string;
   latitude?: number;
@@ -16,6 +17,7 @@ export interface OnboardingState {
   // Validation errors
   validationErrors: {
     displayName?: string;
+    dateOfBirth?: string;
     location?: string;
     save?: string;
   };
@@ -25,6 +27,7 @@ const defaultState: OnboardingState = {
   step: 1,
   saving: false,
   displayName: "",
+  dateOfBirth: "",
   bio: "",
   location: "",
   latitude: undefined,

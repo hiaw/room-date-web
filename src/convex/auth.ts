@@ -118,15 +118,17 @@ export const { auth, signIn, signOut, store } = convexAuth({
       }
 
       // For new sign-ups, validate age if dateOfBirth is provided
-      if ((args.profile as any)?.dateOfBirth) {
-        const ageValidation = validateAge((args.profile as any).dateOfBirth);
+      const dateOfBirth = (args.profile as any)?.dateOfBirth;
+      const isPasswordSignUp = dateOfBirth !== undefined; // Password signups include DOB, OAuth doesn't
+
+      // For password signups, dateOfBirth is required and validated
+      if (isPasswordSignUp) {
+        const ageValidation = validateAge(dateOfBirth);
         if (!ageValidation.valid) {
           throw new Error(ageValidation.error || "Age validation failed");
         }
-      } else {
-        // For password signups, dateOfBirth is required
-        throw new Error("Date of birth is required for new accounts");
       }
+      // OAuth signups will collect DOB during onboarding
 
       // For new sign-ups, check if a user with this email already exists
       if (args.profile?.email) {
@@ -160,8 +162,10 @@ export const { auth, signIn, signOut, store } = convexAuth({
       // Auto-create user profile and settings for new users
       const DEFAULT_MAX_DISTANCE_MILES = 25;
 
-      // Parse dateOfBirth - guaranteed to exist at this point
-      const dateOfBirth = new Date((args.profile as any).dateOfBirth).getTime();
+      // Parse dateOfBirth if available (only for password signups)
+      const profileDateOfBirth = dateOfBirth
+        ? new Date(dateOfBirth).getTime()
+        : undefined;
 
       const profilePromise = ctx.db.insert("userProfiles", {
         userId,
@@ -169,7 +173,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
           typeof args.profile?.name === "string"
             ? args.profile.name
             : undefined,
-        dateOfBirth,
+        dateOfBirth: profileDateOfBirth,
         bio: undefined,
         profileImageUrl:
           typeof args.profile?.image === "string"

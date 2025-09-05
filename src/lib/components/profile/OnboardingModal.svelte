@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useConvexClient } from "convex-svelte";
+  import { useConvexClient, useQuery } from "convex-svelte";
   import { api } from "../../../convex/_generated/api.js";
   import Button from "../ui/Button.svelte";
   import StepProfileAndLocation from "./onboarding/StepProfileAndLocation.svelte";
@@ -19,6 +19,15 @@
 
   let convex = useConvexClient();
 
+  // Check if user needs to provide date of birth (OAuth users who don't have it)
+  let userProfile = useQuery(api.userProfiles.getUserProfile, {});
+  let needsDateOfBirth = $derived(
+    Boolean(
+      userProfile.data?.profile &&
+        userProfile.data.profile.dateOfBirth === undefined,
+    ),
+  );
+
   // Subscribe to store
   let state = $derived($onboardingStore);
 
@@ -26,7 +35,7 @@
     if (state.step === 1) {
       // Validate basic info
       onboardingStore.clearErrors();
-      const validation = validateBasicInfo(state);
+      const validation = validateBasicInfo(state, needsDateOfBirth);
 
       if (!validation.isValid) {
         // Set errors in store
@@ -78,14 +87,21 @@
     onboardingStore.setError("save", undefined);
 
     try {
-      await convex.mutation(api.userProfiles.updateUserProfile, {
+      const profileData: any = {
         displayName: state.displayName.trim(),
         bio: state.bio.trim() || undefined,
         location: state.location || undefined,
         latitude: state.latitude,
         longitude: state.longitude,
         locationSharing: state.locationSharing,
-      });
+      };
+
+      // Add dateOfBirth if user needs to provide it and has provided it
+      if (needsDateOfBirth && state.dateOfBirth) {
+        profileData.dateOfBirth = new Date(state.dateOfBirth).getTime();
+      }
+
+      await convex.mutation(api.userProfiles.updateUserProfile, profileData);
 
       // Update settings with location preferences
       await convex.mutation(api.userProfiles.updateUserSettings, {
@@ -114,6 +130,8 @@
   // Field change handlers
   const handleDisplayNameChange = (value: string) =>
     onboardingStore.setField("displayName", value);
+  const handleDateOfBirthChange = (value: string) =>
+    onboardingStore.setField("dateOfBirth", value);
   const handleBioChange = (value: string) =>
     onboardingStore.setField("bio", value);
   const handleLocationSharingChange = (value: boolean) =>
@@ -149,7 +167,9 @@
         <!-- Combined Profile and Location -->
         <StepProfileAndLocation
           {state}
+          {needsDateOfBirth}
           onDisplayNameChange={handleDisplayNameChange}
+          onDateOfBirthChange={handleDateOfBirthChange}
           onBioChange={handleBioChange}
           onLocationSharingChange={handleLocationSharingChange}
           onGetCurrentLocation={getCurrentLocation}
@@ -176,7 +196,9 @@
           <Button
             onclick={handleNext}
             disabled={state.saving ||
-              (state.step === 1 && !state.displayName.trim())}
+              (state.step === 1 &&
+                (!state.displayName.trim() ||
+                  (needsDateOfBirth && !state.dateOfBirth)))}
           >
             {#if state.saving}
               <div

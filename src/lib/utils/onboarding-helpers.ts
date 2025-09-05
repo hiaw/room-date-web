@@ -6,7 +6,10 @@ export interface LocationResult {
   location: string;
 }
 
-export function validateBasicInfo(state: OnboardingState): {
+export function validateBasicInfo(
+  state: OnboardingState,
+  needsDateOfBirth = false,
+): {
   isValid: boolean;
   errors: OnboardingState["validationErrors"];
 } {
@@ -14,6 +17,29 @@ export function validateBasicInfo(state: OnboardingState): {
 
   if (!state.displayName.trim()) {
     errors.displayName = "Display name is required";
+  }
+
+  if (needsDateOfBirth) {
+    if (!state.dateOfBirth) {
+      errors.dateOfBirth = "Date of birth is required";
+    } else {
+      const birthDate = new Date(state.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        const actualAge = age - 1;
+        if (actualAge < 18) {
+          errors.dateOfBirth = "You must be 18 or older to join Room Dates";
+        }
+      } else if (age < 18) {
+        errors.dateOfBirth = "You must be 18 or older to join Room Dates";
+      }
+    }
   }
 
   return {
