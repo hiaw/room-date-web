@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { validateAuthForm } from "../../utils/validation.js";
+  import {
+    validateAuthForm,
+    getMaxDateOfBirth,
+  } from "../../utils/validation.js";
   import Button from "../ui/Button.svelte";
   import ErrorMessage from "../ui/ErrorMessage.svelte";
   import OAuthButton from "./OAuthButton.svelte";
-  import { Mail, Lock, User } from "lucide-svelte";
+  import { Mail, Lock, User, Calendar } from "lucide-svelte";
 
   import type { AuthFormProps } from "$lib/types/components";
 
@@ -17,24 +20,38 @@
   let email = $state("");
   let password = $state("");
   let name = $state("");
+  let dateOfBirth = $state("");
   let validationErrors = $state<string[]>([]);
+
+  // Calculate max date for date of birth (18 years ago)
+  let maxDateOfBirth = $derived(getMaxDateOfBirth());
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
 
-    validationErrors = validateAuthForm(email, password);
+    validationErrors = validateAuthForm(
+      email,
+      password,
+      isSignUp ? dateOfBirth : undefined,
+    );
 
     if (validationErrors.length > 0) {
       return;
     }
 
-    await onSubmit(email, password, isSignUp ? name : undefined);
+    await onSubmit(
+      email,
+      password,
+      isSignUp ? name : undefined,
+      isSignUp ? dateOfBirth : undefined,
+    );
 
     // Reset form on success (if no error)
     if (!error) {
       email = "";
       password = "";
       name = "";
+      dateOfBirth = "";
     }
   }
 </script>
@@ -78,6 +95,30 @@
           class="w-full rounded-xl border border-gray-200 py-3 pr-4 pl-10 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
         />
       </div>
+    </div>
+
+    <div>
+      <label
+        for="dateOfBirth"
+        class="mb-2 block text-sm font-medium text-gray-700"
+      >
+        Date of Birth
+      </label>
+      <div class="relative">
+        <Calendar
+          class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400"
+        />
+        <input
+          id="dateOfBirth"
+          type="date"
+          bind:value={dateOfBirth}
+          max={maxDateOfBirth}
+          disabled={loading}
+          required
+          class="w-full rounded-xl border border-gray-200 py-3 pr-4 pl-10 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
+        />
+      </div>
+      <p class="mt-1 text-xs text-gray-500">You must be 18 or older to join</p>
     </div>
   {/if}
 

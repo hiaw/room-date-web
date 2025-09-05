@@ -68,7 +68,65 @@ export function validatePassword(password: string): {
   return { valid: errors.length === 0, errors };
 }
 
-export function validateAuthForm(email: string, password: string): string[] {
+export function validateDateOfBirth(dateOfBirth: string): {
+  valid: boolean;
+  error?: string;
+} {
+  if (!dateOfBirth) {
+    return { valid: false, error: "Date of birth is required" };
+  }
+
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+
+  // Check if date is valid
+  if (isNaN(birthDate.getTime())) {
+    return { valid: false, error: "Please enter a valid date" };
+  }
+
+  // Check if date is not in the future
+  if (birthDate > today) {
+    return { valid: false, error: "Date of birth cannot be in the future" };
+  }
+
+  // Calculate age
+  const age = today.getFullYear() - birthDate.getFullYear();
+  const monthDifference = today.getMonth() - birthDate.getMonth();
+  const dayDifference = today.getDate() - birthDate.getDate();
+
+  // Adjust age if birthday hasn't occurred this year
+  const actualAge =
+    monthDifference < 0 || (monthDifference === 0 && dayDifference < 0)
+      ? age - 1
+      : age;
+
+  // Check if user is 18 or older
+  if (actualAge < 18) {
+    return {
+      valid: false,
+      error: "You must be 18 or older to join Room Dates",
+    };
+  }
+
+  return { valid: true };
+}
+
+export function getMaxDateOfBirth(): string {
+  // Return date for 18 years ago (latest valid birth date)
+  const today = new Date();
+  const eighteenYearsAgo = new Date(
+    today.getFullYear() - 18,
+    today.getMonth(),
+    today.getDate(),
+  );
+  return eighteenYearsAgo.toISOString().split("T")[0];
+}
+
+export function validateAuthForm(
+  email: string,
+  password: string,
+  dateOfBirth?: string,
+): string[] {
   const errors: string[] = [];
 
   if (!validateRequired(email)) {
@@ -83,6 +141,14 @@ export function validateAuthForm(email: string, password: string): string[] {
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
       errors.push(...passwordValidation.errors);
+    }
+  }
+
+  // Validate date of birth if provided (for signup)
+  if (dateOfBirth !== undefined) {
+    const dobValidation = validateDateOfBirth(dateOfBirth);
+    if (!dobValidation.valid && dobValidation.error) {
+      errors.push(dobValidation.error);
     }
   }
 

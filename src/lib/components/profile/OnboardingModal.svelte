@@ -2,8 +2,7 @@
   import { useConvexClient } from "convex-svelte";
   import { api } from "../../../convex/_generated/api.js";
   import Button from "../ui/Button.svelte";
-  import StepBasicInfo from "./onboarding/StepBasicInfo.svelte";
-  import StepLocationInfo from "./onboarding/StepLocationInfo.svelte";
+  import StepProfileAndLocation from "./onboarding/StepProfileAndLocation.svelte";
   import StepFinalReview from "./onboarding/StepFinalReview.svelte";
   import { onboardingStore } from "$lib/stores/onboarding.js";
   import {
@@ -44,9 +43,6 @@
 
       onboardingStore.nextStep();
     } else if (state.step === 2) {
-      // Location step - can skip
-      onboardingStore.nextStep();
-    } else if (state.step === 3) {
       // Final step - save profile
       await handleSave();
     }
@@ -56,10 +52,6 @@
     if (state.step > 1) {
       onboardingStore.previousStep();
     }
-  }
-
-  function handleSkipLocation() {
-    onboardingStore.setStep(3);
   }
 
   async function getCurrentLocation() {
@@ -88,7 +80,6 @@
     try {
       await convex.mutation(api.userProfiles.updateUserProfile, {
         displayName: state.displayName.trim(),
-        dateOfBirth: new Date(state.dateOfBirth).getTime(),
         bio: state.bio.trim() || undefined,
         location: state.location || undefined,
         latitude: state.latitude,
@@ -123,8 +114,6 @@
   // Field change handlers
   const handleDisplayNameChange = (value: string) =>
     onboardingStore.setField("displayName", value);
-  const handleDateOfBirthChange = (value: string) =>
-    onboardingStore.setField("dateOfBirth", value);
   const handleBioChange = (value: string) =>
     onboardingStore.setField("bio", value);
   const handleLocationSharingChange = (value: boolean) =>
@@ -146,7 +135,7 @@
 
         <!-- Progress indicator -->
         <div class="mt-4 flex justify-center space-x-2">
-          {#each [1, 2, 3] as i (i)}
+          {#each [1, 2] as i (i)}
             <div
               class="h-2 w-8 rounded-full {state.step >= i
                 ? 'bg-purple-600'
@@ -157,17 +146,11 @@
       </div>
 
       {#if state.step === 1}
-        <!-- Basic Info -->
-        <StepBasicInfo
+        <!-- Combined Profile and Location -->
+        <StepProfileAndLocation
           {state}
           onDisplayNameChange={handleDisplayNameChange}
-          onDateOfBirthChange={handleDateOfBirthChange}
           onBioChange={handleBioChange}
-        />
-      {:else if state.step === 2}
-        <!-- Location -->
-        <StepLocationInfo
-          {state}
           onLocationSharingChange={handleLocationSharingChange}
           onGetCurrentLocation={getCurrentLocation}
         />
@@ -186,40 +169,21 @@
             >
               Back
             </button>
-          {:else if state.step === 2}
-            <button
-              onclick={handleSkipLocation}
-              disabled={state.saving}
-              class="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
-            >
-              Skip
-            </button>
           {/if}
         </div>
 
         <div class="flex space-x-2">
-          {#if state.step < 3}
-            <button
-              onclick={handleClose}
-              disabled={state.saving}
-              class="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
-            >
-              Later
-            </button>
-          {/if}
-
           <Button
             onclick={handleNext}
             disabled={state.saving ||
-              (state.step === 1 &&
-                (!state.displayName.trim() || !state.dateOfBirth))}
+              (state.step === 1 && !state.displayName.trim())}
           >
             {#if state.saving}
               <div
                 class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
               ></div>
             {/if}
-            {state.step === 3 ? "Complete Setup" : "Next"}
+            {state.step === 2 ? "Complete Setup" : "Next"}
           </Button>
         </div>
       </div>

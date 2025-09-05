@@ -45,7 +45,12 @@ export interface EventCardProps {
 
 // Auth Form Component Types
 export interface AuthFormProps {
-  onSubmit: (email: string, password: string, name?: string) => Promise<void>;
+  onSubmit: (
+    email: string,
+    password: string,
+    name?: string,
+    dateOfBirth?: string,
+  ) => Promise<void>;
   isSignUp?: boolean;
   loading?: boolean;
   error?: string | null;

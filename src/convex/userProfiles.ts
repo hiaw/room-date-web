@@ -82,35 +82,52 @@ export const updateUserProfile = mutation({
             (args.dateOfBirth || existingProfile?.dateOfBirth)
           );
 
-    const profileData = {
-      userId,
-      displayName: args.displayName,
-      dateOfBirth: args.dateOfBirth,
-      gender: args.gender,
-      bio: args.bio,
-      profileImageUrl: args.profileImageUrl,
-      profileImages: args.profileImages,
-      location: args.location,
-      latitude: args.latitude,
-      longitude: args.longitude,
-      locationSharing: args.locationSharing ?? false,
-      isProfileComplete,
-    };
-
     let profileId;
     if (existingProfile) {
-      // Update existing profile
-      await ctx.db.patch(existingProfile._id, {
+      // Update existing profile (dateOfBirth should already exist from signup)
+      const updateData = {
         ...Object.fromEntries(
-          Object.entries(profileData).filter(
-            ([, value]) => value !== undefined,
-          ),
+          Object.entries({
+            displayName: args.displayName,
+            gender: args.gender,
+            bio: args.bio,
+            profileImageUrl: args.profileImageUrl,
+            profileImages: args.profileImages,
+            location: args.location,
+            latitude: args.latitude,
+            longitude: args.longitude,
+            locationSharing: args.locationSharing,
+            isProfileComplete,
+            ...(args.dateOfBirth !== undefined && {
+              dateOfBirth: args.dateOfBirth,
+            }),
+          }).filter(([, value]) => value !== undefined),
         ),
-      });
+      };
+
+      await ctx.db.patch(existingProfile._id, updateData);
       profileId = existingProfile._id;
     } else {
-      // Create new profile
-      profileId = await ctx.db.insert("userProfiles", profileData);
+      // Create new profile - this should rarely happen as profiles are created during signup
+      // If creating new profile, dateOfBirth is required
+      if (!args.dateOfBirth) {
+        throw new Error("Date of birth is required for new profiles");
+      }
+
+      profileId = await ctx.db.insert("userProfiles", {
+        userId,
+        displayName: args.displayName,
+        dateOfBirth: args.dateOfBirth,
+        gender: args.gender,
+        bio: args.bio,
+        profileImageUrl: args.profileImageUrl,
+        profileImages: args.profileImages,
+        location: args.location,
+        latitude: args.latitude,
+        longitude: args.longitude,
+        locationSharing: args.locationSharing ?? false,
+        isProfileComplete,
+      });
     }
 
     // Log security event directly

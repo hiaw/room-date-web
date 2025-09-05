@@ -16,10 +16,6 @@ export function validateBasicInfo(state: OnboardingState): {
     errors.displayName = "Display name is required";
   }
 
-  if (!state.dateOfBirth) {
-    errors.dateOfBirth = "Date of birth is required";
-  }
-
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
