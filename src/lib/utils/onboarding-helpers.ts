@@ -1,4 +1,5 @@
 import type { OnboardingState } from "$lib/stores/onboarding.js";
+import { validateDateOfBirth } from "./validation.js";
 
 export interface LocationResult {
   latitude: number;
@@ -23,21 +24,9 @@ export function validateBasicInfo(
     if (!state.dateOfBirth) {
       errors.dateOfBirth = "Date of birth is required";
     } else {
-      const birthDate = new Date(state.dateOfBirth);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-
-      if (
-        monthDiff < 0 ||
-        (monthDiff === 0 && today.getDate() < birthDate.getDate())
-      ) {
-        const actualAge = age - 1;
-        if (actualAge < 18) {
-          errors.dateOfBirth = "You must be 18 or older to join Room Dates";
-        }
-      } else if (age < 18) {
-        errors.dateOfBirth = "You must be 18 or older to join Room Dates";
+      const dobValidation = validateDateOfBirth(state.dateOfBirth);
+      if (!dobValidation.valid) {
+        errors.dateOfBirth = dobValidation.error || "Invalid date of birth";
       }
     }
   }

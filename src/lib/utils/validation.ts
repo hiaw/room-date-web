@@ -68,47 +68,14 @@ export function validatePassword(password: string): {
   return { valid: errors.length === 0, errors };
 }
 
+import { validateAge } from "../../convex/lib/ageValidation.js";
+
 export function validateDateOfBirth(dateOfBirth: string): {
   valid: boolean;
   error?: string;
 } {
-  if (!dateOfBirth) {
-    return { valid: false, error: "Date of birth is required" };
-  }
-
-  const birthDate = new Date(dateOfBirth);
-  const today = new Date();
-
-  // Check if date is valid
-  if (isNaN(birthDate.getTime())) {
-    return { valid: false, error: "Please enter a valid date" };
-  }
-
-  // Check if date is not in the future
-  if (birthDate > today) {
-    return { valid: false, error: "Date of birth cannot be in the future" };
-  }
-
-  // Calculate age
-  const age = today.getFullYear() - birthDate.getFullYear();
-  const monthDifference = today.getMonth() - birthDate.getMonth();
-  const dayDifference = today.getDate() - birthDate.getDate();
-
-  // Adjust age if birthday hasn't occurred this year
-  const actualAge =
-    monthDifference < 0 || (monthDifference === 0 && dayDifference < 0)
-      ? age - 1
-      : age;
-
-  // Check if user is 18 or older
-  if (actualAge < 18) {
-    return {
-      valid: false,
-      error: "You must be 18 or older to join Room Dates",
-    };
-  }
-
-  return { valid: true };
+  // Use the same validation logic as the server
+  return validateAge(dateOfBirth);
 }
 
 export function getMaxDateOfBirth(): string {
