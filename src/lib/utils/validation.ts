@@ -69,6 +69,7 @@ export function validatePassword(password: string): {
 }
 
 import { validateAge } from "../../convex/lib/ageValidation.js";
+import { getMaxBirthDate } from "../constants/age.js";
 
 export function validateDateOfBirth(dateOfBirth: string): {
   valid: boolean;
@@ -79,14 +80,8 @@ export function validateDateOfBirth(dateOfBirth: string): {
 }
 
 export function getMaxDateOfBirth(): string {
-  // Return date for 18 years ago (latest valid birth date)
-  const today = new Date();
-  const eighteenYearsAgo = new Date(
-    today.getFullYear() - 18,
-    today.getMonth(),
-    today.getDate(),
-  );
-  return eighteenYearsAgo.toISOString().split("T")[0];
+  // Use centralized function for consistency
+  return getMaxBirthDate();
 }
 
 export function validateAuthForm(

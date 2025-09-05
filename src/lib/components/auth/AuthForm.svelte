@@ -4,6 +4,7 @@
   import ErrorMessage from "../ui/ErrorMessage.svelte";
   import OAuthButton from "./OAuthButton.svelte";
   import { Mail, Lock, User, Calendar } from "lucide-svelte";
+  import { AGE_ERROR_MESSAGE } from "$lib/constants/age.js";
 
   import type { AuthFormProps } from "$lib/types/components";
 
@@ -111,7 +112,7 @@
           class="w-full rounded-xl border border-gray-200 py-3 pr-4 pl-10 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"
         />
       </div>
-      <p class="mt-1 text-xs text-gray-500">You must be 18 or older to join</p>
+      <p class="mt-1 text-xs text-gray-500">{AGE_ERROR_MESSAGE}</p>
     </div>
   {/if}
 

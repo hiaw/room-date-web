@@ -1,6 +1,7 @@
 <script lang="ts">
   import { User, MapPin } from "lucide-svelte";
   import type { OnboardingState } from "$lib/stores/onboarding.js";
+  import { getMaxBirthDate, AGE_ERROR_MESSAGE } from "$lib/constants/age.js";
 
   interface StepProfileAndLocationProps {
     state: OnboardingState;
@@ -21,6 +22,9 @@
     onLocationSharingChange,
     onGetCurrentLocation,
   }: StepProfileAndLocationProps = $props();
+
+  // Calculate max birth date once for performance
+  const maxBirthDate = getMaxBirthDate();
 </script>
 
 <div class="space-y-6">
@@ -68,15 +72,13 @@
           value={state.dateOfBirth}
           onchange={(e) => onDateOfBirthChange(e.currentTarget.value)}
           type="date"
-          max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0]}
+          max={maxBirthDate}
           class="w-full rounded-lg border {state.validationErrors.dateOfBirth
             ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
             : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500'} px-3 py-2 focus:ring-1 focus:outline-none"
         />
         <p class="mt-1 text-xs text-gray-500">
-          You must be 18 or older to join Room Dates
+          {AGE_ERROR_MESSAGE}
         </p>
         {#if state.validationErrors.dateOfBirth}
           <p class="mt-1 text-sm text-red-600">

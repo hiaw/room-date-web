@@ -1,3 +1,5 @@
+import { MIN_AGE_YEARS, AGE_ERROR_MESSAGE } from "../../lib/constants/age.js";
+
 export function validateAge(dateOfBirth: string): {
   valid: boolean;
   error?: string;
@@ -31,11 +33,11 @@ export function validateAge(dateOfBirth: string): {
       ? age - 1
       : age;
 
-  // Check if user is 18 or older
-  if (actualAge < 18) {
+  // Check if user is at minimum age
+  if (actualAge < MIN_AGE_YEARS) {
     return {
       valid: false,
-      error: "You must be 18 or older to join Room Dates",
+      error: AGE_ERROR_MESSAGE,
     };
   }
 
