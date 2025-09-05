@@ -5,7 +5,7 @@ import { v } from "convex/values";
 export const userProfiles = defineTable({
   userId: v.id("users"),
   displayName: v.optional(v.string()),
-  dateOfBirth: v.number(), // timestamp - now required for age verification
+  dateOfBirth: v.optional(v.number()), // timestamp - required for new signups, optional for existing profiles
   gender: v.optional(v.string()), // "male", "female", "non-binary", etc.
   bio: v.optional(v.string()),
   profileImageUrl: v.optional(v.string()), // R2 key for primary profile image

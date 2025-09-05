@@ -1,8 +1,5 @@
 <script lang="ts">
-  import {
-    validateAuthForm,
-    getMaxDateOfBirth,
-  } from "../../utils/validation.js";
+  import { validateAuthForm } from "../../utils/validation.js";
   import Button from "../ui/Button.svelte";
   import ErrorMessage from "../ui/ErrorMessage.svelte";
   import OAuthButton from "./OAuthButton.svelte";
@@ -22,9 +19,6 @@
   let name = $state("");
   let dateOfBirth = $state("");
   let validationErrors = $state<string[]>([]);
-
-  // Calculate max date for date of birth (18 years ago)
-  let maxDateOfBirth = $derived(getMaxDateOfBirth());
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
@@ -112,7 +106,6 @@
           id="dateOfBirth"
           type="date"
           bind:value={dateOfBirth}
-          max={maxDateOfBirth}
           disabled={loading}
           required
           class="w-full rounded-xl border border-gray-200 py-3 pr-4 pl-10 transition-all focus:border-transparent focus:ring-2 focus:ring-purple-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-50"

@@ -73,14 +73,11 @@ export const updateUserProfile = mutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    // Determine if profile is complete (bio is optional)
+    // Determine if profile is complete (bio is optional, dateOfBirth optional for existing profiles)
     const isProfileComplete =
       args.isProfileComplete !== undefined
         ? args.isProfileComplete
-        : !!(
-            (args.displayName || existingProfile?.displayName) &&
-            (args.dateOfBirth || existingProfile?.dateOfBirth)
-          );
+        : !!(args.displayName || existingProfile?.displayName);
 
     let profileId;
     if (existingProfile) {
