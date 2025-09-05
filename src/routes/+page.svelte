@@ -9,8 +9,6 @@
 
   const convex = useConvexClient();
 
-  let passwordResetCode = $state<string | undefined>(undefined);
-
   /**
    * Safely clean up URL parameters after navigation is stable
    * Uses tick() to ensure DOM updates are complete before navigation changes
@@ -88,10 +86,9 @@
           authStore.setLoading(false);
         }
       } else {
-        // This is likely a password reset code - set it for the UI
-        passwordResetCode = code;
-        // Clean up the URL but keep the password reset code in state
-        await safeReplaceState("/");
+        // This is likely a password reset code - redirect to auth page
+        goto(`/auth?code=${code}`);
+        return;
       }
     } else {
       // Normal page load - check for existing auth
@@ -132,5 +129,5 @@
 {#if $isAuthenticated}
   <AuthenticatedView />
 {:else}
-  <MarketingHomepage {passwordResetCode} />
+  <MarketingHomepage />
 {/if}

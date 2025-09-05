@@ -10,18 +10,7 @@
     CheckCircle,
     Smartphone,
   } from "lucide-svelte";
-  import { goto } from "$app/navigation";
   import MarketingLayout from "$lib/components/marketing/MarketingLayout.svelte";
-
-  interface Props {
-    passwordResetCode?: string;
-  }
-
-  let { passwordResetCode }: Props = $props();
-
-  function handleGetStarted() {
-    goto("/auth" + (passwordResetCode ? `?code=${passwordResetCode}` : ""));
-  }
 
   const features = [
     {
@@ -129,8 +118,8 @@
         <div
           class="mt-10 flex flex-col items-center gap-6 sm:flex-row sm:justify-center"
         >
-          <button
-            onclick={handleGetStarted}
+          <a
+            href="/auth"
             class="group flex items-center space-x-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 text-lg font-semibold text-white shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
           >
             <span>Get Started Free</span>
@@ -138,7 +127,7 @@
               size={20}
               class="transition-transform group-hover:translate-x-1"
             />
-          </button>
+          </a>
 
           <div class="flex items-center space-x-4">
             <Smartphone size={20} class="text-gray-400" />
@@ -314,8 +303,8 @@
       <div
         class="flex flex-col items-center gap-6 sm:flex-row sm:justify-center"
       >
-        <button
-          onclick={handleGetStarted}
+        <a
+          href="/auth"
           class="group flex items-center space-x-2 rounded-full bg-white px-8 py-4 text-lg font-semibold text-purple-600 shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
         >
           <span>Start Your Journey</span>
@@ -323,7 +312,7 @@
             size={20}
             class="transition-transform group-hover:translate-x-1"
           />
-        </button>
+        </a>
 
         <p class="text-sm text-purple-200">
           Free to join • No credit card required
