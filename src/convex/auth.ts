@@ -118,7 +118,8 @@ export const { auth, signIn, signOut, store } = convexAuth({
       }
 
       // For new sign-ups, validate age if dateOfBirth is provided
-      const dateOfBirth = (args.profile as any)?.dateOfBirth;
+      const dateOfBirth = (args.profile as Record<string, unknown>)
+        ?.dateOfBirth as string | undefined;
       const isPasswordSignUp = dateOfBirth !== undefined; // Password signups include DOB, OAuth doesn't
 
       // For password signups, dateOfBirth is required and validated

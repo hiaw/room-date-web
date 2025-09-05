@@ -87,7 +87,15 @@
     onboardingStore.setError("save", undefined);
 
     try {
-      const profileData: any = {
+      const profileData: {
+        displayName: string;
+        bio?: string;
+        location?: string;
+        latitude?: number;
+        longitude?: number;
+        locationSharing: boolean;
+        dateOfBirth?: number;
+      } = {
         displayName: state.displayName.trim(),
         bio: state.bio.trim() || undefined,
         location: state.location || undefined,
@@ -118,12 +126,6 @@
       );
     } finally {
       onboardingStore.setField("saving", false);
-    }
-  }
-
-  function handleClose() {
-    if (!state.saving) {
-      onClose();
     }
   }
 
