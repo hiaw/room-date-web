@@ -24,25 +24,10 @@
     }
   }
 
-  function handleNavToAbout() {
+  function getNavUrl(path: string): string {
     // Preserve the from parameter if it exists
     const fromParam = $page.url.searchParams.get("from");
-    const url = fromParam ? `/about?from=${fromParam}` : "/about";
-    goto(url);
-  }
-
-  function handleNavToPrivacy() {
-    // Preserve the from parameter if it exists
-    const fromParam = $page.url.searchParams.get("from");
-    const url = fromParam ? `/privacy?from=${fromParam}` : "/privacy";
-    goto(url);
-  }
-
-  function handleNavToTerms() {
-    // Preserve the from parameter if it exists
-    const fromParam = $page.url.searchParams.get("from");
-    const url = fromParam ? `/terms?from=${fromParam}` : "/terms";
-    goto(url);
+    return fromParam ? `${path}?from=${fromParam}` : path;
   }
 
   const faqs = [
@@ -125,8 +110,8 @@
 
     <!-- Quick Actions -->
     <div class="mb-12 grid gap-6 md:grid-cols-3">
-      <button
-        onclick={handleNavToAbout}
+      <a
+        href={getNavUrl("/about")}
         class="rounded-2xl border border-gray-100 bg-white p-6 text-left shadow-sm transition-shadow hover:shadow-md"
       >
         <div
@@ -138,10 +123,10 @@
         <p class="text-sm text-gray-600">
           Learn how our platform works and our mission.
         </p>
-      </button>
+      </a>
 
-      <button
-        onclick={handleNavToPrivacy}
+      <a
+        href={getNavUrl("/privacy")}
         class="rounded-2xl border border-gray-100 bg-white p-6 text-left shadow-sm transition-shadow hover:shadow-md"
       >
         <div
@@ -153,10 +138,10 @@
         <p class="text-sm text-gray-600">
           Understand how we protect your data and safety.
         </p>
-      </button>
+      </a>
 
-      <button
-        onclick={handleNavToTerms}
+      <a
+        href={getNavUrl("/terms")}
         class="rounded-2xl border border-gray-100 bg-white p-6 text-left shadow-sm transition-shadow hover:shadow-md"
       >
         <div
@@ -168,7 +153,7 @@
         <p class="text-sm text-gray-600">
           Read our platform rules and guidelines.
         </p>
-      </button>
+      </a>
     </div>
 
     <!-- Getting Started Guide -->
