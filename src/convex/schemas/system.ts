@@ -27,6 +27,7 @@ export const securityEvents = defineTable({
     v.literal("connection_created"),
     v.literal("message_sent"),
     v.literal("profile_updated"),
+    v.literal("dob_change_attempt"),
     v.literal("location_accessed"),
     v.literal("image_uploaded"),
     v.literal("spam_detected"),

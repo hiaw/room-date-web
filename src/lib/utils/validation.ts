@@ -1,3 +1,6 @@
+import { validateAge } from "../../convex/lib/ageValidation.js";
+import { getMaxBirthDate } from "../constants/age.js";
+
 export function validateEmail(email: string): boolean {
   // More robust email validation regex that follows RFC 5322 standards
   const emailRegex =
@@ -67,9 +70,6 @@ export function validatePassword(password: string): {
 
   return { valid: errors.length === 0, errors };
 }
-
-import { validateAge } from "../../convex/lib/ageValidation.js";
-import { getMaxBirthDate } from "../constants/age.js";
 
 export function validateDateOfBirth(dateOfBirth: string): {
   valid: boolean;

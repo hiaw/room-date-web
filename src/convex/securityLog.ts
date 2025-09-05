@@ -15,6 +15,7 @@ export type SecurityEventType =
   | "connection_created"
   | "message_sent"
   | "profile_updated"
+  | "dob_change_attempt"
   | "location_accessed"
   | "image_uploaded"
   | "spam_detected";
@@ -39,6 +40,7 @@ export const logSecurityEvent = mutation({
       v.literal("connection_created"),
       v.literal("message_sent"),
       v.literal("profile_updated"),
+      v.literal("dob_change_attempt"),
       v.literal("location_accessed"),
       v.literal("image_uploaded"),
       v.literal("spam_detected"),
@@ -228,6 +230,7 @@ function getDefaultSeverity(eventType: SecurityEventType): SecuritySeverity {
     connection_created: "low",
     message_sent: "low",
     profile_updated: "low",
+    dob_change_attempt: "high",
     location_accessed: "medium",
     image_uploaded: "low",
     spam_detected: "high",

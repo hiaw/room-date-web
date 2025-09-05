@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { validateAge } from "./lib/ageValidation.js";
+import { DAYS_PER_YEAR, MS_PER_DAY } from "../lib/constants/age.js";
 
 /**
  * Get a user's profile
@@ -81,6 +83,49 @@ export const updateUserProfile = mutation({
 
     let profileId;
     if (existingProfile) {
+      // Security check: Prevent DOB changes that could bypass age verification
+      if (args.dateOfBirth !== undefined && existingProfile.dateOfBirth) {
+        const currentAge = Math.floor(
+          (Date.now() - existingProfile.dateOfBirth) /
+            (DAYS_PER_YEAR * MS_PER_DAY),
+        );
+        const newAge = Math.floor(
+          (Date.now() - args.dateOfBirth) / (DAYS_PER_YEAR * MS_PER_DAY),
+        );
+
+        // Only allow DOB changes that don't make the user younger
+        // This prevents bypassing age verification after signup
+        if (newAge < currentAge) {
+          throw new Error(
+            "Date of birth cannot be changed to make yourself younger",
+          );
+        }
+
+        // Validate the new DOB still meets minimum age requirements
+        const dobString = new Date(args.dateOfBirth)
+          .toISOString()
+          .split("T")[0];
+        const ageValidation = validateAge(dobString);
+        if (!ageValidation.valid) {
+          throw new Error(ageValidation.error || "Invalid date of birth");
+        }
+
+        // Log this security-sensitive operation
+        await ctx.db.insert("securityEvents", {
+          eventType: "dob_change_attempt",
+          userId,
+          metadata: {
+            originalDob: existingProfile.dateOfBirth,
+            newDob: args.dateOfBirth,
+            originalAge: currentAge,
+            newAge: newAge,
+            allowed: true,
+          },
+          timestamp: Date.now(),
+          severity: "medium",
+        });
+      }
+
       // Update existing profile (dateOfBirth should already exist from signup)
       const updateData = Object.fromEntries(
         Object.entries({
