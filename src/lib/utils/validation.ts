@@ -1,3 +1,6 @@
+import { validateAge } from "../../convex/lib/ageValidation.js";
+import { getMaxBirthDate } from "../constants/age.js";
+
 export function validateEmail(email: string): boolean {
   // More robust email validation regex that follows RFC 5322 standards
   const emailRegex =
@@ -68,7 +71,24 @@ export function validatePassword(password: string): {
   return { valid: errors.length === 0, errors };
 }
 
-export function validateAuthForm(email: string, password: string): string[] {
+export function validateDateOfBirth(dateOfBirth: string): {
+  valid: boolean;
+  error?: string;
+} {
+  // Use the same validation logic as the server
+  return validateAge(dateOfBirth);
+}
+
+export function getMaxDateOfBirth(): string {
+  // Use centralized function for consistency
+  return getMaxBirthDate();
+}
+
+export function validateAuthForm(
+  email: string,
+  password: string,
+  dateOfBirth?: string,
+): string[] {
   const errors: string[] = [];
 
   if (!validateRequired(email)) {
@@ -83,6 +103,14 @@ export function validateAuthForm(email: string, password: string): string[] {
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
       errors.push(...passwordValidation.errors);
+    }
+  }
+
+  // Validate date of birth if provided (for signup)
+  if (dateOfBirth !== undefined) {
+    const dobValidation = validateDateOfBirth(dateOfBirth);
+    if (!dobValidation.valid && dobValidation.error) {
+      errors.push(dobValidation.error);
     }
   }
 

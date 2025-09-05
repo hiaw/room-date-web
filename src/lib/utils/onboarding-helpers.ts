@@ -1,4 +1,5 @@
 import type { OnboardingState } from "$lib/stores/onboarding.js";
+import { validateDateOfBirth } from "./validation.js";
 
 export interface LocationResult {
   latitude: number;
@@ -6,7 +7,10 @@ export interface LocationResult {
   location: string;
 }
 
-export function validateBasicInfo(state: OnboardingState): {
+export function validateBasicInfo(
+  state: OnboardingState,
+  needsDateOfBirth = false,
+): {
   isValid: boolean;
   errors: OnboardingState["validationErrors"];
 } {
@@ -16,8 +20,15 @@ export function validateBasicInfo(state: OnboardingState): {
     errors.displayName = "Display name is required";
   }
 
-  if (!state.dateOfBirth) {
-    errors.dateOfBirth = "Date of birth is required";
+  if (needsDateOfBirth) {
+    if (!state.dateOfBirth) {
+      errors.dateOfBirth = "Date of birth is required";
+    } else {
+      const dobValidation = validateDateOfBirth(state.dateOfBirth);
+      if (!dobValidation.valid) {
+        errors.dateOfBirth = dobValidation.error || "Invalid date of birth";
+      }
+    }
   }
 
   return {

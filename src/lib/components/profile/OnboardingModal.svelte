@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { useConvexClient } from "convex-svelte";
+  import { useConvexClient, useQuery } from "convex-svelte";
   import { api } from "../../../convex/_generated/api.js";
   import Button from "../ui/Button.svelte";
-  import StepBasicInfo from "./onboarding/StepBasicInfo.svelte";
-  import StepLocationInfo from "./onboarding/StepLocationInfo.svelte";
+  import StepProfileAndLocation from "./onboarding/StepProfileAndLocation.svelte";
   import StepFinalReview from "./onboarding/StepFinalReview.svelte";
   import { onboardingStore } from "$lib/stores/onboarding.js";
   import {
@@ -20,6 +19,15 @@
 
   let convex = useConvexClient();
 
+  // Check if user needs to provide date of birth (OAuth users who don't have it)
+  let userProfile = useQuery(api.userProfiles.getUserProfile, {});
+  let needsDateOfBirth = $derived(
+    Boolean(
+      userProfile.data?.profile &&
+        userProfile.data.profile.dateOfBirth === undefined,
+    ),
+  );
+
   // Subscribe to store
   let state = $derived($onboardingStore);
 
@@ -27,7 +35,7 @@
     if (state.step === 1) {
       // Validate basic info
       onboardingStore.clearErrors();
-      const validation = validateBasicInfo(state);
+      const validation = validateBasicInfo(state, needsDateOfBirth);
 
       if (!validation.isValid) {
         // Set errors in store
@@ -44,9 +52,6 @@
 
       onboardingStore.nextStep();
     } else if (state.step === 2) {
-      // Location step - can skip
-      onboardingStore.nextStep();
-    } else if (state.step === 3) {
       // Final step - save profile
       await handleSave();
     }
@@ -56,10 +61,6 @@
     if (state.step > 1) {
       onboardingStore.previousStep();
     }
-  }
-
-  function handleSkipLocation() {
-    onboardingStore.setStep(3);
   }
 
   async function getCurrentLocation() {
@@ -86,15 +87,29 @@
     onboardingStore.setError("save", undefined);
 
     try {
-      await convex.mutation(api.userProfiles.updateUserProfile, {
+      const profileData: {
+        displayName: string;
+        bio?: string;
+        location?: string;
+        latitude?: number;
+        longitude?: number;
+        locationSharing: boolean;
+        dateOfBirth?: number;
+      } = {
         displayName: state.displayName.trim(),
-        dateOfBirth: new Date(state.dateOfBirth).getTime(),
         bio: state.bio.trim() || undefined,
         location: state.location || undefined,
         latitude: state.latitude,
         longitude: state.longitude,
         locationSharing: state.locationSharing,
-      });
+      };
+
+      // Add dateOfBirth if user needs to provide it and has provided it
+      if (needsDateOfBirth && state.dateOfBirth) {
+        profileData.dateOfBirth = new Date(state.dateOfBirth).getTime();
+      }
+
+      await convex.mutation(api.userProfiles.updateUserProfile, profileData);
 
       // Update settings with location preferences
       await convex.mutation(api.userProfiles.updateUserSettings, {
@@ -111,12 +126,6 @@
       );
     } finally {
       onboardingStore.setField("saving", false);
-    }
-  }
-
-  function handleClose() {
-    if (!state.saving) {
-      onClose();
     }
   }
 
@@ -146,7 +155,7 @@
 
         <!-- Progress indicator -->
         <div class="mt-4 flex justify-center space-x-2">
-          {#each [1, 2, 3] as i (i)}
+          {#each [1, 2] as i (i)}
             <div
               class="h-2 w-8 rounded-full {state.step >= i
                 ? 'bg-purple-600'
@@ -157,17 +166,13 @@
       </div>
 
       {#if state.step === 1}
-        <!-- Basic Info -->
-        <StepBasicInfo
+        <!-- Combined Profile and Location -->
+        <StepProfileAndLocation
           {state}
+          {needsDateOfBirth}
           onDisplayNameChange={handleDisplayNameChange}
           onDateOfBirthChange={handleDateOfBirthChange}
           onBioChange={handleBioChange}
-        />
-      {:else if state.step === 2}
-        <!-- Location -->
-        <StepLocationInfo
-          {state}
           onLocationSharingChange={handleLocationSharingChange}
           onGetCurrentLocation={getCurrentLocation}
         />
@@ -186,40 +191,23 @@
             >
               Back
             </button>
-          {:else if state.step === 2}
-            <button
-              onclick={handleSkipLocation}
-              disabled={state.saving}
-              class="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
-            >
-              Skip
-            </button>
           {/if}
         </div>
 
         <div class="flex space-x-2">
-          {#if state.step < 3}
-            <button
-              onclick={handleClose}
-              disabled={state.saving}
-              class="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
-            >
-              Later
-            </button>
-          {/if}
-
           <Button
             onclick={handleNext}
             disabled={state.saving ||
               (state.step === 1 &&
-                (!state.displayName.trim() || !state.dateOfBirth))}
+                (!state.displayName.trim() ||
+                  (needsDateOfBirth && !state.dateOfBirth)))}
           >
             {#if state.saving}
               <div
                 class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
               ></div>
             {/if}
-            {state.step === 3 ? "Complete Setup" : "Next"}
+            {state.step === 2 ? "Complete Setup" : "Next"}
           </Button>
         </div>
       </div>

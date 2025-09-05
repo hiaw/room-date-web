@@ -29,6 +29,7 @@
     email: string,
     password: string,
     name?: string,
+    dateOfBirth?: string,
   ) {
     authStore.setLoading(true);
     authError = "";
@@ -38,7 +39,13 @@
       const result = await convex.action(api.auth.signIn, {
         provider: "password",
         params: isSignUp
-          ? { email, password, name: name || email, flow: "signUp" }
+          ? {
+              email,
+              password,
+              name: name || email,
+              dateOfBirth,
+              flow: "signUp",
+            }
           : { email, password, flow: "signIn" },
       });
 

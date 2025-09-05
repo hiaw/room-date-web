@@ -28,6 +28,7 @@ export interface AuthFormData {
   email: string;
   password: string;
   name?: string;
+  dateOfBirth?: string;
 }
 
 export interface UpdateProfileData {
