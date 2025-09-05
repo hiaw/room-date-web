@@ -66,6 +66,8 @@
             authResult.tokens,
           );
         }
+        // Redirect to discover page after successful authentication
+        goto("/discover");
       }
     } catch (err) {
       const errorMessage =
@@ -130,6 +132,8 @@
         const userData = await convex.query(api.users.getUserProfile, {});
         if (userData) {
           authStore.setAuthSuccess(userData, authResult.tokens);
+          // Redirect to discover page after successful password reset
+          goto("/discover");
         }
       }
 
@@ -196,7 +200,7 @@
   }
 
   // Subscribe to auth store for loading state
-  const { isLoading } = $derived($authStore);
+  const isLoading = $derived($authStore.isLoading);
 </script>
 
 <div class="w-full">
