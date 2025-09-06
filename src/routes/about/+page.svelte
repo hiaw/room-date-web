@@ -2,6 +2,7 @@
   import Button from "$lib/components/ui/Button.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
+  import { browser } from "$app/environment";
   import MarketingLayout from "$lib/components/marketing/MarketingLayout.svelte";
   import { ArrowLeft } from "lucide-svelte";
 
@@ -10,8 +11,9 @@
   }
 
   function handleBack() {
-    // Check if accessed from profile
+    // Check if accessed from profile (only in browser)
     if (
+      browser &&
       $page.url.searchParams.has("from") &&
       $page.url.searchParams.get("from") === "profile"
     ) {
@@ -22,7 +24,10 @@
   }
 
   // Check if this page was accessed from within the app (not marketing)
-  const showMarketingLayout = $derived(!$page.url.searchParams.has("from"));
+  // Default to showing marketing layout during prerender
+  const showMarketingLayout = $derived(
+    !browser || !$page.url.searchParams.has("from"),
+  );
 </script>
 
 <svelte:head>
