@@ -17,10 +17,10 @@ describe("+page.svelte", () => {
     const content = readFileSync(filePath, "utf8");
 
     // Check for expected imports
-    expect(content).toContain("import { onMount }");
+    expect(content).toContain("import { onMount, tick }");
     expect(content).toContain("useConvexClient");
     expect(content).toContain("AuthenticatedView");
-    expect(content).toContain("UnauthenticatedView");
+    expect(content).toContain("MarketingHomepage");
   });
 
   it("should contain conditional rendering logic", () => {
@@ -31,7 +31,7 @@ describe("+page.svelte", () => {
     expect(content).toContain("#if $isAuthenticated");
     expect(content).toContain("AuthenticatedView");
     expect(content).toContain("{:else}");
-    expect(content).toContain("UnauthenticatedView");
+    expect(content).toContain("MarketingHomepage");
   });
 
   it("should handle OAuth callback logic", () => {

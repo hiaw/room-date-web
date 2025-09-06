@@ -4,7 +4,6 @@
   import ErrorMessage from "../ui/ErrorMessage.svelte";
   import OAuthButton from "./OAuthButton.svelte";
   import { Mail, Lock, User, Calendar } from "lucide-svelte";
-  import { AGE_ERROR_MESSAGE } from "$lib/constants/age.js";
 
   import type { AuthFormProps } from "$lib/types/components";
 
