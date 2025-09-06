@@ -6,47 +6,57 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 
 /**
- * Helper function to enrich events with application and bookmark data
+ * Helper function to enrich events with application and bookmark data (optimized)
  */
-async function enrichEventWithDetails(
+async function enrichEventsWithDetails(
   ctx: QueryCtx,
-  event: Doc<"events">,
+  events: Doc<"events">[],
   userId: Id<"users"> | null,
 ) {
-  // Get application counts
-  const applications = await ctx.db
-    .query("eventApplications")
-    .withIndex("by_event", (q) => q.eq("eventId", event._id))
-    .collect();
+  if (events.length === 0) return [];
 
-  // Check user's application status
-  let userApplication: Doc<"eventApplications"> | null = null;
-  if (userId) {
-    userApplication =
-      applications.find((app) => app.applicantId === userId) || null;
-  }
+  const eventIds = events.map((e) => e._id);
 
-  // Check if bookmarked
-  let isBookmarked = false;
-  if (userId) {
-    const bookmark = await ctx.db
-      .query("eventBookmarks")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", userId).eq("eventId", event._id),
-      )
-      .first();
-    isBookmarked = !!bookmark;
-  }
+  // Batch queries for better performance
+  const [applicationsMap, userBookmarks] = await Promise.all([
+    // Get all applications for these events
+    Promise.all(
+      eventIds.map(async (eventId) => {
+        const apps = await ctx.db
+          .query("eventApplications")
+          .withIndex("by_event", (q) => q.eq("eventId", eventId))
+          .collect();
+        return [eventId, apps] as const;
+      }),
+    ).then((results) => new Map(results)),
 
-  return {
-    ...event,
-    applicationCount: applications.length,
-    pendingApplicationCount: applications.filter(
-      (app) => app.status === "pending",
-    ).length,
-    userApplication,
-    isBookmarked,
-  };
+    // Get user's bookmarks if authenticated
+    userId
+      ? ctx.db
+          .query("eventBookmarks")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect()
+      : Promise.resolve([]),
+  ]);
+
+  const bookmarkedEventIds = new Set(userBookmarks.map((b) => b.eventId));
+
+  return events.map((event) => {
+    const applications = applicationsMap.get(event._id) || [];
+    const userApplication = userId
+      ? applications.find((app) => app.applicantId === userId) || null
+      : null;
+
+    return {
+      ...event,
+      applicationCount: applications.length,
+      pendingApplicationCount: applications.filter(
+        (app) => app.status === "pending",
+      ).length,
+      userApplication,
+      isBookmarked: userId ? bookmarkedEventIds.has(event._id) : false,
+    };
+  });
 }
 
 /**
@@ -118,7 +128,7 @@ export const discoverEvents = query({
       .query("events")
       .withIndex("by_active", (q) => q.eq("isActive", true));
 
-    let events = await query.take(200); // Get more for filtering
+    let events = await query.take(100); // Reduced from 200 for better performance
 
     // Filter out user's own events
     if (userId) {
@@ -189,12 +199,12 @@ export const discoverEvents = query({
         .slice(0, limit);
     }
 
-    // Get additional details for each event
-    const eventsWithDetails = [];
-    for (const event of events) {
-      const enrichedEvent = await enrichEventWithDetails(ctx, event, userId);
-      eventsWithDetails.push(enrichedEvent);
-    }
+    // Get additional details for each event (batch processing)
+    const eventsWithDetails = await enrichEventsWithDetails(
+      ctx,
+      events,
+      userId,
+    );
 
     return eventsWithDetails;
   },
@@ -224,7 +234,7 @@ export const getEventsNearUser = query({
       .query("events")
       .withIndex("by_active", (q) => q.eq("isActive", true));
 
-    let events = await query.take(200); // Get more for filtering
+    let events = await query.take(100); // Reduced from 200 for better performance
 
     // Filter out user's own events
     if (userId) {
@@ -252,12 +262,12 @@ export const getEventsNearUser = query({
       .slice(0, limit)
       .map((item) => item.event);
 
-    // Get additional details for each event
-    const eventsWithDetails = [];
-    for (const event of events) {
-      const enrichedEvent = await enrichEventWithDetails(ctx, event, userId);
-      eventsWithDetails.push(enrichedEvent);
-    }
+    // Get additional details for each event (batch processing)
+    const eventsWithDetails = await enrichEventsWithDetails(
+      ctx,
+      events,
+      userId,
+    );
 
     return eventsWithDetails;
   },

@@ -52,7 +52,12 @@ export const events = defineTable({
   .index("by_active_location", ["isActive", "roomLatitude", "roomLongitude"])
   .index("by_city_active", ["roomCity", "isActive"])
   .index("by_category", ["category", "isActive"])
-  .index("by_activity_level", ["activityLevel", "isActive"]);
+  .index("by_activity_level", ["activityLevel", "isActive"])
+  // Compound indexes for common filtering patterns in discovery
+  .index("by_active_city_timing", ["isActive", "roomCity", "isFlexibleTiming"])
+  .index("by_active_ages", ["isActive", "minAge", "maxAge"])
+  .index("by_active_time_range", ["isActive", "startTime"])
+  .index("by_active_owner", ["isActive", "ownerId"]); // For filtering out own events
 
 // Event Applications - users apply to join events
 export const eventApplications = defineTable({

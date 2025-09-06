@@ -65,8 +65,7 @@
         eventId: event._id,
         message: "", // Could add a form for this later
       });
-      // Refresh event data to show updated application status
-      eventQuery = useQuery(api.events.getEvent, { eventId });
+      // Convex will automatically update the query due to reactivity
     } catch (error) {
       console.error("Failed to apply:", error);
       alert("Failed to apply to event. Please try again.");
@@ -89,8 +88,7 @@
           eventId: event._id,
         });
       }
-      // Refresh event data
-      eventQuery = useQuery(api.events.getEvent, { eventId });
+      // Convex will automatically update the query due to reactivity
     } catch (error) {
       console.error("Failed to bookmark:", error);
       alert("Failed to bookmark event. Please try again.");

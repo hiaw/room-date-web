@@ -5,6 +5,7 @@
   import { isAuthenticated } from "$lib/stores/auth.js";
   import { goto } from "$app/navigation";
   import { MapPin, Calendar, Plus, Settings } from "lucide-svelte";
+  import { createDebouncedState } from "$lib/utils/debounce.js";
 
   // Import our extracted components
   import EventSearchBar from "$lib/components/discover/EventSearchBar.svelte";
@@ -119,13 +120,22 @@
       "Using default location. Add your location in profile settings for better event recommendations.";
   }
 
-  // Reactive query - recreate the query when params change
+  // Debounce distance filter changes to prevent excessive queries
+  const debouncedDistance = createDebouncedState(
+    $discoverFilters.maxDistance,
+    500,
+  );
+  $effect(() => {
+    debouncedDistance.current = $discoverFilters.maxDistance;
+  });
+
+  // Reactive query - recreate the query when params change (with debounced distance)
   let eventsQueryResult = $derived(
     userLocation && api
       ? useQuery(api.events.getEventsNearUser, {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
-          radiusMiles: $discoverFilters.maxDistance,
+          radiusMiles: debouncedDistance.debounced,
           limit: 20,
         })
       : null,

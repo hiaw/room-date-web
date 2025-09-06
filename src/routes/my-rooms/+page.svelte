@@ -17,7 +17,7 @@
     }
   });
 
-  // Reactive queries
+  // Reactive queries - TODO: Consider using composite query for better performance
   let roomsQueryResult = useQuery(api.rooms.getMyRooms, {});
   let eventsQueryResult = useQuery(api.events.getUserEvents, {});
   let applicationsQueryResult = useQuery(
@@ -25,13 +25,15 @@
     {},
   );
 
+  // Extract data
   let rooms = $derived(roomsQueryResult?.data ?? []);
   let events = $derived(eventsQueryResult?.data ?? []);
   let applications = $derived(applicationsQueryResult?.data ?? []);
+
   let loading = $derived(
-    (roomsQueryResult?.isLoading ?? true) ||
-      (eventsQueryResult?.isLoading ?? true) ||
-      (applicationsQueryResult?.isLoading ?? true),
+    roomsQueryResult?.isLoading ||
+      eventsQueryResult?.isLoading ||
+      applicationsQueryResult?.isLoading,
   );
 
   // Group events by room
