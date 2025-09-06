@@ -50,6 +50,7 @@
   "dependencies": {
     "@auth/core": "0.40.0",
     "@convex-dev/auth": "0.0.88",
+    "@convex-dev/geospatial": "^0.1.9",
     "@convex-dev/r2": "^0.7.1",
     "@playwright/test": "^1.55.0",
     "@stripe/stripe-js": "^7.9.0",

@@ -5,6 +5,7 @@ import { createEventArgs, updateEventArgs } from "./types.js";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 import { holdCreditsLogic, releaseCreditsLogic } from "../credits/index";
+import { eventsGeospatial } from "../geospatial.js";
 
 /**
  * Create a new event
@@ -95,6 +96,25 @@ export const createEvent = mutation({
       joinedAt: Date.now(),
     });
 
+    // Add event to geospatial index if location is available
+    if (room.latitude && room.longitude) {
+      await eventsGeospatial.insert(
+        ctx,
+        eventId,
+        {
+          latitude: room.latitude,
+          longitude: room.longitude,
+        },
+        {
+          isActive: true,
+          minAge: args.minAge,
+          maxAge: args.maxAge,
+          isFlexibleTiming: args.isFlexibleTiming,
+          ownerId: userId,
+        },
+      );
+    }
+
     return eventId;
   },
 });
@@ -152,6 +172,33 @@ export const updateEvent = mutation({
 
     await ctx.db.patch(args.eventId, updateData);
 
+    // Update geospatial index if isActive status changed
+    if (args.isActive !== undefined) {
+      if (event.roomLatitude && event.roomLongitude) {
+        if (args.isActive) {
+          // Add to geospatial index if becoming active
+          await eventsGeospatial.insert(
+            ctx,
+            args.eventId,
+            {
+              latitude: event.roomLatitude,
+              longitude: event.roomLongitude,
+            },
+            {
+              isActive: true,
+              minAge: args.minAge ?? event.minAge,
+              maxAge: args.maxAge ?? event.maxAge,
+              isFlexibleTiming: args.isFlexibleTiming ?? event.isFlexibleTiming,
+              ownerId: event.ownerId,
+            },
+          );
+        } else {
+          // Remove from geospatial index if becoming inactive
+          await eventsGeospatial.remove(ctx, args.eventId);
+        }
+      }
+    }
+
     return args.eventId;
   },
 });
@@ -180,6 +227,9 @@ export const deleteEvent = mutation({
 
     // Mark event as inactive
     await ctx.db.patch(args.eventId, { isActive: false });
+
+    // Remove from geospatial index
+    await eventsGeospatial.remove(ctx, args.eventId);
 
     // Release held credits
     await releaseCreditsLogic(

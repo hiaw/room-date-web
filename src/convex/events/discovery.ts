@@ -1,9 +1,10 @@
 import { query } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { calculateDistance, calculateUserAge } from "../lib/eventHelpers.js";
+import { calculateUserAge } from "../lib/eventHelpers.js";
 import { discoverEventsArgs, eventsNearUserArgs } from "./types.js";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
+import { eventsGeospatial } from "../geospatial.js";
 
 /**
  * Helper function to enrich events with application and bookmark data (optimized)
@@ -173,25 +174,33 @@ export const discoverEvents = query({
       });
     }
 
-    // Distance filtering
+    // Distance filtering using geospatial index
     if (args.latitude && args.longitude) {
       const radiusInMiles = args.radiusInMiles || 25;
 
-      events = events
-        .filter((event) => event.roomLatitude && event.roomLongitude)
-        .map((event) => ({
-          event,
-          distance: calculateDistance(
-            args.latitude!,
-            args.longitude!,
-            event.roomLatitude!,
-            event.roomLongitude!,
-          ),
-        }))
-        .filter((item) => item.distance <= radiusInMiles)
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, limit)
-        .map((item) => item.event);
+      // Use geospatial index for efficient location-based queries
+      const geospatialResults = await eventsGeospatial.queryNearest(
+        ctx,
+        { latitude: args.latitude, longitude: args.longitude },
+        limit * 2, // Query more than needed for additional filtering
+        radiusInMiles * 1609.34, // Convert miles to meters
+      );
+
+      // Get the actual event documents from geospatial results
+      const eventIds = geospatialResults.map((result) => result.key);
+      const geospatialEvents = await Promise.all(
+        eventIds.map(async (eventId) => await ctx.db.get(eventId)),
+      );
+
+      // Filter to only events that match our other criteria
+      events = geospatialEvents
+        .filter(
+          (event): event is Doc<"events"> =>
+            event !== null &&
+            event.isActive &&
+            events.some((e) => e._id === event._id),
+        )
+        .slice(0, limit);
     } else {
       // Sort by creation time (newest first)
       events = events
@@ -211,7 +220,7 @@ export const discoverEvents = query({
 });
 
 /**
- * Get events near user location (optimized version)
+ * Get events near user location using geospatial index
  */
 export const getEventsNearUser = query({
   args: eventsNearUserArgs,
@@ -229,43 +238,41 @@ export const getEventsNearUser = query({
         .first();
     }
 
-    // Start with active events
-    const query = ctx.db
-      .query("events")
-      .withIndex("by_active", (q) => q.eq("isActive", true));
+    // Use geospatial index for efficient location-based queries
+    const geospatialResults = await eventsGeospatial.queryNearest(
+      ctx,
+      { latitude: args.latitude, longitude: args.longitude },
+      100, // Query more than we need for filtering
+      radiusInMiles * 1609.34, // Convert miles to meters
+    );
 
-    let events = await query.take(100); // Reduced from 200 for better performance
+    // Get the actual event documents
+    const eventIds = geospatialResults.map((result) => result.key);
+    const events = await Promise.all(
+      eventIds.map(async (eventId) => await ctx.db.get(eventId)),
+    );
+
+    // Filter out null events (in case some were deleted)
+    let validEvents = events.filter(
+      (event): event is Doc<"events"> => event !== null && event.isActive,
+    );
 
     // Filter out user's own events
     if (userId) {
-      events = events.filter((event) => event.ownerId !== userId);
+      validEvents = validEvents.filter((event) => event.ownerId !== userId);
     }
 
     // Apply shared filtering logic
-    events = await filterOutAppliedEvents(ctx, events, userId);
-    events = await filterByGenderPreferences(events, userProfile);
+    validEvents = await filterOutAppliedEvents(ctx, validEvents, userId);
+    validEvents = await filterByGenderPreferences(validEvents, userProfile);
 
-    // Distance filtering
-    events = events
-      .filter((event) => event.roomLatitude && event.roomLongitude)
-      .map((event) => ({
-        event,
-        distance: calculateDistance(
-          args.latitude,
-          args.longitude,
-          event.roomLatitude!,
-          event.roomLongitude!,
-        ),
-      }))
-      .filter((item) => item.distance <= radiusInMiles)
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, limit)
-      .map((item) => item.event);
+    // Take only the requested limit
+    validEvents = validEvents.slice(0, limit);
 
     // Get additional details for each event (batch processing)
     const eventsWithDetails = await enrichEventsWithDetails(
       ctx,
-      events,
+      validEvents,
       userId,
     );
 
